@@ -72,6 +72,7 @@ export interface Club {
   /** The user's chosen XI (player ids per formation slot); unset = auto-pick. */
   lineup?: (string | null)[];
   history: SeasonRecord[];
+  trophies?: Trophy[];
   /** This season's money in and out. */
   ledger?: Ledger;
   /** Players this club has scouted (exact ratings known). */
@@ -251,11 +252,61 @@ export interface CountryDef {
 
 export interface Fixture {
   id: string;
+  /** League division id; for a cup tie, the cup's id. */
   divisionId: string;
   week: number;
   homeId: string;
   awayId: string;
   result: MatchResult | null;
+}
+
+// ---------------------------------------------------------------- cups
+
+export interface CupDef {
+  id: string;
+  name: string;
+  /** Short label for fixture lists, e.g. FAC. */
+  short: string;
+  /** Pyramid level -> the round (0-based) that level's clubs join in. */
+  entries: Record<number, number>;
+  /** Day of the week ties are played (2 = Tuesday, 3 = Wednesday). */
+  day: number;
+  /** Part of the season the rounds are spread over (fractions of the season). */
+  window: [number, number];
+  /** Prize for winning a round in the first round; it doubles each round. */
+  prize: number;
+  /** Semi-finals at a neutral ground too, not just the final. */
+  neutralSemis: boolean;
+}
+
+export interface CupTie extends Fixture {
+  cupId: string;
+  round: number;
+  neutral: boolean;
+  winnerId?: string;
+}
+
+export interface CupRound {
+  name: string;
+  week: number;
+  day: number;
+  ties: CupTie[];
+  /** Through to the next round without playing (odd numbers). */
+  byes: string[];
+  drawn: boolean;
+  played: boolean;
+}
+
+export interface CupState {
+  id: string;
+  season: number;
+  rounds: CupRound[];
+  winnerId?: string;
+}
+
+export interface Trophy {
+  season: number;
+  name: string;
 }
 
 /** `attack` is commentary colour only and is never stored with a result. */
@@ -349,6 +400,8 @@ export interface GameState {
   half?: 'am' | 'pm';
   /** Scouts out watching players; reports arrive on `dueDay` (week * 7 + day). */
   scoutAssignments?: { playerId: string; dueDay: number }[];
+  /** This season's cup competitions. */
+  cups?: CupState[];
 }
 
 export interface GameSettings {

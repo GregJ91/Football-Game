@@ -2,7 +2,8 @@ import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamS
 import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
 import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
-import { MATCHDAY, SEASON_START_DAY, advanceHalfDay, deliverScoutReports, isMatchdayMorning, userFixtureThisWeek } from '../calendar';
+import { MATCHDAY, SEASON_START_DAY, advanceHalfDay, deliverScoutReports, isMatchdayMorning, todaysUserMatch } from '../calendar';
+import { awardLeagueTitles, completeUserCupTie, isCupTie, playDueCupRounds, setupCups } from './cups';
 import { chairmanWeek, gradingWarning, makeSponsorOffers, moodAfterMatch, seasonPayouts, seasonReview, setSeasonTarget } from '../club/chairman';
 import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
@@ -110,10 +111,21 @@ export function userFixtureNext(game: GameState): Fixture | undefined {
  */
 export function advanceToUserMatch(game: GameState): Fixture | undefined {
   while (game.phase === 'season') {
-    if (isMatchdayMorning(game)) return userFixtureThisWeek(game);
+    if (isMatchdayMorning(game)) return todaysUserMatch(game);
     if (advanceHalfDay(game) === 'seasonEnd') break;
   }
   return undefined;
+}
+
+/** Sim the user's match today (and the rest of that day's or week's games). */
+export function simUserMatchToday(game: GameState): Fixture | undefined {
+  const match = todaysUserMatch(game);
+  if (!match) return undefined;
+  if (isCupTie(match)) {
+    playDueCupRounds(game, game.week, game.day ?? MATCHDAY);
+    game.half = 'pm';
+  } else playWeek(game);
+  return match;
 }
 
 /** A live, steppable match for the user's fixture, with the user's side managed by hand. */
@@ -121,8 +133,11 @@ export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
   const home = game.clubs[fixture.homeId];
   const away = game.clubs[fixture.awayId];
   const seed = withRng(game, (rng) => rng.int(0, 2 ** 31));
+  const cup = isCupTie(fixture) ? fixture : null;
   return createLiveMatch(new Rng(seed), teamSheet(game, home, away, { live: true }), teamSheet(game, away, home, { live: true }), {
-    capacity: home.capacity,
+    knockout: !!cup,
+    neutral: cup?.neutral,
+    capacity: cup?.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
     crowdFill: crowdFill(game, home),
     commentary: true,
     manual: { home: home.isUser, away: away.isUser },
@@ -134,6 +149,15 @@ export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveM
   const result = finishMatch(live);
   fixture.result = result;
   withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId]));
+  if (isCupTie(fixture)) {
+    if (fixture.neutral) {
+      addGate(game, game.clubs[fixture.homeId], result.attendance / 2);
+      addGate(game, game.clubs[fixture.awayId], result.attendance / 2);
+    } else addGate(game, game.clubs[fixture.homeId], result.attendance);
+    completeUserCupTie(game, fixture);
+    game.half = 'pm';
+    return result;
+  }
   addGate(game, game.clubs[fixture.homeId], result.attendance);
   playWeek(game);
   return result;
@@ -198,6 +222,8 @@ export function fixturesForWeek(game: GameState, week: number): Fixture[] {
 /** Play every fixture in the current week across the whole pyramid. */
 export function playWeek(game: GameState): Fixture[] {
   if (game.phase !== 'season') return [];
+  // Any cup rounds earlier in the week that were skipped over.
+  playDueCupRounds(game, game.week, MATCHDAY);
   // It's matchday: messages from today's games and business carry Saturday's date.
   game.day = MATCHDAY;
   const fixtures = fixturesForWeek(game, game.week).filter((f) => !f.result);
@@ -306,6 +332,7 @@ export function endSeason(game: GameState) {
     });
   }
 
+  awardLeagueTitles(game, summary.champions);
   seasonPayouts(game, summary);
   seasonReview(game, summary);
   game.lastSummary = summary;
@@ -397,6 +424,7 @@ export function startNextSeason(game: GameState) {
   game.phase = 'season';
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   scheduleSeason(game);
+  setupCups(game);
   startOfSeasonBusiness(game);
 }
 

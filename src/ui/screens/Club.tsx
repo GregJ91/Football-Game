@@ -9,14 +9,15 @@ import { buildTable } from '../../engine/season/table';
 import type { Build, FacilityKind, Stand } from '../../engine/types';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
-import { money, ordinal } from '../format';
+import { money, ordinal, seasonLabel } from '../format';
 
-type Tab = 'ground' | 'facilities' | 'money' | 'board';
+type Tab = 'ground' | 'facilities' | 'money' | 'board' | 'honours';
 const TABS: { t: Tab; label: string }[] = [
   { t: 'ground', label: 'Ground' },
   { t: 'facilities', label: 'Facilities' },
   { t: 'money', label: 'Money' },
   { t: 'board', label: 'Board' },
+  { t: 'honours', label: 'Honours' },
 ];
 
 const STYLE_LABEL = { steady: 'Steady deal', upfront: 'Cash up front', bonus: 'Promotion bonus' } as const;
@@ -328,6 +329,51 @@ export function Club() {
           </section>
         </>
       )}
+
+      {tab === 'honours' && (() => {
+        const trophies = club.trophies ?? [];
+        const counts = new Map<string, number[]>();
+        for (const t of trophies) counts.set(t.name, [...(counts.get(t.name) ?? []), t.season]);
+        return (
+          <>
+            <section className="card">
+              <div className="card-label"><span>Trophy cabinet</span><span>{trophies.length}</span></div>
+              {trophies.length === 0 ? (
+                <p className="muted small">Empty for now. Win a league or a cup to start filling it.</p>
+              ) : (
+                <ul className="trophies">
+                  {[...counts.entries()].map(([name, seasons]) => (
+                    <li key={name}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M7 4 H17 V9 A5 5 0 0 1 7 9 Z M12 14 V18 M8 20 H16 M7 6 H4 A3 3 0 0 0 7 11 M17 6 H20 A3 3 0 0 1 17 11" />
+                      </svg>
+                      <span className="grow"><strong>{name}</strong><small>{seasons.map(seasonLabel).join(', ')}</small></span>
+                      {seasons.length > 1 && <b>×{seasons.length}</b>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section className="card">
+              <div className="card-label"><span>Club history</span></div>
+              {club.history.length === 0 ? (
+                <p className="muted small">Your first season is under way.</p>
+              ) : (
+                <ul className="history-list">
+                  {[...club.history].reverse().map((h) => (
+                    <li key={h.season}>
+                      <span className="season">{seasonLabel(h.season)}</span>
+                      <span className="grow">{game.divisions.find((d) => d.def.id === h.divisionId)?.def.name ?? h.divisionId}</span>
+                      <b>{ordinal(h.position)}</b>
+                      <span className={`outcome outcome-${h.outcome}`}>{h.outcome === 'stayed' ? '' : h.outcome[0].toUpperCase() + h.outcome.slice(1)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        );
+      })()}
 
       {standSheet !== null && (
         <div className="sheet-backdrop" onClick={() => setStandSheet(null)}>

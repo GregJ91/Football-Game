@@ -41,7 +41,7 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
 export function TabBar() {
   const current = useGame((s) => s.screen);
   // League and fixtures are reached from the Hub.
-  const screen = current === 'fixtures' || current === 'league' || current === 'inbox' ? 'hub' : current;
+  const screen = current === 'fixtures' || current === 'league' || current === 'cups' || current === 'inbox' ? 'hub' : current;
   const go = useGame((s) => s.go);
   return (
     <nav className="tab-bar" aria-label="Main">

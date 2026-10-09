@@ -3,10 +3,11 @@ import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
 import {
-  advanceToUserMatch, completeUserMatch, playWeek, startNextSeason, startUserMatch, userFixtureNext,
+  advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch,
 } from '../engine/season/season';
 import type { FacilityKind, Fixture, GameState, Tactics } from '../engine/types';
-import { advanceHalfDay, assignScout, type ScoutResult } from '../engine/calendar';
+import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
+import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
 import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
 import {
@@ -21,7 +22,7 @@ import {
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;
@@ -97,13 +98,15 @@ interface Store {
 
 const yieldToUi = () => new Promise((r) => setTimeout(r, 0));
 
+/** The user's next match, league or cup. */
 export function nextUserFixture(game: GameState): Fixture | undefined {
-  return userFixtureNext(game);
+  return nextUserMatch(game);
 }
 
 export function lastUserFixture(game: GameState): Fixture | undefined {
-  const played = game.fixtures.filter((f) => f.result && (f.homeId === game.userClubId || f.awayId === game.userClubId));
-  return played.sort((a, b) => b.week - a.week)[0];
+  const mine = (f: Fixture) => f.result && (f.homeId === game.userClubId || f.awayId === game.userClubId);
+  const played: Fixture[] = [...game.fixtures.filter(mine), ...userCupTies(game).filter(mine)];
+  return played.sort((a, b) => b.week * 7 + matchDay(game, b) - (a.week * 7 + matchDay(game, a)))[0];
 }
 
 export function userSide(game: GameState, fixture: Fixture): SideName {
@@ -369,8 +372,7 @@ export const useGame = create<Store>()((set, get) => {
       if (!game || get().busy) return;
       set({ busy: true });
       await yieldToUi();
-      const target = advanceToUserMatch(game);
-      if (target) playWeek(game);
+      const target = advanceToUserMatch(game) ? simUserMatchToday(game) : undefined;
       const popup = target?.result ? target : null;
       set({ busy: false, resultPopup: popup, screen: popup || game.phase === 'season' ? 'hub' : 'seasonEnd' });
       commit();

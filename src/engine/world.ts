@@ -3,6 +3,7 @@ import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../d
 import { SQUAD_TEMPLATE, generatePlayer } from './players/generate';
 import { Rng } from './rng';
 import { createStadium, syncCapacity } from './club/stadium';
+import { setupCups } from './season/cups';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
 import type {
@@ -198,6 +199,7 @@ export function createGame(config: NewGameConfig): GameState {
   user.stadium = createStadium();
   syncCapacity(user);
   scheduleSeason(game);
+  setupCups(game);
   addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays.`, { subject: 'Welcome' });
   startOfSeasonBusiness(game);
   return game;

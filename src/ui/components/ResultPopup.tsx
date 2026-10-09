@@ -9,7 +9,11 @@ export function ResultPopup() {
   const us = fixture.homeId === game.userClubId;
   const ours = us ? fixture.result.homeGoals : fixture.result.awayGoals;
   const theirs = us ? fixture.result.awayGoals : fixture.result.homeGoals;
-  const verdict = ours > theirs ? 'Win' : ours < theirs ? 'Defeat' : 'Draw';
+  const pens = fixture.result.penalties;
+  const pensUs = pens ? (us ? pens.home : pens.away) : 0;
+  const pensThem = pens ? (us ? pens.away : pens.home) : 0;
+  // A shoot-out decides a cup tie that finished level.
+  const verdict = ours > theirs || pensUs > pensThem ? 'Win' : ours < theirs || pensUs < pensThem ? 'Defeat' : 'Draw';
   return (
     <div className="sheet-backdrop center" onClick={dismiss}>
       <div className="popup" role="dialog" aria-modal="true" aria-label="Full time" onClick={(e) => e.stopPropagation()}>

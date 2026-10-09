@@ -439,3 +439,29 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 details.others { margin-top: 6px; }
 details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 10px 4px; min-height: 44px; display: flex; align-items: center; }
 .player-row .pos { width: auto; min-width: 40px; }
+
+/* Cups and honours */
+.cup-card { gap: 8px; }
+.cup-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cup-head strong { font-family: var(--display); font-size: 20px; }
+.cup-winner { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--accent); font-weight: 600; }
+.cup-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.cup-results li { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(44, 66, 52, 0.5); }
+.cup-results li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.cup-results li span:last-child { text-align: right; }
+.cup-results li span.won { color: var(--text); font-weight: 600; }
+.cup-results li b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cup-results li.mine { background: rgba(242, 182, 50, 0.08); border-radius: 6px; padding: 4px 6px; }
+.fixture-row .comp { width: 34px; flex: none; font-size: 11px; font-weight: 700; color: var(--muted); }
+.fixture-row .comp.cup { color: var(--accent); }
+.trophies, .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.trophies li { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+.trophies li strong { color: var(--text); display: block; font-size: 15px; }
+.trophies li small { color: var(--muted); font-size: 12px; }
+.trophies li b { font-family: var(--display); font-size: 18px; }
+.history-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.history-list .season { width: 56px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.history-list .outcome { width: 80px; text-align: right; font-size: 12px; font-weight: 700; }
+.outcome-champions, .outcome-promoted { color: var(--accent); }
+.outcome-relegated { color: var(--warn); }
+.club-screen .segmented button { font-size: 13px; padding: 0 2px; }

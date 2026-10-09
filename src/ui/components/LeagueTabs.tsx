@@ -7,7 +7,8 @@ export function LeagueTabs() {
   return (
     <div className="segmented" role="tablist">
       <button type="button" role="tab" aria-selected={screen === 'league'} onClick={() => go('league')}>Table</button>
-      <button type="button" role="tab" aria-selected={screen === 'fixtures'} onClick={() => go('fixtures')}>Your fixtures</button>
+      <button type="button" role="tab" aria-selected={screen === 'fixtures'} onClick={() => go('fixtures')}>Fixtures</button>
+      <button type="button" role="tab" aria-selected={screen === 'cups'} onClick={() => go('cups')}>Cups</button>
     </div>
   );
 }

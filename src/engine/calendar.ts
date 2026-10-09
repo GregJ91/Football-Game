@@ -3,7 +3,8 @@ import { playerName } from './players/generate';
 import type { Rng } from './rng';
 import { playWeek } from './season/season';
 import { addInbox, askingPrice, interestIn, potentialStars } from './transfers/market';
-import type { GameState, Player } from './types';
+import { cupName, cupRoundsToday, isCupTie, playDueCupRounds, roundOf, userCupTies, userTieToday } from './season/cups';
+import type { Fixture, GameState, Player } from './types';
 import { divisionOf, squadOf, withRng } from './world';
 
 /** Days run Sunday (0) to Saturday (6); league matches are on Saturdays. */
@@ -51,9 +52,36 @@ export function userFixtureThisWeek(game: GameState) {
   );
 }
 
-/** Saturday morning with the user's game still to play. */
+/** The user's match today, league (Saturday) or cup (midweek), if not yet played. */
+export function todaysUserMatch(game: GameState): Fixture | undefined {
+  return game.day === MATCHDAY ? userFixtureThisWeek(game) : userTieToday(game);
+}
+
+/** Morning of a day with the user's match still to play. */
 export function isMatchdayMorning(game: GameState): boolean {
-  return game.phase === 'season' && game.day === MATCHDAY && game.half === 'am' && !!userFixtureThisWeek(game);
+  return game.phase === 'season' && game.half === 'am' && !!todaysUserMatch(game);
+}
+
+/** Day of the week a fixture is played. */
+export function matchDay(game: GameState, f: Fixture): number {
+  return isCupTie(f) ? roundOf(game, f).day : MATCHDAY;
+}
+
+export function matchDate(game: GameState, f: Fixture): Date {
+  return dateOf(game, f.week, matchDay(game, f));
+}
+
+/** The user's next league or cup match, whichever comes first. */
+export function nextUserMatch(game: GameState): Fixture | undefined {
+  const league = game.fixtures.find((f) => !f.result && (f.homeId === game.userClubId || f.awayId === game.userClubId));
+  const cups = userCupTies(game).filter((t) => !t.result);
+  const all: Fixture[] = [...(league ? [league] : []), ...cups];
+  return all.sort((a, b) => a.week * 7 + matchDay(game, a) - (b.week * 7 + matchDay(game, b)))[0];
+}
+
+/** Competition label for a fixture, e.g. "FA Cup · Round 2" or "League". */
+export function competitionLabel(game: GameState, f: Fixture): string {
+  return isCupTie(f) ? `${cupName(game, f.cupId)} · ${roundOf(game, f).name}` : 'League';
 }
 
 export type StepResult = 'moved' | 'matchday' | 'seasonEnd';
@@ -70,6 +98,11 @@ export function advanceHalfDay(game: GameState): StepResult {
       if (userFixtureThisWeek(game)) return 'matchday';
       playWeek(game); // everyone else's games; leaves us on Saturday evening
       return game.phase === 'season' ? 'moved' : 'seasonEnd';
+    }
+    // A midweek cup day: stop for the user's tie, otherwise play the round.
+    if (cupRoundsToday(game).length) {
+      if (userTieToday(game)) return 'matchday';
+      playDueCupRounds(game, game.week, day);
     }
     game.half = 'pm';
     dailyEvents(game);

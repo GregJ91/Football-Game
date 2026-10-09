@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { fixtureDate, formatDate } from '../../engine/calendar';
+import { competitionLabel, formatDate, matchDate, matchDay } from '../../engine/calendar';
+import { cupDef } from '../../data/cups';
+import { isCupTie, userCupTies } from '../../engine/season/cups';
 import type { Fixture } from '../../engine/types';
 import { userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -12,9 +14,10 @@ export function Fixtures() {
   useGame((s) => s.rev);
   const [open, setOpen] = useState<Fixture | null>(null);
   const club = userClub(game);
-  const fixtures = game.fixtures
-    .filter((f) => f.homeId === club.id || f.awayId === club.id)
-    .sort((a, b) => a.week - b.week);
+  // League fixtures and cup ties drawn so far, in date order.
+  const fixtures: Fixture[] = [...game.fixtures.filter((f) => f.homeId === club.id || f.awayId === club.id), ...userCupTies(game)].sort(
+    (a, b) => a.week * 7 + matchDay(game, a) - (b.week * 7 + matchDay(game, b)),
+  );
 
   return (
     <main className="screen fixtures">
@@ -31,13 +34,17 @@ export function Fixtures() {
           if (r) {
             const us = home ? r.homeGoals : r.awayGoals;
             const them = home ? r.awayGoals : r.homeGoals;
-            outcome = us > them ? 'W' : us < them ? 'L' : 'D';
+            const pens = r.penalties;
+            const pu = pens ? (home ? pens.home : pens.away) : 0;
+            const pt = pens ? (home ? pens.away : pens.home) : 0;
+            outcome = us > them || pu > pt ? 'W' : us < them || pu < pt ? 'L' : 'D';
           }
           return (
             <li key={f.id}>
               <button type="button" className="fixture-row" disabled={!r} onClick={() => setOpen(f)}>
-                <span className="wk">{formatDate(fixtureDate(game, f.week)).replace(/^\w+ /, '')}</span>
-                <span className="ha">{home ? 'H' : 'A'}</span>
+                <span className="wk">{formatDate(matchDate(game, f)).replace(/^\w+ /, '')}</span>
+                <span className={`comp ${isCupTie(f) ? 'cup' : ''}`}>{isCupTie(f) ? cupDef(game.country, f.cupId).short : 'L'}</span>
+                <span className="ha">{isCupTie(f) && f.neutral ? 'N' : home ? 'H' : 'A'}</span>
                 <ClubDot colours={opp.colours} size={12} />
                 <span className="opp">{opp.name}</span>
                 {r ? (
@@ -56,7 +63,7 @@ export function Fixtures() {
         <div className="sheet-backdrop" onClick={() => setOpen(null)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Match report" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-head">
-              <strong className="grow">{formatDate(fixtureDate(game, open.week), true)}</strong>
+              <strong className="grow">{formatDate(matchDate(game, open), true)} · {competitionLabel(game, open)}</strong>
               <button type="button" className="link-btn" onClick={() => setOpen(null)}>
                 Close
               </button>

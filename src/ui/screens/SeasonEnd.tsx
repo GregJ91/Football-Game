@@ -1,3 +1,4 @@
+import { cupDef } from '../../data/cups';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { ClubDot, Crest } from '../components/ClubArt';
@@ -58,6 +59,22 @@ export function SeasonEnd() {
         <LeagueTable game={game} def={division.def} rows={rows} />
       </section>
       <TableKey def={division.def} />
+
+      {(game.cups ?? []).length > 0 && (
+        <section className="card">
+          <div className="card-label"><span>Cup winners</span></div>
+          {game.cups!.map((cup) => {
+            const w = cup.winnerId ? game.clubs[cup.winnerId] : null;
+            return (
+              <div key={cup.id} className="po-row">
+                <span className="grow">{cupDef(game.country, cup.id).name}</span>
+                {w && <ClubDot colours={w.colours} size={12} />}
+                <strong>{w ? w.name : '–'}</strong>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <section className="card">
         <div className="card-label">

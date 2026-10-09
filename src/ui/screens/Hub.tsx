@@ -8,7 +8,8 @@ import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
 import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { boardOf } from '../../engine/club/chairman';
-import { fixtureDate, formatDate } from '../../engine/calendar';
+import { competitionLabel, formatDate, matchDate } from '../../engine/calendar';
+import { isCupTie } from '../../engine/season/cups';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -79,8 +80,8 @@ export function Hub() {
       {next && opponent ? (
         <section className="card fixture">
           <div className="card-label">
-            <span>{formatDate(fixtureDate(game, next.week))} · League</span>
-            <span>{isHome ? 'Home' : 'Away'}</span>
+            <span>{formatDate(matchDate(game, next))} · {competitionLabel(game, next)}</span>
+            <span>{isCupTie(next) && next.neutral ? 'Neutral' : isHome ? 'Home' : 'Away'}</span>
           </div>
           <div className="versus">
             <div className="side">

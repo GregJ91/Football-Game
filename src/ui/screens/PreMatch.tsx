@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { previewMatch, recommendTactics } from '../../engine/match/preview';
 import { pickTeam } from '../../engine/match/selection';
 import { aiTactics, userSelection } from '../../engine/season/season';
+import { competitionLabel } from '../../engine/calendar';
+import { isCupTie } from '../../engine/season/cups';
 import { buildTable } from '../../engine/season/table';
 import type { Tactics } from '../../engine/types';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
@@ -32,8 +34,9 @@ export function PreMatch() {
     const oppSheet = { selection: pickTeam(squadOf(game, opponent.id), oppTactics.formation), tactics: oppTactics };
     const ours = userSelection(game);
     const ourSheet = { selection: ours.selection, tactics: club.tactics };
-    const preview = isHome ? previewMatch(ourSheet, oppSheet, 'home') : previewMatch(oppSheet, ourSheet, 'away');
-    const advice = recommendTactics(squad, oppSheet, isHome ? 'home' : 'away', false, (f) => userSelection(game, f).selection);
+    const neutral = isCupTie(fixture) && fixture.neutral;
+    const preview = isHome ? previewMatch(ourSheet, oppSheet, 'home', neutral) : previewMatch(oppSheet, ourSheet, 'away', neutral);
+    const advice = recommendTactics(squad, oppSheet, isHome ? 'home' : 'away', neutral, (f) => userSelection(game, f).selection);
     const div = divisionOf(game, club.id);
     const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
     const started = table.some((r) => r.played > 0);
@@ -62,7 +65,7 @@ export function PreMatch() {
     <main className="screen prematch">
       <header className="screen-head">
         <button type="button" className="link-btn" onClick={() => go('hub')}>← Hub</button>
-        <div className="eyebrow">Pre-match · {isHome ? 'Home' : 'Away'}</div>
+        <div className="eyebrow">{competitionLabel(game, fixture)} · {isCupTie(fixture) && fixture.neutral ? 'Neutral ground' : isHome ? 'Home' : 'Away'}</div>
         <h1>vs {opponent.name}</h1>
       </header>
 

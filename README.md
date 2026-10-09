@@ -52,6 +52,12 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Season money:** prize money for every club, parachute payments after relegation, and a season ledger.
 - **Day by day, CM 01/02 style:** Continue moves on half a day (AM, then PM, then the next morning), with the date top right. Matches are on Saturdays; Continue on matchday morning takes you to the match. Play match and Sim match on the Hub skip straight to the next game.
 - **Inbox** (top left, with an unread count), filtered by Transfers, Training, Medical, Scouting and Club. It includes Friday training reports, training knocks, match injuries, bids you can answer in place, and scout reports that arrive a few days after you send a scout, with a verdict on the player.
+- **Cups:**
+  - **England:** FA Cup (everyone; non-league clubs start early and the big clubs join later), League Cup (top four levels), FA Trophy (levels 5–6) and FA Vase (level 7).
+  - **Scotland:** Scottish Cup and Scottish League Cup.
+  - **How ties work:** midweek, single-match knockouts with extra time and penalties, and neutral semi-finals and finals where real. The next round is drawn as soon as one is played.
+  - **Rewards:** prize money doubles each round, and fans get a boost for wins (more for giant-killings).
+  - **Honours:** a trophy cabinet and club history under Club → Honours.
 - **Playable UI:** Hub (board and fan meters, things needing attention), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
