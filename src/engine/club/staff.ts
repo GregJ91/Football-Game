@@ -1,3 +1,4 @@
+import { COUNTRIES } from '../../data/pyramids';
 import { FIRST_NAMES, LAST_NAMES } from '../../data/names';
 import { roundMoney } from '../players/ratings';
 import { Rng } from '../rng';
@@ -27,6 +28,17 @@ function levelRating(level: number) {
   return 6 + (8 - level) * 1.5;
 }
 
+/**
+ * The English level whose staff pay a division matches, by how good the
+ * league is: the Highland League pays like England's bottom level, not like
+ * the National League that shares its level number.
+ */
+function payLevel(game: GameState, level: number): number {
+  if (game.country === 'eng') return level;
+  const quality = COUNTRIES[game.country].divisions.find((d) => d.level === level)?.quality ?? 45;
+  return COUNTRIES.eng.divisions.reduce((best, d) => (Math.abs(d.quality - quality) < Math.abs(best.quality - quality) ? d : best)).level;
+}
+
 /** What a member of staff of this rating costs at this level, per week. */
 export function staffWage(rating: number, level: number): number {
   // Part-time staff in non-league: much cheaper.
@@ -49,7 +61,7 @@ function hash(s: string): number {
 export function hireInitialStaff(game: GameState, club: Club) {
   const level = divisionOf(game, club.id).def.level;
   const rng = new Rng(hash(`${game.seed}:${club.id}:staff`));
-  club.staff = Object.fromEntries(STAFF_ROLES.map((role) => [role, person(rng, levelRating(level) - 1 + rng.normal() * 1.5, level)]));
+  club.staff = Object.fromEntries(STAFF_ROLES.map((role) => [role, person(rng, levelRating(level) - 1 + rng.normal() * 1.5, payLevel(game, level))]));
 }
 
 /** This month's shortlist for a post: four candidates, the same all month. */
@@ -60,7 +72,7 @@ export function staffCandidates(game: GameState, role: StaffRole): StaffMember[]
   const base = levelRating(level);
   // One bargain, a couple at the level, and one ambitious (and pricey) option.
   return [base - 3, base, base + 1, base + 4]
-    .map((r) => person(rng, r + rng.normal() * 1.5, level))
+    .map((r) => person(rng, r + rng.normal() * 1.5, payLevel(game, level)))
     .sort((a, b) => b.rating - a.rating);
 }
 

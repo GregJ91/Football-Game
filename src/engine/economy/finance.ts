@@ -1,6 +1,9 @@
 import type { Budgets, Club, CountryId, GameState, Ledger } from '../types';
 import { divisionOf, domesticClubs, squadOf } from '../world';
-import { homeMatchExtras, seasonTicketHolders } from '../club/matchday';
+import { commercialUpkeep, homeMatchExtras, seasonTicketHolders, weeklyMerchandise } from '../club/matchday';
+import { staffWages } from '../club/staff';
+import { totalUpkeep } from '../club/facilities';
+import { groundUpkeep } from '../club/stadium';
 
 /** Typical ticket price by level (£). */
 const TICKET: Record<CountryId, number[]> = {
@@ -10,8 +13,8 @@ const TICKET: Record<CountryId, number[]> = {
 
 /** Weekly TV, prize-pool share and sponsorship by level (£). */
 const TV: Record<CountryId, number[]> = {
-  eng: [0, 1_400_000, 220_000, 60_000, 30_000, 8_000, 3_000, 1_200],
-  sco: [0, 120_000, 20_000, 5_000, 2_500, 900],
+  eng: [0, 1_400_000, 220_000, 60_000, 30_000, 15_000, 6_500, 2_500],
+  sco: [0, 120_000, 20_000, 7_500, 3_500, 2_000],
 };
 
 export function emptyLedger(): Ledger {
@@ -121,7 +124,19 @@ export const WAGE_TO_TRANSFER = 30;
 /** Share of a sale fee the board adds back to the transfer budget. */
 export const SALE_REINVEST = 0.75;
 
-const roundTo = (n: number, step: number) => Math.round(n / step) * step;
+const roundTo = (n: number, step: number, how: 'nearest' | 'down' = 'nearest') => (how === 'down' ? Math.floor(n / step) : Math.round(n / step)) * step;
+
+/**
+ * What comes in every week whether or not there's a home game (TV and the
+ * club shop), less staff wages and upkeep: the most the club can pay its
+ * players and still make money every week. The shirt sponsor isn't counted
+ * (some deals pay up front or on promotion), so it's profit on top.
+ */
+export function spareWeeklyIncome(game: GameState, club: Club): number {
+  const regular = weeklyTv(game, club) + weeklyMerchandise(game, club);
+  const costs = staffWages(club) + totalUpkeep(club) + groundUpkeep(game, club) + commercialUpkeep(club);
+  return Math.max(0, regular - costs);
+}
 
 /** The board sets the season's budgets from income and the bank balance. */
 /** Topped up to this while unlimited money is on. */
@@ -159,7 +174,14 @@ export function setBoardBudgets(game: GameState, club: Club): Budgets {
   const step = income > 100_000 ? 1000 : income > 10_000 ? 100 : 10;
   // A confident board is more generous.
   const confidence = club.board?.confidence ?? 60;
-  const wage = roundTo(Math.max(bill * 1.15, income * 0.75 * (0.88 + confidence / 500)), step);
+  // The user's wage budget is what the club's regular weekly income (TV and the shop) can pay after
+  // staff and upkeep, so even a full budget leaves every week in the green; home games and the shirt
+  // sponsor are profit on top. It never sits below the wages already being paid.
+  const spare = spareWeeklyIncome(game, club);
+  // A little room to sign someone (up to 5% over the current bill), but never past break-even.
+  const wage = club.isUser
+    ? Math.max(Math.ceil(bill), roundTo(Math.max(bill, Math.min(bill * 1.05, spare), spare * (0.82 + confidence / 1000)), step, 'down'))
+    : roundTo(Math.max(bill * 1.15, income * 0.75 * (0.88 + confidence / 500)), step);
   const transfer = roundTo(Math.max(0, club.balance * (0.36 + confidence / 250)), step * 10);
   club.budgets = { transfer, wage };
   return club.budgets;

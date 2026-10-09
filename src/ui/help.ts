@@ -59,7 +59,7 @@ const HELP = {
   bench: ['Substitutes', 'The players on the bench for matches. Untouched slots are filled with the best of the rest.'],
 
   // ---------------------------------------------------------------- transfers
-  transferBudget: ['Budgets', 'What the board lets you spend: a transfer budget for fees and a wage budget for weekly wages. Tap to move money between them.'],
+  transferBudget: ['Budgets', "What the board lets you spend: a transfer budget for fees and a wage budget for weekly wages. The wage budget is set so your weekly TV and shop money covers it, so you're in the green every week even at the limit. Tap to move money between them (going past it can mean losing money)."],
   realistic: ['Realistic targets', "Only show players you could afford: the fee within your transfer budget and wages you could fit in."],
   scoutingTab: ['Scouting', 'Send scouts on missions to find players, read their reports, and keep a shortlist.'],
   scoutMission: ['Scouting mission', 'Tell the scouts what you need. In about a week they come back with reports on the best players who fit and would consider joining. Uses one of the week’s scout reports.'],
