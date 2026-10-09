@@ -70,6 +70,8 @@ export function weeklyIncomeEstimate(game: GameState, club: Club): number {
  * gate) also brings in food, drink and hospitality.
  */
 export function addGate(game: GameState, club: Club, attendance: number, opts: { league?: boolean; atHome?: boolean } = {}) {
+  // Foreign clubs' money isn't tracked (they meet ours in Europe and the Super Cup).
+  if (club.foreign) return;
   // Seats sell for a quarter more than terracing.
   const s = club.stadium;
   const cap = s ? s.stands.reduce((n, x) => n + x.capacity, 0) : 0;

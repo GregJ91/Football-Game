@@ -95,8 +95,18 @@ export const CUPS: Record<CountryId, CupDef[]> = {
   ],
 };
 
+/**
+ * One-off finals at the start of the season, at a neutral ground: the
+ * Community Shield (league champions v FA Cup winners) and the UEFA Super
+ * Cup (Champions League v Europa League winners).
+ */
+export const SHOWPIECES: CupDef[] = [
+  { id: 'community-shield', name: 'Community Shield', short: 'CS', entries: {}, day: 3, window: [0, 0], prize: 250_000, neutralSemis: false, showpiece: true },
+  { id: 'super-cup', name: 'UEFA Super Cup', short: 'USC', entries: {}, day: 3, window: [0, 0], prize: 4_000_000, neutralSemis: false, showpiece: true },
+];
+
 export function cupDef(country: CountryId, id: string): CupDef {
-  const def = CUPS[country].find((c) => c.id === id);
+  const def = CUPS[country].find((c) => c.id === id) ?? SHOWPIECES.find((c) => c.id === id);
   if (!def) throw new Error(`Unknown cup ${id}`);
   return def;
 }

@@ -94,7 +94,43 @@ function placesFromSeason(game: GameState, summary: SeasonSummary): EuroEntry[] 
   const top = game.divisions.find((d) => d.def.level === 1)!;
   const order = summary.finalTables[top.def.id].map((r) => r.clubId);
   const winners = Object.fromEntries((game.cups ?? []).map((c) => [c.id, c.winnerId]));
-  return allocatePlaces(game, order, winners);
+  return titleHolderPlaces(game, allocatePlaces(game, order, winners), order);
+}
+
+const COMP_RANK: Record<string, number> = { ucl: 0, uel: 1, uecl: 2 };
+
+/**
+ * European winners move up: the Champions League and Europa League winners
+ * go into next season's Champions League, the Conference League winners into
+ * the Europa League, straight into the league phase. A place they would have
+ * had anyway passes to the next club in the league.
+ */
+function titleHolderPlaces(game: GameState, entries: EuroEntry[], order: string[]): EuroEntry[] {
+  const top = game.divisions.find((d) => d.def.level === 1)!.def;
+  const won = (id: string) => game.europe?.comps.find((c) => c.id === id)?.winnerId;
+  const grants: [string, string, string][] = [
+    ['ucl', 'ucl', 'Champions League holders'],
+    ['uel', 'ucl', 'Europa League winners'],
+    ['uecl', 'uel', 'Conference League winners'],
+  ];
+  let out = [...entries];
+  for (const [from, to, reason] of grants) {
+    const clubId = won(from);
+    if (!clubId || game.clubs[clubId].foreign) continue;
+    const existing = out.find((e) => e.clubId === clubId);
+    if (existing && COMP_RANK[existing.compId] <= COMP_RANK[to]) {
+      // Already in at least as good a competition: no play-off for the holders.
+      if (existing.compId === to) existing.playoff = false;
+      continue;
+    }
+    out = out.filter((e) => e !== existing);
+    out.push({ clubId, compId: to, playoff: false, reason });
+    if (existing) {
+      const i = order.findIndex((id) => !out.some((e) => e.clubId === id));
+      if (i >= 0) out.push({ clubId: order[i], compId: existing.compId, playoff: existing.playoff, reason: `${ordinal(i + 1)} in the ${top.name}` });
+    }
+  }
+  return out.sort((a, b) => COMP_RANK[a.compId] - COMP_RANK[b.compId]);
 }
 
 /** Before any season has been played, the biggest top-flight clubs take the places. */

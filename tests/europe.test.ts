@@ -1,3 +1,4 @@
+import { cupDef } from '../src/data/cups';
 import { describe, expect, it } from 'vitest';
 import { EURO_COMPS, EURO_SLOTS } from '../src/data/europe';
 import { runToEnd } from '../src/engine/match/engine';
@@ -120,7 +121,10 @@ describe('a European season', () => {
       expect(allTies(game).some((t) => t.homeId === e.clubId || t.awayId === e.clubId)).toBe(true);
       expect(game.clubs[e.clubId].ledger!.prize!).toBeGreaterThan(1_000_000);
     }
-    expect(game.lastSummary!.europe!.qualified).toHaveLength(EURO_SLOTS.eng.length);
+    // One extra place if an English club won the Europa or Conference League.
+    const extra = game.lastSummary!.europe!.qualified.filter((e) => /League (winners|holders)/.test(e.reason)).length;
+    expect(game.lastSummary!.europe!.qualified.length).toBeGreaterThanOrEqual(EURO_SLOTS.eng.length);
+    expect(game.lastSummary!.europe!.qualified.length).toBeLessThanOrEqual(EURO_SLOTS.eng.length + extra);
     expect(game.lastSummary!.europe!.winners).toHaveLength(3);
   });
 
@@ -183,6 +187,7 @@ describe('older saves', () => {
     const game = testGame('sco', 67);
     for (const id of game.europe!.foreignIds) delete game.clubs[id];
     delete game.europe;
+    game.cups = game.cups!.filter((c) => c.id !== 'super-cup');
     playToSeasonEnd(game);
     expect(game.europe!.next).toHaveLength(EURO_SLOTS.sco.length);
     startNextSeason(game);
@@ -204,7 +209,9 @@ describe('testing start: a top-flight giant', () => {
       expect(game.clubs[user].capacity).toBeGreaterThan(40000);
       expect(game.europe!.entries.find((e) => e.clubId === user)).toMatchObject({ compId: 'ucl', playoff: false });
       // Top-flight clubs join the domestic cups later; the user is drawn as rounds reach them.
-      expect(game.cups!.every((c) => !c.rounds[0].ties.some((t) => t.homeId === user || t.awayId === user))).toBe(true);
+      expect(game.cups!.filter((c) => !cupDef(country, c.id).showpiece).every((c) => !c.rounds[0].ties.some((t) => t.homeId === user || t.awayId === user))).toBe(true);
+      // As the biggest club, England's giant opens the season in the Community Shield.
+      if (country === 'eng') expect(game.cups!.find((c) => c.id === 'community-shield')!.rounds[0].ties[0]).toSatisfy((t: { homeId: string; awayId: string }) => t.homeId === user || t.awayId === user);
       playToSeasonEnd(game);
       const ucl = game.europe!.comps.find((c) => c.id === 'ucl')!;
       expect(ucl.league).toContain(user);

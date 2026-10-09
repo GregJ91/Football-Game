@@ -431,6 +431,8 @@ export interface CupDef {
   roundNames?: string[];
   /** Inbox message when the user's club reaches a round (by index). */
   milestones?: Record<number, string>;
+  /** A one-off final between last season's winners (Community Shield, Super Cup). */
+  showpiece?: boolean;
 }
 
 export interface CupTie extends Fixture {

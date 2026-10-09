@@ -9,7 +9,8 @@ import { testGame } from './helpers';
 describe('cup set-up', () => {
   it('England has four cups, first rounds drawn, big clubs joining later', () => {
     const game = testGame('eng', 51);
-    expect(game.cups!.map((c) => c.id)).toEqual(['fa-cup', 'league-cup', 'fa-trophy', 'fa-vase']);
+    // Plus the season's one-off finals: the Community Shield and the UEFA Super Cup.
+    expect(game.cups!.map((c) => c.id)).toEqual(['fa-cup', 'league-cup', 'fa-trophy', 'fa-vase', 'community-shield', 'super-cup']);
     const fa = game.cups![0];
     expect(fa.rounds[0].drawn).toBe(true);
     const r0 = fa.rounds[0].ties.flatMap((t) => [t.homeId, t.awayId]).concat(fa.rounds[0].byes);

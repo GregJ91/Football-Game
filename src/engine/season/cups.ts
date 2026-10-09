@@ -8,8 +8,8 @@ import { roundMoney } from '../players/ratings';
 import { recoverTo } from '../players/squad';
 import type { Rng } from '../rng';
 import type { CupDef, CupRound, CupState, CupTie, GameState } from '../types';
-import { addInbox } from '../transfers/market';
-import { divisionOf, newId, withRng } from '../world';
+import { addInbox, levelOf } from '../transfers/market';
+import { leagueNameOf, newId, withRng } from '../world';
 import { completeUserEuroTie, euroMatchOptions, playEuroRound } from './europe';
 import { playMatch } from './season';
 
@@ -73,6 +73,7 @@ export function tieMatchOptions(game: GameState, tie: CupTie): SimOptions {
 
 /** Create this season's cups with their round dates, and make the first draws. */
 export function setupCups(game: GameState) {
+  const previousCups = game.cups ?? [];
   // European nights are fixed first; a domestic round that clashes moves to another midweek day.
   const euro = new Set((game.europe?.comps ?? []).flatMap((c) => c.rounds.map((r) => `${r.week}:${r.day}`)));
   const taken = new Set(euro);
@@ -93,7 +94,44 @@ export function setupCups(game: GameState) {
   });
   withRng(game, (rng) => {
     for (const cup of game.cups!) drawRound(game, rng, cup, 0, []);
+    // The season's curtain-raisers: one match each, at a neutral ground.
+    for (const { id, pair, week } of showpieceMatches(game, previousCups)) {
+      const cup: CupState = { id, season: game.season, rounds: [{ name: 'Final', week, day: freeDay(week, 3), ties: [], byes: [], drawn: false, played: false }] };
+      taken.add(`${week}:${cup.rounds[0].day}`);
+      game.cups!.push(cup);
+      drawRound(game, rng, cup, 0, pair);
+    }
   });
+}
+
+/**
+ * Who plays in the Community Shield (England: league champions v FA Cup
+ * winners, or the runners-up if one club won both) and the UEFA Super Cup
+ * (Champions League v Europa League winners). Before any season has been
+ * played, the biggest clubs stand in.
+ */
+function showpieceMatches(game: GameState, previousCups: CupState[]): { id: string; pair: string[]; week: number }[] {
+  const out: { id: string; pair: string[]; week: number }[] = [];
+  const summary = game.lastSummary;
+  const top = game.divisions.find((d) => d.def.level === 1)!;
+  if (game.country === 'eng') {
+    const table = summary?.finalTables[top.def.id]?.map((r) => r.clubId);
+    const byRep = [...top.clubIds].sort((a, b) => game.clubs[b].reputation - game.clubs[a].reputation);
+    const champions = table?.[0] ?? byRep[0];
+    const cupWinner = previousCups.find((c) => c.id === 'fa-cup')?.winnerId;
+    const opponent = cupWinner && cupWinner !== champions ? cupWinner : (table ?? byRep).find((id) => id !== champions);
+    if (champions && opponent && game.clubs[champions] && game.clubs[opponent]) out.push({ id: 'community-shield', pair: [champions, opponent], week: 0 });
+  }
+  const euroWinners = summary?.europe?.winners;
+  const ucl = euroWinners?.find((w) => w.compId === 'ucl')?.clubId;
+  const uel = euroWinners?.find((w) => w.compId === 'uel')?.clubId;
+  if (ucl && uel && ucl !== uel) out.push({ id: 'super-cup', pair: [ucl, uel], week: 2 });
+  else if (!summary && game.europe) {
+    // First season: the strongest club in Europe against a strong outsider.
+    const foreign = game.europe.foreignIds.map((id) => game.clubs[id]).sort((a, b) => b.foreign!.strength - a.foreign!.strength);
+    if (foreign.length > 8) out.push({ id: 'super-cup', pair: [foreign[0].id, foreign[7].id], week: 2 });
+  }
+  return out;
 }
 
 function drawRound(game: GameState, rng: Rng, cup: CupState, r: number, through: string[]) {
@@ -134,10 +172,18 @@ function drawRound(game: GameState, rng: Rng, cup: CupState, r: number, through:
   if (tie) {
     const opp = game.clubs[tie.homeId === user ? tie.awayId : tie.homeId];
     const where = tie.neutral ? 'at a neutral ground' : tie.homeId === user ? 'at home' : 'away';
-    addInbox(game, 'info', `${def.name} ${round.name} draw: ${opp.name} (${divisionOf(game, opp.id).def.name}), ${where}, on ${formatDate(dateIn(game.season, round.week, round.day))}.`, {
-      category: 'match',
-      subject: `${def.name}: ${round.name} draw`,
-    });
+    const when = formatDate(dateIn(game.season, round.week, round.day));
+    if (def.showpiece) {
+      addInbox(game, 'info', `We're in the ${def.name}: ${opp.name} (${leagueNameOf(game, opp.id)}), ${where}, on ${when}. A trophy to start the season.`, {
+        category: 'match',
+        subject: def.name,
+      });
+    } else {
+      addInbox(game, 'info', `${def.name} ${round.name} draw: ${opp.name} (${leagueNameOf(game, opp.id)}), ${where}, on ${when}.`, {
+        category: 'match',
+        subject: `${def.name}: ${round.name} draw`,
+      });
+    }
   } else if (round.byes.includes(user)) {
     addInbox(game, 'info', `You have a bye ${inRound(round.name)} of the ${def.name}.`, { category: 'match', subject: `${def.name}: bye` });
   }
@@ -160,7 +206,7 @@ function settleTie(game: GameState, cup: CupState, tie: CupTie) {
   if (tie.winnerId === user.id || loserId === user.id) {
     const opp = game.clubs[tie.winnerId === user.id ? loserId : tie.winnerId];
     const round = cup.rounds[tie.round];
-    const giantKilling = divisionOf(game, opp.id).def.level < divisionOf(game, user.id).def.level;
+    const giantKilling = !def.showpiece && levelOf(game, opp.id) < levelOf(game, user.id);
     const board = (user.board ??= { confidence: 60, fans: 60 });
     if (tie.winnerId === user.id) {
       board.fans = Math.min(100, board.fans + (giantKilling ? 6 : 3));

@@ -34,6 +34,13 @@ export function Cups() {
       const where = next.neutral ? 'neutral ground' : next.homeId === user ? 'home' : 'away';
       return { text: `${round.name}: ${opp.name} (${where}), ${formatDate(dateIn(game.season, round.week, round.day))}.`, tone: 'neutral' };
     }
+    if (def.showpiece) {
+      const tie = cup.rounds[0]?.ties[0];
+      if (!tie) return { text: 'Not played this season.', tone: 'neutral' };
+      const [a, b] = [game.clubs[tie.homeId].name, game.clubs[tie.awayId].name];
+      if (cup.winnerId) return { text: `${game.clubs[cup.winnerId].name} won it.`, tone: 'neutral' };
+      return { text: `${a} v ${b} at a neutral ground, ${formatDate(dateIn(game.season, cup.rounds[0].week, cup.rounds[0].day))}.`, tone: 'neutral' };
+    }
     const entered = def.entries[userLevel] !== undefined;
     if (!entered) return { text: 'Not entered: this cup is for clubs at other levels.', tone: 'neutral' };
     if (cup.winnerId) return { text: 'Finished.', tone: 'neutral' };

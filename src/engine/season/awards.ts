@@ -6,7 +6,7 @@ import { canPlay } from '../players/ratings';
 import type { AwardWinner, BallonDorPlace, DivisionAwards, GameState, MatchResult, MonthlyAwards, Player, Position, SeasonSummary, YearAwards } from '../types';
 import { addInbox } from '../transfers/market';
 import { playerById, squadOf, withRng } from '../world';
-import { cupDef } from '../../data/cups';
+import { SHOWPIECES, cupDef } from '../../data/cups';
 import { euroDef } from '../../data/europe';
 import { nationOf } from './europe';
 
@@ -219,7 +219,7 @@ export function seasonAwards(game: GameState, summary: SeasonSummary) {
   const leagues = new Set(game.divisions.map((d) => d.def.id));
   summary.cupGloves = {};
   for (const compId of Object.keys(game.cleanSheets ?? {})) {
-    if (leagues.has(compId)) continue;
+    if (leagues.has(compId) || SHOWPIECES.some((s) => s.id === compId)) continue;
     const glove = goldenGlove(game, compId);
     if (glove) summary.cupGloves[compId] = glove;
   }
