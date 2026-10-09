@@ -1,0 +1,35 @@
+import { useState } from 'react';
+import { buildTable } from '../../engine/season/table';
+import { divisionOf } from '../../engine/world';
+import { useGame } from '../../state/store';
+import { LeagueTable, TableKey } from '../components/LeagueTable';
+
+export function League() {
+  const game = useGame((s) => s.game)!;
+  useGame((s) => s.rev);
+  const [divId, setDivId] = useState(() => divisionOf(game, game.userClubId).def.id);
+  const division = game.divisions.find((d) => d.def.id === divId) ?? game.divisions[0];
+  const rows = buildTable(division.clubIds, game.fixtures.filter((f) => f.divisionId === division.def.id));
+
+  return (
+    <main className="screen league">
+      <header className="screen-head">
+        <h1>League</h1>
+        <label className="field">
+          <span className="visually-hidden">Division</span>
+          <select value={division.def.id} onChange={(e) => setDivId(e.target.value)}>
+            {game.divisions.map((d) => (
+              <option key={d.def.id} value={d.def.id}>
+                Level {d.def.level} · {d.def.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
+      <section className="card flush">
+        <LeagueTable game={game} def={division.def} rows={rows} />
+      </section>
+      <TableKey def={division.def} />
+    </main>
+  );
+}
