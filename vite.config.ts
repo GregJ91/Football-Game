@@ -2,10 +2,8 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 
-/** Version shown on the home screen: the package version plus a build number that goes up with every commit. */
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+/** The update number (commit count): the home screen shows it as v1.01, v1.02… (see src/version.ts). */
 const git = (cmd: string) => {
   try {
     return execSync(`git ${cmd}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
@@ -21,7 +19,6 @@ export default defineConfig(({ mode }) => ({
   // Served from a sub-path (e.g. GitHub Pages /Football-Game/) when BASE_PATH is set.
   base: process.env.BASE_PATH ?? '/',
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(BUILD),
     __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },

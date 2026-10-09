@@ -3,7 +3,7 @@ import { listSaves, type SaveMeta } from '../../state/persistence';
 import { useGame } from '../../state/store';
 import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
-import { APP_BUILD, APP_BUILT_AT, APP_VERSION } from '../../version';
+import { APP_BUILT_AT, APP_VERSION } from '../../version';
 
 export function Start() {
   const go = useGame((s) => s.go);
@@ -78,7 +78,7 @@ export function Start() {
 
       <footer className="version">
         <span>
-          Version {APP_VERSION} · build {APP_BUILD}
+          Version v{APP_VERSION}
           <small>Updated {formatDate(APP_BUILT_AT, true)}</small>
         </span>
         <button type="button" className="link-btn" disabled={checking} onClick={() => void checkForUpdates()}>
