@@ -428,7 +428,14 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 .a-good { color: var(--good); }
 .a-avg { color: var(--text); }
 .a-poor { color: var(--warn); }
-@media (max-width: 380px) { .cm-attrs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Two columns on narrow phones: Technical (or Goalkeeping) then Physical down the
+   left, Mental (the longest list) down the right, so there's no gap. */
+@media (max-width: 380px) {
+  .cm-attrs { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .cm-col:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .cm-col:nth-child(2) { grid-column: 2; grid-row: 1 / span 2; }
+  .cm-col:nth-child(3) { grid-column: 1; grid-row: 2; margin-top: 10px; }
+}
 details.others { margin-top: 6px; }
 details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 10px 4px; min-height: 44px; display: flex; align-items: center; }
 .player-row .pos { width: auto; min-width: 40px; }
