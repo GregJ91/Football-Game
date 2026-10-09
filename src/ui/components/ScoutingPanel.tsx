@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { useState } from 'react';
 import { dateIn, formatDate, scoutDueDate } from '../../engine/calendar';
 import { scoutReportsPerWeek, staffRating } from '../../engine/club/staff';
@@ -50,7 +51,7 @@ export function ScoutingPanel({ onOpen }: { onOpen: (p: Player) => void }) {
 
   return (
     <>
-      <section className="card scout-team">
+      <section className="card scout-team" {...hp('chiefScout')}>
         <div className="card-label">
           <span>Chief scout</span>
           <span>{left} of {scoutReportsPerWeek(club)} reports left this week</span>
@@ -63,7 +64,7 @@ export function ScoutingPanel({ onOpen }: { onOpen: (p: Player) => void }) {
       </section>
 
       <section className="card">
-        <div className="card-label"><span>New scouting mission</span><span>{missions.length}/{MAX_MISSIONS} out</span></div>
+        <div className="card-label" {...hp('scoutMission')}><span>New scouting mission</span><span>{missions.length}/{MAX_MISSIONS} out</span></div>
         <p className="muted small">Tell your scouts what you need. They come back with the best players who fit and would consider joining.</p>
         <div className="grid-3">
           <label className="field">
@@ -119,7 +120,7 @@ export function ScoutingPanel({ onOpen }: { onOpen: (p: Player) => void }) {
       )}
 
       <section className="card">
-        <div className="card-label"><span>Shortlist</span><span>{shortlist.length}</span></div>
+        <div className="card-label" {...hp('shortlist')}><span>Shortlist</span><span>{shortlist.length}</span></div>
         {shortlist.length === 0 ? (
           <p className="muted small">Star a player from his profile to keep an eye on him here.</p>
         ) : (

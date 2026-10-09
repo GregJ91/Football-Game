@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { useMemo, useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
 import { POSITION_ORDER, positionsLabel } from '../../engine/players/ratings';
@@ -126,7 +127,7 @@ export function Transfers() {
         <h1>Transfers</h1>
       </header>
 
-      <button type="button" className="card budgets" onClick={() => setBudgetSheet(true)}>
+      <button type="button" className="card budgets" onClick={() => setBudgetSheet(true)} {...hp('transferBudget')}>
         <span>
           <small>Transfer budget</small>
           <strong>{money(budgets.transfer)}</strong>
@@ -141,7 +142,7 @@ export function Transfers() {
 
       <div className="segmented" role="tablist">
         {(['search', 'scouting', 'yours', 'recent'] as Tab[]).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
+          <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} {...(t === 'scouting' ? hp('scoutingTab') : {})}>
             {t === 'search' ? 'Search' : t === 'scouting' ? 'Scouting' : t === 'yours' ? `Offers${bids.length ? ` (${bids.length})` : ''}` : 'History'}
           </button>
         ))}
@@ -186,7 +187,7 @@ export function Transfers() {
             </label>
             <div className="pills compact">
               <button type="button" className="pill" aria-pressed={listedOnly} onClick={() => filter(setListedOnly)(!listedOnly)}>Transfer listed</button>
-              <button type="button" className="pill" aria-pressed={affordable} onClick={() => filter(setAffordable)(!affordable)}>Realistic targets</button>
+              <button type="button" className="pill" {...hp('realistic')} aria-pressed={affordable} onClick={() => filter(setAffordable)(!affordable)}>Realistic targets</button>
             </div>
           </div>
           {activeChallenge(game) === 'kids' && <p className="note neutral"><span aria-hidden="true">•</span>Challenge: only players aged 21 or under are shown.</p>}
@@ -212,7 +213,7 @@ export function Transfers() {
                 <li key={p.id}>
                   <button type="button" className="player-row" onClick={() => setOpen(p)}>
                     <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
-                    <span className={`ovr ${known ? '' : 'range'}`}>{known ? p.overall : `${lo}–${hi}`}</span>
+                    <span className={`ovr ${known ? '' : 'range'}`} {...hp('ovr')}>{known ? p.overall : `${lo}–${hi}`}</span>
                     <span className="who">
                       <strong>{p.firstName} {p.lastName}{p.listed || p.transferRequest ? <small className="warn"> Listed</small> : null}</strong>
                       <small>
@@ -222,7 +223,7 @@ export function Transfers() {
                     <span className="role">
                       {money(p.value)}
                       <small>{sort.key === 'price' && from ? `Asking ${money(fee)}` : from ? '' : 'Free'}</small>
-                      <small className={`interest-text interest-${interest}`}>{INTEREST_DOT[interest]}</small>
+                      <small className={`interest-text interest-${interest}`} {...hp('interest')}>{INTEREST_DOT[interest]}</small>
                     </span>
                   </button>
                 </li>

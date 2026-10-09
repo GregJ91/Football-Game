@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { useState } from 'react';
 import { FORMATIONS } from '../../engine/match/selection';
 import { canPlay, effectiveRating, positionFit, positionsLabel, positionsOf } from '../../engine/players/ratings';
@@ -210,7 +211,7 @@ export function Tactics() {
       </section>
 
       <section className="card">
-        <div className="card-label">
+        <div className="card-label" {...hp('bench')}>
           <span>Substitutes</span>
           {club.bench ? <button type="button" className="link-btn" onClick={resetBench}>Auto-pick subs</button> : <span>Best of the rest</span>}
         </div>

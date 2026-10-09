@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { INTEREST_TEXT, VERDICT_TEXT, isShortlisted } from '../../engine/transfers/scouting';
 import { useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
@@ -129,7 +130,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label={playerName(p)} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
-          <span className="ovr big">{known ? p.overall : `${lo}–${hi}`}</span>
+          <span className="ovr big" {...hp('ovr')}>{known ? p.overall : `${lo}–${hi}`}</span>
           <div className="grow">
             <strong>{playerName(p)}</strong>
             <small>
@@ -140,6 +141,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
             <button
               type="button"
               className="star-btn"
+              {...hp('shortlist')}
               aria-pressed={shortlisted}
               aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
               onClick={() => toggleShortlist(p.id)}
@@ -151,16 +153,16 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
         </div>
 
         <div className="facts">
-          {p.clubId && <span>Value {money(p.value)}</span>}
-          <span>Wage {moneyPw(p.wage)}</span>
-          {p.clubId && <span>Contract ends summer {p.contractEnd + 1}</span>}
-          {own && <span>Fitness {Math.round(p.fitness)}%</span>}
-          {own && <span>Morale {Math.round(p.morale)}</span>}
-          {own && <span>Form {p.form.toFixed(1)}</span>}
+          {p.clubId && <span {...hp('value')}>Value {money(p.value)}</span>}
+          <span {...hp('wage')}>Wage {moneyPw(p.wage)}</span>
+          {p.clubId && <span {...hp('contract')}>Contract ends summer {p.contractEnd + 1}</span>}
+          {own && <span {...hp('fitness')}>Fitness {Math.round(p.fitness)}%</span>}
+          {own && <span {...hp('morale')}>Morale {Math.round(p.morale)}</span>}
+          {own && <span {...hp('form')}>Form {p.form.toFixed(1)}</span>}
           {own && p.listed && <span className="warn">Transfer listed</span>}
           {own && p.loanFrom && <span className="warn">On loan from {game.clubs[p.loanFrom].name}</span>}
-          {interest && <span className={`interest interest-${interest}`}>{INTEREST_LABEL[interest]}</span>}
-          {known && !own && <span>Potential {'★'.repeat(potentialStars(p))}{'☆'.repeat(5 - potentialStars(p))}</span>}
+          {interest && <span className={`interest interest-${interest}`} {...hp('interest')}>{INTEREST_LABEL[interest]}</span>}
+          {known && !own && <span {...hp('potential')}>Potential {'★'.repeat(potentialStars(p))}{'☆'.repeat(5 - potentialStars(p))}</span>}
         </div>
 
         {step.kind === 'view' && (
@@ -183,7 +185,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
             {own && (
               <div className="role-box">
                 <div className="card-label">
-                  <span>Squad role</span>
+                  <span {...hp('role')}>Squad role</span>
                   <span className={`mood mood-${moodOf(p)}`}>{moodOf(p)}</span>
                 </div>
                 <div className="pills compact" role="group" aria-label="Squad role">
@@ -223,6 +225,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
                       <button
                         type="button"
                         className="btn secondary"
+                        {...hp('scoutPlayer')}
                         disabled={(game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK) <= 0}
                         onClick={() => {
                           const r = scout(p.id);
@@ -243,7 +246,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
                 {blocker || talksOff ? (
                   <p className="note bad"><span aria-hidden="true">▼</span>{talksOff ? `${p.lastName} has walked away from talks.` : blocker}</p>
                 ) : p.clubId ? (
-                  <button type="button" className="btn primary" onClick={() => setStep({ kind: 'fee' })}>Make an offer</button>
+                  <button type="button" className="btn primary" onClick={() => setStep({ kind: 'fee' })} {...hp('offer')}>Make an offer</button>
                 ) : (
                   <button type="button" className="btn primary" onClick={() => setStep({ kind: 'terms', fee: 0 })}>Offer a contract</button>
                 )}
@@ -255,6 +258,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
                     <button
                       type="button"
                       className="btn tile"
+                      {...hp('loan')}
                       onClick={() => {
                         const err = loanPlayer(p.id);
                         setStep({ kind: 'done', message: err ?? `${playerName(p)} joins on loan until the end of the season. You pay his ${moneyPw(p.wage)}.` });
@@ -285,10 +289,10 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
             {own && !p.loanFrom && (
               <div className="stack">
                 <div className="grid-2">
-                  <button type="button" className="btn tile" onClick={() => toggleListed(p.id)}>
+                  <button type="button" className="btn tile" onClick={() => toggleListed(p.id)} {...hp('listed')}>
                     {p.listed ? 'Take off the list' : 'Transfer list'}
                   </button>
-                  <button type="button" className="btn tile" onClick={() => setStep({ kind: 'renew' })}>New contract</button>
+                  <button type="button" className="btn tile" onClick={() => setStep({ kind: 'renew' })} {...hp('renew')}>New contract</button>
                 </div>
                 {confirmRelease ? (
                   <div className="grid-2">
@@ -306,7 +310,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
                     <button type="button" className="btn tile" onClick={() => setConfirmRelease(false)}>Keep him</button>
                   </div>
                 ) : (
-                  <button type="button" className="link-btn" onClick={() => setConfirmRelease(true)}>
+                  <button type="button" className="link-btn" onClick={() => setConfirmRelease(true)} {...hp('release')}>
                     Release him (pay-off {money(releaseCost(game, p))})
                   </button>
                 )}

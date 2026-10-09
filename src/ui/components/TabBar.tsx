@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { hp } from '../help';
 import { useGame, type Screen } from '../../state/store';
 
 const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
@@ -38,6 +39,8 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
   },
 ];
 
+const NAV_HELP = { hub: 'navHub', squad: 'navSquad', tactics: 'navTactics', transfers: 'navTransfers', club: 'navClub' } as const;
+
 export function TabBar() {
   const current = useGame((s) => s.screen);
   // League and fixtures are reached from the Hub.
@@ -52,6 +55,7 @@ export function TabBar() {
           className={screen === t.screen ? 'active' : undefined}
           aria-current={screen === t.screen ? 'page' : undefined}
           onClick={() => go(t.screen)}
+          {...hp(NAV_HELP[t.screen as keyof typeof NAV_HELP])}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             {t.icon}

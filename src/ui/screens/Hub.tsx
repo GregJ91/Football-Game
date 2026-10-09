@@ -12,6 +12,7 @@ import { nextLevelGrading } from '../../engine/club/stadium';
 import { competitionLabel, formatDate, matchDate } from '../../engine/calendar';
 import { isCupTie } from '../../engine/season/cups';
 import { challengeDef, seasonsSurvived } from '../../engine/club/challenge';
+import { hp } from '../help';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -69,18 +70,18 @@ export function Hub() {
             {seasonLabel(game.season)} · Game {matchday} of {ourFixtures.length} · {division.def.name}
           </div>
         </div>
-        <div className="bank">
+        <div className="bank" {...hp('bank')}>
           <strong>{money(club.balance)}</strong>
           <span>Bank</span>
         </div>
       </header>
 
       <button type="button" className="mood-row" onClick={() => go('club')}>
-        <span>Board <b>{Math.round(board.confidence)}</b><i className="mini"><i style={{ width: `${board.confidence}%` }} /></i></span>
-        <span>Fans <b>{Math.round(board.fans)}</b><i className="mini fans"><i style={{ width: `${board.fans}%` }} /></i></span>
+        <span {...hp('board')}>Board <b>{Math.round(board.confidence)}</b><i className="mini"><i style={{ width: `${board.confidence}%` }} /></i></span>
+        <span {...hp('fans')}>Fans <b>{Math.round(board.fans)}</b><i className="mini fans"><i style={{ width: `${board.fans}%` }} /></i></span>
         {board.warning === 'final' ? (
           <span className="target-chip danger">Final warning</span>
-        ) : board.target && <span className="target-chip">Target: {board.target.label}</span>}
+        ) : board.target && <span className="target-chip" {...hp('target')}>Target: {board.target.label}</span>}
       </button>
 
       {game.challenge?.status === 'active' && (() => {
@@ -127,16 +128,16 @@ export function Hub() {
             </div>
           </div>
           <div className="grid-2">
-            <button type="button" className="btn primary" disabled={busy} onClick={openPreMatch}>
+            <button type="button" className="btn primary" disabled={busy} onClick={openPreMatch} {...hp('playMatch')}>
               Play match
               <small>Pick the team, watch it live</small>
             </button>
-            <button type="button" className="btn secondary" disabled={busy} onClick={() => void simNextMatch()}>
+            <button type="button" className="btn secondary" disabled={busy} onClick={() => void simNextMatch()} {...hp('simMatch')}>
               {busy ? 'Simming…' : 'Sim match'}
               <small>Plays the full 90 minutes instantly</small>
             </button>
           </div>
-          <button type="button" className="link-btn center" disabled={busy} onClick={() => void simToSeasonEnd()}>
+          <button type="button" className="link-btn center" disabled={busy} onClick={() => void simToSeasonEnd()} {...hp('simSeason')}>
             Sim to the end of the season
           </button>
         </section>
@@ -165,7 +166,7 @@ export function Hub() {
       )}
 
       {grading && !grading.ok && division.def.promotion && (
-        <button type="button" className="card grading-alert" onClick={() => go('club')}>
+        <button type="button" className="card grading-alert" onClick={() => go('club')} {...hp('gradingAlert')}>
           <strong>Your ground isn't good enough to go up</strong>
           <small>
             Even if you win the league, you won't be promoted until the ground passes:{' '}

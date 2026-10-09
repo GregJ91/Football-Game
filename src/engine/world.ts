@@ -299,7 +299,7 @@ export function createGame(config: NewGameConfig): GameState {
   scheduleSeason(game);
   setupEurope(game);
   setupCups(game);
-  addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays.`, { subject: 'Welcome' });
+  addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays. Not sure what something does? Press and hold it.`, { subject: 'Welcome' });
   assignRoles(game, user);
   startOfSeasonBusiness(game);
   return game;

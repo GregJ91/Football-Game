@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { FORMATIONS } from '../../engine/match/selection';
 import type { Formation, Mentality, Pressing, Tactics } from '../../engine/types';
 
@@ -13,7 +14,7 @@ const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 export function TacticsPicker({ tactics, onChange }: { tactics: Tactics; onChange: (t: Tactics) => void }) {
   return (
     <div className="tactics-picker">
-      <fieldset>
+      <fieldset {...hp('formation')}>
         <legend>Formation</legend>
         <div className="pills">
           {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
@@ -23,7 +24,7 @@ export function TacticsPicker({ tactics, onChange }: { tactics: Tactics; onChang
           ))}
         </div>
       </fieldset>
-      <fieldset>
+      <fieldset {...hp('mentality')}>
         <legend>Mentality</legend>
         <div className="pills">
           {MENTALITIES.map((m) => (
@@ -33,7 +34,7 @@ export function TacticsPicker({ tactics, onChange }: { tactics: Tactics; onChang
           ))}
         </div>
       </fieldset>
-      <fieldset>
+      <fieldset {...hp('pressing')}>
         <legend>Pressing</legend>
         <div className="pills">
           {PRESSING.map((p) => (

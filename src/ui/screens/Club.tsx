@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { useState } from 'react';
 import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
 import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
@@ -83,7 +84,7 @@ export function Club() {
     const s = stadium.stands[i];
     const work = stadium.builds.find((b) => b.stand === i);
     return (
-      <button type="button" className={`stand stand-${area} ${work ? 'building' : ''}`} onClick={() => setStandSheet(i)}>
+      <button type="button" className={`stand stand-${area} ${work ? 'building' : ''}`} onClick={() => setStandSheet(i)} {...hp('stand')}>
         <strong>{s.name}</strong>
         <span>{s.capacity.toLocaleString('en-GB')}{s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}</span>
         {s.roof && <em>Roofed</em>}
@@ -187,9 +188,9 @@ export function Club() {
           </section>
 
           <div className="stat-row">
-            <div><small>Capacity</small><strong>{totalCapacity(stadium).toLocaleString('en-GB')}</strong>{club.capacity < totalCapacity(stadium) && <small>{club.capacity.toLocaleString('en-GB')} during work</small>}</div>
-            <div><small>Seats</small><strong>{totalSeats(stadium).toLocaleString('en-GB')}</strong></div>
-            <div><small>Floodlights</small><strong>{stadium.floodlights ? 'Yes' : 'No'}</strong></div>
+            <div {...hp('capacity')}><small>Capacity</small><strong>{totalCapacity(stadium).toLocaleString('en-GB')}</strong>{club.capacity < totalCapacity(stadium) && <small>{club.capacity.toLocaleString('en-GB')} during work</small>}</div>
+            <div {...hp('seats')}><small>Seats</small><strong>{totalSeats(stadium).toLocaleString('en-GB')}</strong></div>
+            <div {...hp('floodlights')}><small>Floodlights</small><strong>{stadium.floodlights ? 'Yes' : 'No'}</strong></div>
           </div>
 
           {!stadium.floodlights && !stadium.builds.some((b) => b.kind === 'floodlights') && (() => {
@@ -217,7 +218,7 @@ export function Club() {
           )}
 
           {grading && (
-            <section className={`card grading ${grading.ok ? 'ok' : 'not-ok'}`}>
+            <section className={`card grading ${grading.ok ? 'ok' : 'not-ok'}`} {...hp('grading')}>
               <div className="card-label">
                 <span>Ground rules for the level above</span>
                 <span>{grading.ok ? 'Passes' : 'Not yet'}</span>
@@ -245,7 +246,7 @@ export function Club() {
             const max = (kind === 'food' ? FOOD_LEVELS : VIP_LEVELS).length - 1;
             return (
               <section key={kind} className="card facility">
-                <div className="facility-head">
+                <div className="facility-head" {...hp(kind)}>
                   <span>
                     <strong>{kind === 'food' ? 'Food and drink' : 'VIP hospitality'}</strong>
                     <small className="block muted">{cur.name}</small>
@@ -277,7 +278,7 @@ export function Club() {
           })}
 
           <section className="card">
-            <div className="card-label"><span>Ground running costs</span><span>{moneyPw(groundUpkeep(game, club) + commercialUpkeep(club))}</span></div>
+            <div className="card-label" {...hp('groundUpkeep')}><span>Ground running costs</span><span>{moneyPw(groundUpkeep(game, club) + commercialUpkeep(club))}</span></div>
             <div className="ledger">
               <div><span>Stands, seats, roofs and floodlights</span><b>{moneyPw(groundUpkeep(game, club))}</b></div>
               <div><span>Food and drink</span><b>{moneyPw(FOOD_LEVELS[foodLevel(club)].upkeep)}</b></div>
@@ -300,7 +301,7 @@ export function Club() {
                     <strong>{STAFF_INFO[role].name}</strong>
                     <small className="block muted">{s ? `${s.name} · ${moneyPw(s.wage)}` : 'Vacant'}</small>
                   </span>
-                  <span className={`staff-rating ${s && s.rating >= 15 ? 'a-top' : s && s.rating >= 11 ? 'a-good' : s && s.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{s ? `${s.rating}/20` : '–'}</span>
+                  <span {...hp('staffRating')} className={`staff-rating ${s && s.rating >= 15 ? 'a-top' : s && s.rating >= 11 ? 'a-good' : s && s.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{s ? `${s.rating}/20` : '–'}</span>
                 </div>
                 <p className="muted small">{STAFF_INFO[role].effect}</p>
                 <button type="button" className="btn tile" onClick={() => setStaffSheet(role)}>Find a replacement</button>
@@ -314,7 +315,7 @@ export function Club() {
             const inProgress = stadium.builds.find((b) => b.kind === 'facility' && b.facility === kind);
             return (
               <section key={kind} className="card facility">
-                <div className="facility-head">
+                <div className="facility-head" {...hp('facility')}>
                   <strong>{FACILITY_INFO[kind].name}</strong>
                   <span className="pips" aria-label={`Level ${level} of ${MAX_FACILITY}`}>
                     {Array.from({ length: MAX_FACILITY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
@@ -373,13 +374,13 @@ export function Club() {
       {tab === 'money' && (
         <>
           <div className="stat-row">
-            <div><small>Bank</small><strong>{money(club.balance)}</strong></div>
+            <div {...hp('bank')}><small>Bank</small><strong>{money(club.balance)}</strong></div>
             <div><small>Wages</small><strong>{moneyPw(wageBill(game, club))}</strong></div>
             <div><small>TV & sponsors</small><strong>{moneyPw(weeklyTv(game, club) + (club.sponsor?.weekly ?? 0))}</strong></div>
           </div>
 
           <section className="card">
-            <div className="card-label"><span>A normal week</span><span className={weeklyNet >= 0 ? 'good' : 'warn'}>{weeklyNet >= 0 ? '+' : '−'}{moneyPw(Math.abs(weeklyNet))}</span></div>
+            <div className="card-label" {...hp('weekly')}><span>A normal week</span><span className={weeklyNet >= 0 ? 'good' : 'warn'}>{weeklyNet >= 0 ? '+' : '−'}{moneyPw(Math.abs(weeklyNet))}</span></div>
             <div className="ledger">
               <h3>Money in</h3>
               <div><span>TV money</span><b>{moneyPw(weekly.tv)}</b></div>
@@ -396,7 +397,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <div className="card-label"><span>Each home league game</span><span>about {money(homeGame.gate + homeGame.food + homeGame.vip)}</span></div>
+            <div className="card-label" {...hp('homeGame')}><span>Each home league game</span><span>about {money(homeGame.gate + homeGame.food + homeGame.vip)}</span></div>
             <div className="ledger">
               <div><span>Gate: {payers.toLocaleString('en-GB')} paying fans at £{price}</span><b>{money(homeGame.gate)}</b></div>
               <div><span>Food and drink</span><b>{money(homeGame.food)}</b></div>
@@ -410,7 +411,7 @@ export function Club() {
 
           {club.seasonTickets?.season === game.season && (
             <section className="card">
-              <div className="card-label"><span>Season tickets</span><span>{money(club.seasonTickets.revenue)}</span></div>
+              <div className="card-label" {...hp('seasonTickets')}><span>Season tickets</span><span>{money(club.seasonTickets.revenue)}</span></div>
               <p className="small">
                 {club.seasonTickets.holders.toLocaleString('en-GB')} sold at {money(club.seasonTickets.price)} each, paid in the summer. Sold every summer at a fifth off the
                 match price: more fans and a bigger ground sell more.
@@ -419,7 +420,7 @@ export function Club() {
           )}
 
           <section className="card">
-            <div className="card-label"><span>Ticket price</span><span>Typical at this level £{guide}</span></div>
+            <div className="card-label" {...hp('ticketPrice')}><span>Ticket price</span><span>Typical at this level £{guide}</span></div>
             <div className="stepper">
               <button type="button" aria-label="Lower ticket price" onClick={() => setTicketPrice(price - 1)}>−</button>
               <label className="visually-hidden" htmlFor="ticket-price">Ticket price</label>
@@ -433,7 +434,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <div className="card-label"><span>Shirt sponsor</span></div>
+            <div className="card-label" {...hp('sponsor')}><span>Shirt sponsor</span></div>
             {club.sponsorOffers ? (
               <div className="stack">
                 <p className="muted small">Pick one before the summer window shuts, or the board takes the steady deal.</p>
@@ -461,7 +462,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <div className="card-label"><span>Bank loan</span></div>
+            <div className="card-label" {...hp('loanBank')}><span>Bank loan</span></div>
             {club.loan ? (
               <>
                 <p className="small">{money(club.loan.remaining)} left to repay at {moneyPw(club.loan.weekly)}.</p>
@@ -480,7 +481,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <label className="toggle no-rule" htmlFor="unlimited-money">
+            <label className="toggle no-rule" htmlFor="unlimited-money" {...hp('unlimited')}>
               <input
                 id="unlimited-money"
                 type="checkbox"
@@ -492,7 +493,7 @@ export function Club() {
                 <small>Bank and budgets stay topped up at £1bn. Switch off to go back to your real balance.</small>
               </span>
             </label>
-            <label className="toggle no-rule" htmlFor="all-interested">
+            <label className="toggle no-rule" htmlFor="all-interested" {...hp('allInterested')}>
               <input
                 id="all-interested"
                 type="checkbox"
@@ -507,7 +508,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <div className="card-label"><span>This season so far</span><span className={totalIn - totalOut >= 0 ? 'good' : 'warn'}>{totalIn - totalOut >= 0 ? '+' : '−'}{money(Math.abs(totalIn - totalOut))}</span></div>
+            <div className="card-label" {...hp('ledger')}><span>This season so far</span><span className={totalIn - totalOut >= 0 ? 'good' : 'warn'}>{totalIn - totalOut >= 0 ? '+' : '−'}{money(Math.abs(totalIn - totalOut))}</span></div>
             <div className="ledger">
               <h3>Money in</h3>
               {income.map(([label, v]) => <div key={label}><span>{label}</span><b>{money(v)}</b></div>)}

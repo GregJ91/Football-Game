@@ -1,3 +1,4 @@
+import { hp } from '../help';
 import { useState } from 'react';
 import { userSelection } from '../../engine/season/season';
 import { playerName } from '../../engine/players/generate';
@@ -37,8 +38,8 @@ export function Squad() {
         <h1>Squad</h1>
         <div className="segmented" role="tablist">
           <button type="button" role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
-          <button type="button" role="tab" aria-selected={tab === 'training'} onClick={() => setTab('training')}>Training</button>
-          <button type="button" role="tab" aria-selected={tab === 'medical'} onClick={() => setTab('medical')}>
+          <button type="button" role="tab" aria-selected={tab === 'training'} onClick={() => setTab('training')} {...hp('training')}>Training</button>
+          <button type="button" role="tab" aria-selected={tab === 'medical'} onClick={() => setTab('medical')} {...hp('medical')}>
             Medical{squad.some((p) => p.injuryWeeks > 0) ? ` (${squad.filter((p) => p.injuryWeeks > 0).length})` : ''}
           </button>
         </div>
@@ -63,18 +64,18 @@ export function Squad() {
           return (
             <li key={p.id}>
               <button type="button" className="player-row" onClick={() => setSelected(p)}>
-                <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
-                <span className="ovr">{p.overall}</span>
+                <span className={`pos pos-${p.position}`} {...hp('position')}>{positionsLabel(p)}</span>
+                <span className="ovr" {...hp('ovr')}>{p.overall}</span>
                 <span className="who">
-                  <strong><i className={`mood-dot mood-${moodOf(p)}`} aria-label={moodOf(p)} />{playerName(p)}</strong>
+                  <strong><i className={`mood-dot mood-${moodOf(p)}`} aria-label={moodOf(p)} {...hp('morale')} />{playerName(p)}</strong>
                   <small>
-                    {ROLE_LABEL[roleOf(p)]} · <span className={p.fitness < TIRED ? 'warn' : undefined}>Fit {Math.round(p.fitness)}%</span> · {p.age} yrs · {apps} apps{p.seasonStats.goals ? ` · ${p.seasonStats.goals} gls` : ''}
+                    {ROLE_LABEL[roleOf(p)]} · <span className={p.fitness < TIRED ? 'warn' : undefined} {...hp('fitness')}>Fit {Math.round(p.fitness)}%</span> · {p.age} yrs · {apps} apps{p.seasonStats.goals ? ` · ${p.seasonStats.goals} gls` : ''}
                     {apps ? ` · ${(p.seasonStats.ratingSum / apps).toFixed(1)} avg` : ''}
                   </small>
                 </span>
                 <span className="role">
                   {st ? <em className="warn">{st}</em> : p.loanFrom ? <em>On loan</em> : p.transferRequest ? <em className="warn">Wants away</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
-                  <small>{moneyPw(p.wage)}</small>
+                  <small {...hp('wage')}>{moneyPw(p.wage)}</small>
                   {p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
                 </span>
               </button>

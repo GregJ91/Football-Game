@@ -11,6 +11,7 @@ import { divisionOf, squadOf, userClub } from '../../engine/world';
 import { nextUserFixture, useGame } from '../../state/store';
 import { ClubDot, matchKits } from '../components/ClubArt';
 import { TacticsPicker, tacticsLabel } from '../components/TacticsPicker';
+import { hp } from '../help';
 import { ordinal } from '../format';
 
 export function PreMatch() {
@@ -167,8 +168,8 @@ export function PreMatch() {
       </section>
 
       <div className="sticky-cta grid-2">
-        <button type="button" className="btn primary big" disabled={busy} onClick={kickOff}>Play match<small>Watch it live</small></button>
-        <button type="button" className="btn secondary big" disabled={busy} onClick={() => void simNextMatch()}>Sim match<small>Plays the full 90 minutes instantly</small></button>
+        <button type="button" className="btn primary big" disabled={busy} onClick={kickOff} {...hp('playMatch')}>Play match<small>Watch it live</small></button>
+        <button type="button" className="btn secondary big" disabled={busy} onClick={() => void simNextMatch()} {...hp('simMatch')}>Sim match<small>Plays the full 90 minutes instantly</small></button>
       </div>
     </main>
   );

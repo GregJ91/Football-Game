@@ -600,3 +600,11 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .steps i { width: 28px; height: 4px; border-radius: 2px; background: var(--line); }
 .steps i.on { background: var(--accent); }
 .steps small { margin-left: 6px; color: var(--muted); font-size: 12px; }
+
+/* Press-and-hold help */
+[data-help] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: text; }
+.help-bubble { position: fixed; z-index: 100; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: #F5F1E6; color: #14181A; font-size: 14px; line-height: 1.4; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); pointer-events: auto; animation: help-in 0.12s ease-out; }
+.help-bubble.above { transform: translateY(-100%); }
+.help-bubble strong { font-family: var(--display); font-size: 16px; letter-spacing: 0.3px; }
+@keyframes help-in { from { opacity: 0; } to { opacity: 1; } }
