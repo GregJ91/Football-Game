@@ -277,6 +277,10 @@ export interface CupDef {
   prize: number;
   /** Semi-finals at a neutral ground too, not just the final. */
   neutralSemis: boolean;
+  /** Names for the early rounds (quarter-finals onwards are named by size). */
+  roundNames?: string[];
+  /** Inbox message when the user's club reaches a round (by index). */
+  milestones?: Record<number, string>;
 }
 
 export interface CupTie extends Fixture {

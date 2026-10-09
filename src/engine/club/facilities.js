@@ -1,0 +1,56 @@
+import { ledgerOf } from '../economy/finance';
+import { cannotBuild, stadiumOf } from './stadium';
+export const MAX_FACILITY = 5;
+export const FACILITY_INFO = {
+    training: { name: 'Training ground', effect: 'Young players develop faster.' },
+    youth: { name: 'Youth academy', effect: 'Better and more youngsters each summer.' },
+    medical: { name: 'Medical centre', effect: 'Injured players recover sooner.' },
+};
+export function facilitiesOf(club) {
+    club.facilities ??= { training: 1, youth: 1, medical: 1 };
+    return club.facilities;
+}
+export function facilityUpgrade(game, level) {
+    const k = game.country === 'eng' ? 1 : 0.6;
+    return { cost: Math.round(8000 * level * level * k), weeks: 4 + 2 * level, upkeep: facilityUpkeep(level) };
+}
+/** Weekly running cost of a facility at `level`. */
+export function facilityUpkeep(level) {
+    return 80 * (level - 1) * (level - 1);
+}
+export function totalUpkeep(club) {
+    const f = facilitiesOf(club);
+    return facilityUpkeep(f.training) + facilityUpkeep(f.youth) + facilityUpkeep(f.medical);
+}
+export function facilityBusy(club) {
+    return stadiumOf(club).builds.some((b) => b.kind === 'facility');
+}
+export function startFacilityUpgrade(game, club, kind) {
+    const level = facilitiesOf(club)[kind];
+    if (level >= MAX_FACILITY)
+        return 'Already at the top level.';
+    if (facilityBusy(club))
+        return 'A facility upgrade is already under way.';
+    const { cost, weeks } = facilityUpgrade(game, level + 1);
+    const problem = cannotBuild(club, cost);
+    if (problem)
+        return problem;
+    stadiumOf(club).builds.push({ kind: 'facility', facility: kind, weeksLeft: weeks, totalWeeks: weeks, cost });
+    club.balance -= cost;
+    const l = ledgerOf(club);
+    l.building = (l.building ?? 0) + cost;
+    return null;
+}
+/** Extra yearly development for the user's young players (AI clubs are the baseline). */
+export function trainingBonus(club) {
+    return club.isUser ? (facilitiesOf(club).training - 1) * 0.35 : 0;
+}
+/** Fewer weeks out injured with a better medical centre. */
+export function injuryFactor(club) {
+    return club.isUser ? 1 - (facilitiesOf(club).medical - 1) * 0.12 : 1;
+}
+/** Youth intake each summer for the user's club. */
+export function youthIntake(club) {
+    const level = facilitiesOf(club).youth;
+    return { count: 1 + Math.floor(level / 2), qualityBonus: (level - 1) * 2.5, potentialBonus: (level - 1) * 2 };
+}

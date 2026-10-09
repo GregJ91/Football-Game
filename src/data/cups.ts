@@ -7,14 +7,31 @@ import type { CountryId, CupDef } from '../engine/types';
 export const CUPS: Record<CountryId, CupDef[]> = {
   eng: [
     {
+      // Non-league clubs come through the qualifying rounds; Leagues One and
+      // Two join in the First Round Proper, the top two divisions in the Third.
       id: 'fa-cup',
       name: 'FA Cup',
       short: 'FAC',
-      entries: { 7: 0, 6: 0, 5: 1, 4: 2, 3: 2, 2: 3, 1: 3 },
+      entries: { 7: 0, 6: 1, 5: 3, 4: 4, 3: 4, 2: 6, 1: 6 },
       day: 2,
-      window: [0.12, 0.9],
-      prize: 4000,
+      window: [0.06, 0.92],
+      prize: 2500,
       neutralSemis: true,
+      roundNames: [
+        'First Qualifying Round',
+        'Second Qualifying Round',
+        'Third Qualifying Round',
+        'Fourth Qualifying Round',
+        'First Round Proper',
+        'Second Round',
+        'Third Round',
+        'Fourth Round',
+        'Fifth Round',
+      ],
+      milestones: {
+        4: "You're through to the First Round Proper of the FA Cup. The Football League clubs are in the hat now.",
+        6: "FA Cup Third Round: the Premier League and Championship clubs join. Anything can happen.",
+      },
     },
     {
       id: 'league-cup',
@@ -49,14 +66,21 @@ export const CUPS: Record<CountryId, CupDef[]> = {
   ],
   sco: [
     {
+      // Highland and Lowland League clubs start in the First Round; League One
+      // and Two join in the Second, the Championship in the Third, and the
+      // Premiership in the Fourth.
       id: 'scottish-cup',
       name: 'Scottish Cup',
       short: 'SC',
-      entries: { 5: 0, 4: 1, 3: 1, 2: 2, 1: 2 },
+      entries: { 5: 0, 4: 1, 3: 1, 2: 2, 1: 3 },
       day: 2,
-      window: [0.15, 0.9],
+      window: [0.1, 0.92],
       prize: 3000,
       neutralSemis: true,
+      roundNames: ['First Round', 'Second Round', 'Third Round', 'Fourth Round', 'Fifth Round'],
+      milestones: {
+        3: 'Scottish Cup Fourth Round: the Premiership clubs are in the draw.',
+      },
     },
     {
       id: 'scottish-league-cup',

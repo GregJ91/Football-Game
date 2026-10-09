@@ -53,8 +53,18 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
 - **Day by day, CM 01/02 style:** Continue moves on half a day (AM, then PM, then the next morning), with the date top right. Matches are on Saturdays; Continue on matchday morning takes you to the match. Play match and Sim match on the Hub skip straight to the next game.
 - **Inbox** (top left, with an unread count), filtered by Transfers, Training, Medical, Scouting and Club. It includes Friday training reports, training knocks, match injuries, bids you can answer in place, and scout reports that arrive a few days after you send a scout, with a verdict on the player.
 - **Cups:**
-  - **England:** FA Cup (everyone; non-league clubs start early and the big clubs join later), League Cup (top four levels), FA Trophy (levels 5–6) and FA Vase (level 7).
-  - **Scotland:** Scottish Cup and Scottish League Cup.
+  - **England:**
+    - **FA Cup**, with real round names and entry points:
+      - Step 5 clubs start in the First Qualifying Round, and National League North/South clubs join in the Second.
+      - National League clubs join in the Fourth Qualifying Round.
+      - League One and League Two join in the First Round Proper.
+      - Premier League and Championship clubs join in the Third Round.
+    - **League Cup** (top four levels).
+    - **FA Trophy** (levels 5–6).
+    - **FA Vase** (level 7).
+  - **Scotland:**
+    - **Scottish Cup:** Lowland and Highland League clubs start in the First Round, Leagues One and Two join in the Second, the Championship in the Third, and the Premiership in the Fourth.
+    - **Scottish League Cup.**
   - **How ties work:** midweek, single-match knockouts with extra time and penalties, and neutral semi-finals and finals where real. The next round is drawn as soon as one is played.
   - **Rewards:** prize money doubles each round, and fans get a boost for wins (more for giant-killings).
   - **Honours:** a trophy cabinet and club history under Club → Honours.

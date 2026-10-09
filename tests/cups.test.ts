@@ -13,7 +13,8 @@ describe('cup set-up', () => {
     const fa = game.cups![0];
     expect(fa.rounds[0].drawn).toBe(true);
     const r0 = fa.rounds[0].ties.flatMap((t) => [t.homeId, t.awayId]).concat(fa.rounds[0].byes);
-    expect(r0.every((id) => divisionOf(game, id).def.level >= 6)).toBe(true);
+    expect(r0.every((id) => divisionOf(game, id).def.level === 7)).toBe(true);
+    expect(fa.rounds[0].name).toBe('First Qualifying Round');
     for (const cup of game.cups!) {
       for (const r of cup.rounds) expect(r.week).toBeLessThan(game.totalWeeks);
     }
@@ -23,6 +24,44 @@ describe('cup set-up', () => {
     const game = testGame('eng', 51);
     const ties = userCupTies(game);
     expect(ties.map((t) => t.cupId).sort()).toEqual(['fa-cup', 'fa-vase']);
+  });
+});
+
+describe('real cup formats', () => {
+  it('FA Cup: qualifying rounds, Football League clubs in the First Round Proper, top two in the Third Round', () => {
+    const game = testGame('eng', 55);
+    playToSeasonEnd(game);
+    const fa = game.cups!.find((c) => c.id === 'fa-cup')!;
+    const names = fa.rounds.map((r) => r.name);
+    expect(names.slice(0, 5)).toEqual(['First Qualifying Round', 'Second Qualifying Round', 'Third Qualifying Round', 'Fourth Qualifying Round', 'First Round Proper']);
+    expect(names.slice(-3)).toEqual(['Quarter-final', 'Semi-final', 'Final']);
+    const levelsIn = (r: number) => new Set(fa.rounds[r].ties.flatMap((t) => [t.homeId, t.awayId]).concat(fa.rounds[r].byes).map((id) => divisionOf(game, id).def.level));
+    // Levels move at season end, so check entry rounds against this season's summary tables instead.
+    const levelOf = (id: string) => game.divisions.find((d) => game.lastSummary!.finalTables[d.def.id].some((row) => row.clubId === id))!.def.level;
+    const firstSeen = new Map<number, number>();
+    fa.rounds.forEach((round, r) => {
+      for (const id of round.ties.flatMap((t) => [t.homeId, t.awayId]).concat(round.byes)) {
+        const lvl = levelOf(id);
+        if (!firstSeen.has(lvl)) firstSeen.set(lvl, r);
+      }
+    });
+    expect(firstSeen.get(7)).toBe(0);
+    expect(firstSeen.get(6)).toBe(1);
+    expect(firstSeen.get(4)).toBe(4);
+    expect(firstSeen.get(1)).toBe(6);
+    expect(fa.rounds[6].name).toBe('Third Round');
+    void levelsIn;
+  });
+
+  it('Scottish Cup: Premiership clubs join in the Fourth Round', () => {
+    const game = testGame('sco', 56);
+    const sc = game.cups!.find((c) => c.id === 'scottish-cup')!;
+    expect(sc.rounds[0].name).toBe('First Round');
+    playToSeasonEnd(game);
+    const levelOf = (id: string) => game.divisions.find((d) => game.lastSummary!.finalTables[d.def.id].some((row) => row.clubId === id))!.def.level;
+    const premRound = sc.rounds.findIndex((r) => r.ties.some((t) => levelOf(t.homeId) === 1 || levelOf(t.awayId) === 1) || r.byes.some((id) => levelOf(id) === 1));
+    expect(premRound).toBe(3);
+    expect(sc.rounds[3].name).toBe('Fourth Round');
   });
 });
 

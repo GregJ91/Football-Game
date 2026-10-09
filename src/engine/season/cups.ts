@@ -25,16 +25,18 @@ function roundCount(game: GameState, def: CupDef): number {
   }
 }
 
-function roundName(teams: number, index: number): string {
+const ORDINAL_ROUNDS = ['First Round', 'Second Round', 'Third Round', 'Fourth Round', 'Fifth Round', 'Sixth Round', 'Seventh Round'];
+
+function roundName(def: CupDef, teams: number, index: number): string {
   if (teams <= 2) return 'Final';
   if (teams <= 4) return 'Semi-final';
   if (teams <= 8) return 'Quarter-final';
-  return `Round ${index + 1}`;
+  return def.roundNames?.[index] ?? ORDINAL_ROUNDS[index] ?? `Round ${index + 1}`;
 }
 
-/** "in Round 2" / "in the semi-final" */
+/** "in the Second Qualifying Round" / "in the semi-final" */
 export function inRound(name: string): string {
-  return name.startsWith('Round') ? `in ${name}` : `in the ${name.toLowerCase()}`;
+  return /^(Final|Semi-final|Quarter-final)$/.test(name) ? `in the ${name.toLowerCase()}` : `in the ${name}`;
 }
 
 export function cupName(game: GameState, cupId: string) {
@@ -71,7 +73,7 @@ function drawRound(game: GameState, rng: Rng, cup: CupState, r: number, through:
   }
   const round = cup.rounds[r];
   const pool = rng.shuffle([...through, ...entrants(game, def, r)]);
-  round.name = roundName(pool.length, r);
+  round.name = roundName(def, pool.length, r);
   if (pool.length % 2 === 1) round.byes.push(pool.pop()!);
   const neutral = pool.length <= 2 || (def.neutralSemis && pool.length <= 4);
   for (let i = 0; i < pool.length; i += 2) {
@@ -90,6 +92,13 @@ function drawRound(game: GameState, rng: Rng, cup: CupState, r: number, through:
   round.drawn = true;
 
   const user = game.userClubId;
+  const milestone = def.milestones?.[r];
+  if (milestone && through.includes(user)) {
+    // Reaching a famous round lifts the fans.
+    const board = (game.clubs[user].board ??= { confidence: 60, fans: 60 });
+    board.fans = Math.min(100, board.fans + 4);
+    addInbox(game, 'info', milestone, { category: 'match', subject: `${def.name}: ${round.name}` });
+  }
   const tie = round.ties.find((t) => t.homeId === user || t.awayId === user);
   if (tie) {
     const opp = game.clubs[tie.homeId === user ? tie.awayId : tie.homeId];
