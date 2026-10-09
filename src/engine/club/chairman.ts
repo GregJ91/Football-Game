@@ -32,11 +32,16 @@ const PATIENCE: Record<Difficulty, { down: number; up: number }> = {
   hard: { down: 1.35, up: 0.85 },
 };
 
-/** Change the board's confidence in the user, scaled by difficulty. */
-export function shiftConfidence(game: GameState, delta: number) {
+/**
+ * Change the board's confidence in the user, scaled by difficulty. `raw`
+ * skips the scaling: single results and the season review count the same on
+ * every difficulty, so hard mode's pressure comes from the monthly checks and
+ * the sack rather than from every defeat counting extra.
+ */
+export function shiftConfidence(game: GameState, delta: number, raw = false) {
   const b = boardOf(game.clubs[game.userClubId]);
   const p = PATIENCE[difficultyOf(game)];
-  b.confidence = clamp(b.confidence + delta * (delta < 0 ? p.down : p.up));
+  b.confidence = clamp(b.confidence + (raw ? delta : delta * (delta < 0 ? p.down : p.up)));
 }
 
 /**
@@ -154,7 +159,7 @@ export function moodAfterMatch(game: GameState, scored: number, conceded: number
   const b = boardOf(club);
   const res = scored > conceded ? 1 : scored < conceded ? -1 : 0;
   b.fans = clamp(b.fans + res * 2);
-  shiftConfidence(game, res);
+  shiftConfidence(game, res, true);
   if (home) {
     const ratio = (club.ticketPrice ?? guideTicketPrice(game, club)) / guideTicketPrice(game, club);
     b.fans = clamp(b.fans - Math.max(-1, Math.min(3, (ratio - 1) * 4)));
@@ -171,7 +176,8 @@ export function seasonReview(game: GameState, summary: SeasonSummary) {
   const relegated = summary.relegated[div.def.id].includes(club.id);
   const target = b.target;
   const diff = target ? target.position - pos : 0;
-  shiftConfidence(game, Math.max(-20, Math.min(20, diff * 3)) + (promoted ? 15 : 0) - (relegated ? 15 : 0));
+  // The monthly checks have already judged the league position along the way, so the review is milder.
+  shiftConfidence(game, Math.max(-12, Math.min(15, diff * 2)) + (promoted ? 15 : 0) - (relegated ? 15 : 0), true);
   b.fans = clamp(b.fans + (promoted ? 15 : relegated ? -12 : Math.max(-8, Math.min(8, diff * 1.5))));
   const verdict = !target
     ? 'The board thanks you for the season.'
