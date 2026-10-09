@@ -50,7 +50,11 @@ export const CHALLENGES: ChallengeDef[] = [
     id: 'old',
     name: 'Old But Gold',
     tagline: 'Thirty-somethings only.',
-    rules: ['You can only sign players aged 30 or over (loans too).'],
+    rules: [
+      'You start with a squad of players aged 30 or over.',
+      'You can only sign players aged 30 or over (loans too).',
+      'The academy is closed: no youngsters come through.',
+    ],
   },
   {
     id: 'relegation',
@@ -165,9 +169,9 @@ export function relegationLeagues(country: CountryId) {
  * hand the user the club second from bottom.
  */
 export function createRelegationBattle(seed: number, country: CountryId, divisionId: string, realNames = false): GameState {
-  // Hard but winnable: re-roll a few times for a side within about six points of safety.
+  // Hard but winnable: re-roll (a few times at most, it takes a moment each) for a side within about seven points of safety.
   let best: { game: GameState; gap: number } | null = null;
-  for (let i = 0; i < 4 && (!best || best.gap > 6); i++) {
+  for (let i = 0; i < 6 && (!best || best.gap > 7); i++) {
     const tried = playToRunIn(seed + i, country, divisionId, realNames);
     if (!best || tried.gap < best.gap) best = tried;
   }

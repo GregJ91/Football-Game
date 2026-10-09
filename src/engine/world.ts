@@ -118,6 +118,7 @@ export function createSquad(
   maxAge = 99,
   worldClass = 0,
   wonderkids = 0,
+  minAge = 0,
 ): Player[] {
   const players: Player[] = [];
   // Which squad places go to the world-class players, the stars and the wonderkids.
@@ -128,7 +129,7 @@ export function createSquad(
   order.slice(worldClass + stars, worldClass + stars + wonderkids).forEach((i) => kind.set(i, 'kid'));
   SQUAD_TEMPLATE.forEach((position, i) => {
     const k = kind.get(i);
-    const age = maxAge < 99 ? rng.int(17, maxAge) : k === 'world' ? rng.int(24, 29) : k === 'star' ? rng.int(23, 29) : k === 'kid' ? rng.int(17, 19) : randomAge(rng);
+    const age = minAge ? rng.int(minAge, minAge + 4) : maxAge < 99 ? rng.int(17, maxAge) : k === 'world' ? rng.int(24, 29) : k === 'star' ? rng.int(23, 29) : k === 'kid' ? rng.int(17, 19) : randomAge(rng);
     const target =
       k === 'world' ? Math.min(94, quality + 14 + rng.next() * 5)
         : k === 'star' ? quality + 6 + rng.next() * 7
@@ -278,6 +279,8 @@ export function createGame(config: NewGameConfig): GameState {
       if (config.topFlight) makeGiant(game, rng, user, def);
       // Kids: a squad of under-22s, a little stronger than their age suggests.
       else if (config.challenge === 'kids') createSquad(game, rng, user, def.quality + 4, 0, 21);
+      // Old But Gold: thirty-somethings at about the level's standard (and its wages), declining from here.
+      else if (config.challenge === 'old') createSquad(game, rng, user, def.quality - 1, 0, 99, 0, 0, 30);
       // An average side for the level; climbing is down to the manager.
       else createSquad(game, rng, user, def.quality);
       division.clubIds.push(user.id);

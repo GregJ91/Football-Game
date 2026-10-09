@@ -1,3 +1,4 @@
+import { activeChallenge } from '../club/challenge';
 import type { Rng } from '../rng';
 import type { GameState, Player } from '../types';
 import { facilitiesOf, trainingBonus, youthIntake } from '../club/facilities';
@@ -86,14 +87,17 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       if (i >= 0) need.splice(i, 1);
     }
     // Only while the squad is short (or has no keeper at all).
+    // Old But Gold: gaps are filled by veterans, and the academy is closed.
+    const oldButGold = club.isUser && activeChallenge(game) === 'old';
     for (const position of need) {
       const hasKeeper = club.playerIds.some((id) => game.players[id].position === 'GK');
       if (club.playerIds.length >= 22 && (position !== 'GK' || hasKeeper)) continue;
-      sign(game, rng, clubId, position, quality - 13 + rng.normal() * 3, rng.int(16, 19));
+      if (oldButGold) sign(game, rng, clubId, position, quality - 2 + rng.normal() * 3, rng.int(30, 33));
+      else sign(game, rng, clubId, position, quality - 13 + rng.normal() * 3, rng.int(16, 19));
     }
 
     // The user's academy produces its own intake every summer.
-    if (club.isUser) {
+    if (club.isUser && !oldButGold) {
       const intake = youthIntake(club);
       const names: string[] = [];
       for (let i = 0; i < intake.count; i++) {
