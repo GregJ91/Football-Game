@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { COUNTRIES, bottomDivisions } from '../../data/pyramids';
-import type { ClubColours, CountryId, KitPattern, Region } from '../../engine/types';
+import type { ClubColours, CountryId, Difficulty, KitPattern, Region } from '../../engine/types';
 import { useGame } from '../../state/store';
 import { Crest, Kit } from '../components/ClubArt';
 
@@ -14,6 +14,12 @@ const SECONDARIES = [
 ] as const;
 const PATTERNS: KitPattern[] = ['plain', 'stripes', 'hoops', 'halves', 'sash'];
 
+const DIFFICULTIES: { d: Difficulty; label: string; note: string }[] = [
+  { d: 'easy', label: 'Easy', note: 'More money, a patient board' },
+  { d: 'normal', label: 'Normal', note: 'The board warns, never sacks' },
+  { d: 'hard', label: 'Hard', note: 'Less money, and you can be sacked' },
+];
+
 export function CreateClub() {
   const newGame = useGame((s) => s.newGame);
   const go = useGame((s) => s.go);
@@ -24,6 +30,7 @@ export function CreateClub() {
   const [country, setCountry] = useState<CountryId>('eng');
   const [region, setRegion] = useState<Region>('N');
   const [topFlight, setTopFlight] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
   const clubName = name.trim();
   const valid = clubName.length >= 3;
@@ -39,6 +46,7 @@ export function CreateClub() {
       country,
       region,
       topFlight,
+      difficulty,
     });
   };
 
@@ -146,6 +154,17 @@ export function CreateClub() {
           </div>
         </fieldset>
         )}
+        <fieldset className="field">
+          <legend>Difficulty</legend>
+          <div className="grid-3">
+            {DIFFICULTIES.map(({ d, label, note }) => (
+              <button key={d} type="button" className="choice" aria-pressed={difficulty === d} onClick={() => setDifficulty(d)}>
+                <strong>{label}</strong>
+                <small>{note}</small>
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <fieldset className="field">
           <legend>Testing</legend>
           <label className="toggle no-rule" htmlFor="top-flight">

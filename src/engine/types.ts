@@ -185,7 +185,14 @@ export interface Board {
   target?: SeasonTarget;
   /** Already warned about the ground this season. */
   gradingWarned?: boolean;
+  /** The board has warned you about results: concerned, then a final warning. */
+  warning?: 'concerned' | 'final';
+  /** When the final warning was given. */
+  warnedSeason?: number;
+  warnedWeek?: number;
 }
+
+export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface SponsorDeal {
   name: string;
@@ -449,6 +456,8 @@ export interface GameState {
   rngState: number;
   country: CountryId;
   season: number; // starting year, e.g. 2026 for 2026/27
+  /** The season the career started (for the board's first-season patience). */
+  startSeason?: number;
   week: number; // next week to be played (0-based)
   totalWeeks: number;
   userClubId: string;
@@ -458,7 +467,9 @@ export interface GameState {
   fixtures: Fixture[];
   /** Filled when the regular season has ended. */
   lastSummary: SeasonSummary | null;
-  phase: 'season' | 'seasonEnd';
+  phase: 'season' | 'seasonEnd' | 'sacked';
+  /** Set when the board sacked you (hard difficulty): the career is over. */
+  sacked?: { season: number; week: number; reason: string };
   nextId: number;
   settings?: GameSettings;
   inbox?: InboxItem[];
@@ -479,6 +490,8 @@ export interface GameState {
 }
 
 export interface GameSettings {
+  /** Starting money and how patient the board is; on hard it can sack you. Unset = normal. */
+  difficulty?: Difficulty;
   /** Let the assistant manager pick tactics for simulated matches. */
   assistantTactics: boolean;
   /** The assistant rests tired players in matches you sim. */

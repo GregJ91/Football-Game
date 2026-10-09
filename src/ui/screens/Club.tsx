@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { boardOf, loanOptions } from '../../engine/club/chairman';
+import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
 import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
 import {
   floodlightOption, nextLevelGrading, stadiumBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
@@ -298,6 +298,32 @@ export function Club() {
 
       {tab === 'board' && (
         <>
+          {(() => {
+            const difficulty = difficultyOf(game);
+            const status = board.warning === 'final'
+              ? { tone: 'bad', text: difficulty === 'hard' ? "Final warning: turn things round within a month or you'll be sacked." : 'Final warning: the board are furious, but they are standing by you.' }
+              : board.warning === 'concerned'
+                ? { tone: 'bad', text: 'The board are concerned about results.' }
+                : board.confidence >= 60
+                  ? { tone: 'good', text: 'The board are happy with you.' }
+                  : { tone: 'neutral', text: 'The board are keeping an eye on things.' };
+            return (
+              <section className="card">
+                <div className="card-label">
+                  <span>Your job</span>
+                  <span>{difficulty[0].toUpperCase() + difficulty.slice(1)}</span>
+                </div>
+                <p className={`note ${status.tone}`}><span aria-hidden="true">{status.tone === 'good' ? '▲' : status.tone === 'bad' ? '▼' : '•'}</span>{status.text}</p>
+                <p className="muted small">
+                  {difficulty === 'hard'
+                    ? 'On hard the board can sack you: below 20 confidence you get a final warning, and a month later (or at the end of the season) you are out if it has not recovered. New managers get their first season.'
+                    : difficulty === 'normal'
+                      ? 'On normal the board will warn you if results are poor, but they will not sack you.'
+                      : 'On easy the board are patient and will not sack you.'}
+                </p>
+              </section>
+            );
+          })()}
           <section className="card meters">
             <div className="meter">
               <div className="meter-head"><span>Board confidence</span><b>{Math.round(board.confidence)}</b></div>
@@ -321,6 +347,8 @@ export function Club() {
             <div className="card-label"><span>What moves them</span></div>
             <ul className="plain-list">
               <li>Results, and how you finish against the target.</li>
+              <li>Each month they check your league position against the target.</li>
+              <li>Being in debt worries them.</li>
               <li>Promotion lifts both meters; relegation hits them hard.</li>
               <li>Fans dislike ticket prices above the going rate and love new stands.</li>
               <li>Big loans worry the board.</li>

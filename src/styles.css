@@ -489,3 +489,4 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .bench-row small.warn { color: var(--warn); }
 .tired-box { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
 .squad small .warn { color: var(--warn); }
+.target-chip.danger { border-color: var(--warn); color: var(--warn); font-weight: 700; }

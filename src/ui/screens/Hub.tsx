@@ -74,7 +74,9 @@ export function Hub() {
       <button type="button" className="mood-row" onClick={() => go('club')}>
         <span>Board <b>{Math.round(board.confidence)}</b><i className="mini"><i style={{ width: `${board.confidence}%` }} /></i></span>
         <span>Fans <b>{Math.round(board.fans)}</b><i className="mini fans"><i style={{ width: `${board.fans}%` }} /></i></span>
-        {board.target && <span className="target-chip">Target: {board.target.label}</span>}
+        {board.warning === 'final' ? (
+          <span className="target-chip danger">Final warning</span>
+        ) : board.target && <span className="target-chip">Target: {board.target.label}</span>}
       </button>
 
       {next && opponent ? (

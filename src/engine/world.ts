@@ -11,7 +11,7 @@ import { foreignSquad } from './season/foreign';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
 import type {
-  Club, ClubColours, CountryId, Division, DivisionDef, GameState, Player, Region,
+  Club, ClubColours, CountryId, Difficulty, Division, DivisionDef, GameState, Player, Region,
 } from './types';
 
 export const START_SEASON = 2026;
@@ -38,6 +38,8 @@ export interface NewGameConfig {
   colours: ClubColours;
   /** Testing aid: start as one of the biggest clubs in the top flight, in the Champions League. */
   topFlight?: boolean;
+  /** Starting money and the board's patience; on hard the board can sack you. */
+  difficulty?: Difficulty;
 }
 
 /** Club-level economics by pyramid level (rough; refined in the chairman phase). */
@@ -183,6 +185,7 @@ export function createGame(config: NewGameConfig): GameState {
     rngState: 0,
     country: config.country,
     season: START_SEASON,
+    startSeason: START_SEASON,
     week: 0,
     totalWeeks: 0,
     userClubId: '',
@@ -195,6 +198,7 @@ export function createGame(config: NewGameConfig): GameState {
     nextId: 1,
     day: 1,
     half: 'am',
+    settings: { assistantTactics: false, difficulty: config.difficulty ?? 'normal' },
   };
   const names = new NameFactory(rng, config.country);
   names.reserve(config.clubName);
@@ -249,6 +253,10 @@ export function createGame(config: NewGameConfig): GameState {
   game.rngState = rng.state;
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   const user = game.clubs[game.userClubId];
+  // Difficulty: more or less money to start with, and a more or less patient board.
+  const difficulty = config.difficulty ?? 'normal';
+  user.balance = Math.round(user.balance * { easy: 2.5, normal: 1, hard: 0.5 }[difficulty]);
+  user.board = { confidence: { easy: 70, normal: 60, hard: 50 }[difficulty], fans: 60 };
   user.stadium ??= createStadium();
   syncCapacity(user);
   scheduleSeason(game);

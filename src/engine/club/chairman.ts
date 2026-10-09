@@ -2,7 +2,8 @@ import { LAST_NAMES } from '../../data/names';
 import { guideTicketPrice, ledgerOf, topUpUnlimited, weeklyIncomeEstimate, weeklyTv } from '../economy/finance';
 import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
-import type { Board, Club, GameState, SeasonSummary } from '../types';
+import type { Board, Club, Difficulty, GameState, SeasonSummary } from '../types';
+import { buildTable } from '../season/table';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, squadOf } from '../world';
 import { FACILITY_INFO, facilitiesOf, totalUpkeep } from './facilities';
@@ -13,6 +14,100 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 export function boardOf(club: Club): Board {
   club.board ??= { confidence: 60, fans: 60 };
   return club.board;
+}
+
+// ---------------------------------------------------------------- difficulty and the sack
+
+export function difficultyOf(game: GameState): Difficulty {
+  return game.settings?.difficulty ?? 'normal';
+}
+
+/** How hard bad news and good news move the board, by difficulty. */
+const PATIENCE: Record<Difficulty, { down: number; up: number }> = {
+  easy: { down: 0.5, up: 1.25 },
+  normal: { down: 1, up: 1 },
+  hard: { down: 1.35, up: 0.85 },
+};
+
+/** Change the board's confidence in the user, scaled by difficulty. */
+export function shiftConfidence(game: GameState, delta: number) {
+  const b = boardOf(game.clubs[game.userClubId]);
+  const p = PATIENCE[difficultyOf(game)];
+  b.confidence = clamp(b.confidence + delta * (delta < 0 ? p.down : p.up));
+}
+
+/**
+ * Monthly board check: league position against the target, and debt. Then
+ * the board's verdict (see judge). Returns true if the user was sacked.
+ */
+export function boardCheck(game: GameState): boolean {
+  const club = game.clubs[game.userClubId];
+  const b = boardOf(club);
+  const div = divisionOf(game, club.id);
+  const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
+  const row = table.find((r) => r.clubId === club.id);
+  if (b.target && row && row.played >= 6) {
+    const behind = table.indexOf(row) + 1 - b.target.position;
+    const slack = Math.max(2, Math.round(div.clubIds.length / 8));
+    // A poor month costs a little; a whole season well off the pace adds up to about 30.
+    if (behind > slack) shiftConfidence(game, -Math.min(3, 1 + (behind - slack) / 3));
+    else if (behind <= 0) shiftConfidence(game, 1);
+  }
+  if (club.balance < 0 && !game.settings?.unlimitedMoney) shiftConfidence(game, -3);
+  return judge(game, false);
+}
+
+/**
+ * The board's patience. Below 30 they say they're concerned; below 20 it's a
+ * final warning. On hard, a final warning not turned round within a month
+ * (or by the end of the season) is the sack, and so is falling to 8.
+ */
+export function judge(game: GameState, seasonEnd: boolean): boolean {
+  const difficulty = difficultyOf(game);
+  const b = boardOf(game.clubs[game.userClubId]);
+  const c = b.confidence;
+  if (difficulty === 'easy') {
+    b.warning = undefined;
+    return false;
+  }
+  if (c >= 40) {
+    if (b.warning) addInbox(game, 'info', "The board's confidence in you has returned. Keep it up.", { category: 'club', subject: 'Board back onside' });
+    b.warning = undefined;
+    return false;
+  }
+  if (c < 20) {
+    // A new manager gets his first season: warnings, but no sack until its final day.
+    const firstSeason = game.season === game.startSeason;
+    if (difficulty === 'hard' && (!firstSeason || seasonEnd)) {
+      const monthPassed = b.warning === 'final' && (game.season > (b.warnedSeason ?? game.season) || game.week - (b.warnedWeek ?? game.week) >= 4);
+      if (c <= 8 || monthPassed || (seasonEnd && (b.warning === 'final' || c < 15))) {
+        sack(game, c <= 8 ? 'The board lost all confidence in you.' : "Results didn't improve after the board's final warning.");
+        return true;
+      }
+    }
+    if (b.warning !== 'final') {
+      b.warning = 'final';
+      b.warnedSeason = game.season;
+      b.warnedWeek = game.week;
+      const text = difficulty === 'hard'
+        ? "Final warning from the board: things have to improve within a month, or you'll be dismissed."
+        : "The board are furious with how things are going. They're standing by you, but they want it turned round.";
+      addInbox(game, 'contract', text, { category: 'club', subject: 'Final warning' });
+    }
+    return false;
+  }
+  if (c < 30 && !b.warning) {
+    b.warning = 'concerned';
+    addInbox(game, 'info', "The board are concerned about how the season is going. They expect better.", { category: 'club', subject: 'Board concerned' });
+  }
+  return false;
+}
+
+/** The end of the career at this club. */
+function sack(game: GameState, reason: string) {
+  game.sacked = { season: game.season, week: game.week, reason };
+  game.phase = 'sacked';
+  addInbox(game, 'contract', `You have been relieved of your duties. ${reason}`, { category: 'club', subject: 'Sacked' });
 }
 
 // ---------------------------------------------------------------- season target
@@ -59,7 +154,7 @@ export function moodAfterMatch(game: GameState, scored: number, conceded: number
   const b = boardOf(club);
   const res = scored > conceded ? 1 : scored < conceded ? -1 : 0;
   b.fans = clamp(b.fans + res * 2);
-  b.confidence = clamp(b.confidence + res);
+  shiftConfidence(game, res);
   if (home) {
     const ratio = (club.ticketPrice ?? guideTicketPrice(game, club)) / guideTicketPrice(game, club);
     b.fans = clamp(b.fans - Math.max(-1, Math.min(3, (ratio - 1) * 4)));
@@ -76,7 +171,7 @@ export function seasonReview(game: GameState, summary: SeasonSummary) {
   const relegated = summary.relegated[div.def.id].includes(club.id);
   const target = b.target;
   const diff = target ? target.position - pos : 0;
-  b.confidence = clamp(b.confidence + Math.max(-20, Math.min(20, diff * 3)) + (promoted ? 15 : 0) - (relegated ? 15 : 0));
+  shiftConfidence(game, Math.max(-20, Math.min(20, diff * 3)) + (promoted ? 15 : 0) - (relegated ? 15 : 0));
   b.fans = clamp(b.fans + (promoted ? 15 : relegated ? -12 : Math.max(-8, Math.min(8, diff * 1.5))));
   const verdict = !target
     ? 'The board thanks you for the season.'
@@ -137,7 +232,7 @@ export function takeLoan(game: GameState, amount: number): string | null {
   club.balance += amount;
   const l = ledgerOf(club);
   l.loan = (l.loan ?? 0) + amount;
-  if (amount > weeklyIncomeEstimate(game, club) * 20) boardOf(club).confidence = clamp(boardOf(club).confidence - 4);
+  if (amount > weeklyIncomeEstimate(game, club) * 20) shiftConfidence(game, -4);
   return null;
 }
 

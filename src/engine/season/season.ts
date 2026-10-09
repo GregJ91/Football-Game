@@ -5,7 +5,7 @@ import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinan
 import { MATCHDAY, SEASON_START_DAY, advanceHalfDay, deliverScoutReports, isMatchdayMorning, todaysUserMatch } from '../calendar';
 import { awardLeagueTitles, completeUserCupTie, isCupTie, playDueCupRounds, setupCups, tieMatchOptions } from './cups';
 import { europeSeasonEnd, setupEurope } from './europe';
-import { chairmanWeek, gradingWarning, makeSponsorOffers, moodAfterMatch, seasonPayouts, seasonReview, setSeasonTarget } from '../club/chairman';
+import { boardCheck, chairmanWeek, gradingWarning, judge, makeSponsorOffers, moodAfterMatch, seasonPayouts, seasonReview, setSeasonTarget } from '../club/chairman';
 import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
 import { rolloverPlayers } from '../players/development';
@@ -257,6 +257,8 @@ export function playWeek(game: GameState): Fixture[] {
   });
   userMatchMood(game, fixtures);
   if (game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
+  // Once a month the board takes stock; on hard it may end your career here.
+  if (game.week >= 8 && game.week % 4 === 2 && boardCheck(game)) return fixtures;
   const wasOpen = transferWindow(game).open;
   game.week++;
   // Saturday evening: day -1 of the new week is the Saturday just gone,
@@ -358,6 +360,7 @@ export function endSeason(game: GameState) {
   seasonReview(game, summary);
   game.lastSummary = summary;
   game.phase = 'seasonEnd';
+  judge(game, true);
 }
 
 /** No promotion without a ground that meets the next level's rules; the next club goes up instead. */

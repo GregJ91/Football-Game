@@ -77,6 +77,12 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Foreign clubs:** about 120 fictional clubs from 35 nations, rated by strength. Their ratings move with the domestic game so Europe stays competitive. Your matches use the full engine against a generated squad with local names; other games use a quick model calibrated against the engine.
   - **Money:** entry, results and each knockout round pay prize money, and home gates sell at a premium. Winning adds the trophy to the cabinet.
 - **Playable UI:** Hub (board and fan meters, things needing attention), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
+- **Difficulty:** choose it when you found the club.
+  - **Easy:** more money and a patient board.
+  - **Normal:** the board warns you about poor results but never sacks you.
+  - **Hard:** less money and an impatient board that can sack you. Below 20 confidence you get a final warning; if it hasn't recovered a month later, or by the end of the season, you're out (and at once if it hits 8). New managers get their first season.
+  - **The board** checks your league position against its target every month, and dislikes debt.
+  - **Sacked** ends the career, with a look back at your seasons and honours, and a fresh start.
 - **Squad depth:**
   - **Fitness:** recovers a little every day (3–5% depending on stamina). One game a week leaves time to recover fully; two a week wears a side down unless you rotate. Tired players show in orange. Auto-pick leaves out badly tired players.
   - **Rotation:** "Rest tired players" on the Tactics and pre-match screens, and an assistant option to rest them in simmed matches.
