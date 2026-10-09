@@ -146,6 +146,8 @@ export interface Club {
   board?: Board;
   /** Ticket price for this season (£); unset = the guide price. */
   ticketPrice?: number;
+  /** This season's season-ticket sales (user club). */
+  seasonTickets?: { season: number; holders: number; price: number; revenue: number };
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
@@ -194,6 +196,14 @@ export interface Ledger {
   other: number; // pay-offs and the like (negative = cost)
   sponsor?: number;
   prize?: number;
+  /** Season tickets sold in the summer. */
+  seasonTickets?: number;
+  /** Food and drink at home games. */
+  food?: number;
+  /** VIP hospitality at home games. */
+  hospitality?: number;
+  /** Shirts and the club shop. */
+  merch?: number;
   /** Stadium and facility building costs. */
   building?: number;
   /** Facility running costs. */
@@ -213,7 +223,7 @@ export interface Stand {
   roof: boolean;
 }
 
-export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights';
+export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights' | 'food' | 'vip';
 export type FacilityKind = 'training' | 'youth' | 'medical';
 
 export interface Build {
@@ -222,6 +232,8 @@ export interface Build {
   /** Places added, for an extension. */
   size?: number;
   facility?: FacilityKind;
+  /** Food or VIP level being built. */
+  level?: number;
   weeksLeft: number;
   totalWeeks: number;
   cost: number;
@@ -230,6 +242,10 @@ export interface Build {
 export interface Stadium {
   stands: Stand[];
   floodlights: boolean;
+  /** Food and drink outlets, level 0 (tea hut) to 4. */
+  food?: number;
+  /** VIP hospitality, level 0 (none) to 4. */
+  vip?: number;
   builds: Build[];
 }
 

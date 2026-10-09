@@ -12,6 +12,8 @@ const DIFFICULTIES: { d: Difficulty; label: string; note: string }[] = [
   { d: 'hard', label: 'Hard', note: 'Less money, and you can be sacked' },
 ];
 
+const STEP_TITLES = ['Name your club', 'Kits and crest', 'Where to start'];
+
 export function CreateClub() {
   const newGame = useGame((s) => s.newGame);
   const go = useGame((s) => s.go);
@@ -30,6 +32,7 @@ export function CreateClub() {
   const [region, setRegion] = useState<Region>('N');
   const [topFlight, setTopFlight] = useState(false);
   const [realNames, setRealNames] = useState(true);
+  const [step, setStep] = useState(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
   const clubName = name.trim();
@@ -61,7 +64,8 @@ export function CreateClub() {
           type="button"
           className="link-btn"
           onClick={() => {
-            if (challenge) {
+            if (step > 1) setStep(step - 1);
+            else if (challenge) {
               setChallengeDraft(null);
               go('challenges');
             } else go('start');
@@ -70,10 +74,14 @@ export function CreateClub() {
           ← Back
         </button>
         <div className="eyebrow">{challenge ? `Challenge: ${challengeDef(challenge).name}` : 'New game'}</div>
-        <h1>Create your club</h1>
+        <h1>{STEP_TITLES[step - 1]}</h1>
+        <div className="steps" aria-label={`Step ${step} of 3`}>
+          {[1, 2, 3].map((n) => <i key={n} className={n <= step ? 'on' : ''} />)}
+          <small>Step {step} of 3</small>
+        </div>
       </header>
 
-      {challenge && (
+      {challenge && step === 1 && (
         <section className="card challenge-banner">
           <ul className="plain-list">
             {challengeDef(challenge).rules.map((r) => <li key={r}>{r}</li>)}
@@ -92,22 +100,27 @@ export function CreateClub() {
       </section>
 
       <div className="form">
+        {step === 1 && (<>
         <label className="field">
           <span>Club name</span>
           <input value={name} maxLength={28} placeholder="e.g. Ashford Rovers" onChange={(e) => setName(e.target.value)} />
         </label>
         <div className="grid-2">
           <label className="field">
-            <span>Short name</span>
+            <span>3-letter name</span>
             <input value={shortName} maxLength={3} placeholder={short || 'ABC'} onChange={(e) => setShortName(e.target.value.toUpperCase())} />
           </label>
           <label className="field">
-            <span>Ground</span>
+            <span>Stadium name</span>
             <input value={ground} maxLength={24} placeholder="e.g. The Meadow" onChange={(e) => setGround(e.target.value)} />
           </label>
         </div>
 
-        <IdentityEditor value={identity} onChange={setIdentity} shortName={short} />
+        </>)}
+
+        {step === 2 && <IdentityEditor value={identity} onChange={setIdentity} shortName={short} />}
+
+        {step === 3 && (<>
 
         <fieldset className="field">
           <legend>Start in</legend>
@@ -170,12 +183,20 @@ export function CreateClub() {
           </label>
         </fieldset>
         )}
+        </>)}
       </div>
 
       <div className="sticky-cta">
-        <button type="button" className="btn primary big" disabled={!valid} onClick={found}>
-          Found the club
-        </button>
+        {step < 3 ? (
+          <button type="button" className="btn primary big" disabled={!valid} onClick={() => { setStep(step + 1); window.scrollTo(0, 0); }}>
+            Next: {step === 1 ? 'kits and crest' : 'where to start'}
+          </button>
+        ) : (
+          <button type="button" className="btn primary big" disabled={!valid} onClick={found}>
+            Found the club
+          </button>
+        )}
+        {step === 1 && !valid && <p className="hint">Give the club a name of at least 3 letters.</p>}
       </div>
     </main>
   );

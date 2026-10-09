@@ -8,6 +8,7 @@ import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
 import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { boardOf } from '../../engine/club/chairman';
+import { nextLevelGrading } from '../../engine/club/stadium';
 import { competitionLabel, formatDate, matchDate } from '../../engine/calendar';
 import { isCupTie } from '../../engine/season/cups';
 import { challengeDef, seasonsSurvived } from '../../engine/club/challenge';
@@ -24,6 +25,7 @@ export function Hub() {
 
   const club = userClub(game);
   const division = divisionOf(game, club.id);
+  const grading = game.phase === 'season' ? nextLevelGrading(game) : null;
   // The engine mutates `game` in place, so `rev` is what signals a change.
   const table = useMemo(() => divisionTable(game, division.def.id), [rev, division]);
   const started = table.some((r) => r.played > 0);
@@ -127,9 +129,11 @@ export function Hub() {
           <div className="grid-2">
             <button type="button" className="btn primary" disabled={busy} onClick={openPreMatch}>
               Play match
+              <small>Pick the team, watch it live</small>
             </button>
             <button type="button" className="btn secondary" disabled={busy} onClick={() => void simNextMatch()}>
               {busy ? 'Simming…' : 'Sim match'}
+              <small>Plays the full 90 minutes instantly</small>
             </button>
           </div>
           <button type="button" className="link-btn center" disabled={busy} onClick={() => void simToSeasonEnd()}>
@@ -158,6 +162,16 @@ export function Hub() {
             </button>
           )}
         </section>
+      )}
+
+      {grading && !grading.ok && division.def.promotion && (
+        <button type="button" className="card grading-alert" onClick={() => go('club')}>
+          <strong>Your ground isn't good enough to go up</strong>
+          <small>
+            Even if you win the league, you won't be promoted until the ground passes:{' '}
+            {grading.items.filter((i) => !i.ok).map((i) => (i.label === 'Floodlights' ? 'floodlights needed' : `${i.label.toLowerCase()} ${i.have} of ${i.need}`)).join(', ')}. Build it in Club → Ground before the season ends →
+          </small>
+        </button>
       )}
 
       {last && (

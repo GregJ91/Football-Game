@@ -1,6 +1,7 @@
 import { cupDef } from '../../data/cups';
 import { euroDef } from '../../data/europe';
 import { nationOf } from '../../engine/season/europe';
+import { checkGrading } from '../../engine/club/stadium';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { ClubCrest, ClubDot } from '../components/ClubArt';
@@ -27,6 +28,8 @@ export function SeasonEnd() {
   const rows = summary.finalTables[division.def.id];
   const userPlayoffs = summary.playoffs.filter((t) => t.homeId === club.id || t.awayId === club.id);
   const nameOf = (id: string) => game.clubs[id].name;
+  const denied = summary.deniedPromotion?.clubId === club.id;
+  const grading = denied ? checkGrading(game, club, division.def.level - 1) : null;
 
   return (
     <main className="screen season-end">
@@ -37,8 +40,26 @@ export function SeasonEnd() {
         <p>
           {club.name} finished {ordinal(record.position)}
           {record.outcome === 'promoted' && userPlayoffs.length > 0 ? ' and won the play-offs' : ''}.
+          {denied ? ' But there is no promotion this time.' : ''}
         </p>
       </section>
+
+      {denied && grading && (
+        <section className="card grading not-ok">
+          <div className="card-label"><span>Promotion denied</span></div>
+          <p className="small">
+            The ground doesn't meet the rules for the level above, so {nameOf(summary.deniedPromotion!.replacementId)} go up instead.
+            Build it up in Club → Ground: work has to be finished before the end of next season.
+          </p>
+          {grading.items.map((it) => (
+            <div key={it.label} className="grading-row">
+              <span aria-hidden="true">{it.ok ? '✓' : '✗'}</span>
+              <span className="grow">{it.label}</span>
+              <span>{it.have} / {it.need}</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       {userPlayoffs.length > 0 && (
         <section className="card">

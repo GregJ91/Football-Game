@@ -29,7 +29,8 @@ function levelRating(level: number) {
 
 /** What a member of staff of this rating costs at this level, per week. */
 export function staffWage(rating: number, level: number): number {
-  const scale = [0, 4, 2, 1.4, 1, 0.7, 0.5, 0.35][level] ?? 0.35;
+  // Part-time staff in non-league: much cheaper.
+  const scale = [0, 4, 2, 1.4, 1, 0.5, 0.25, 0.15][level] ?? 0.15;
   return roundMoney(120 * Math.pow(1.25, rating) * scale);
 }
 

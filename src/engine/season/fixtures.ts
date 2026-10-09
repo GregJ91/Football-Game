@@ -10,17 +10,26 @@ export function roundRobin(clubIds: string[], rounds: number, rng: Rng): [string
   const n = teams.length;
   const cycle: [string, string][][] = [];
   const rot = teams.slice(1);
+  // Venues: whoever played away last time is at home this time, so the
+  // home and away games alternate as in a real fixture list. Ties go to the
+  // club with fewer home games so far.
+  const last = new Map<string, 'H' | 'A'>();
+  const homes = new Map<string, number>();
   for (let day = 0; day < n - 1; day++) {
     const round: [string, string][] = [];
     const ring = [teams[0], ...rot];
     for (let i = 0; i < n / 2; i++) {
       const a = ring[i];
       const b = ring[n - 1 - i];
-      // Alternate venues so nobody gets a long run of home or away games.
-      const flip = i === 0 ? day % 2 === 1 : (day + i) % 2 === 1;
-      round.push(flip ? [b, a] : [a, b]);
+      if (a === 'BYE' || b === 'BYE') continue;
+      const want = (t: string) => (last.get(t) === 'A' ? 2 : last.get(t) === 'H' ? 0 : 1) - (homes.get(t) ?? 0) * 0.01;
+      const [home, away] = want(a) >= want(b) ? [a, b] : [b, a];
+      round.push([home, away]);
+      last.set(home, 'H');
+      last.set(away, 'A');
+      homes.set(home, (homes.get(home) ?? 0) + 1);
     }
-    cycle.push(round.filter(([x, y]) => x !== 'BYE' && y !== 'BYE'));
+    cycle.push(round);
     rot.unshift(rot.pop()!);
   }
   const days: [string, string][][] = [];

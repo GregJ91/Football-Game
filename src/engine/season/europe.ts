@@ -553,7 +553,7 @@ function euroGate(game: GameState, tie: CupTie, result: MatchResult) {
   const sides = tie.neutral ? [tie.homeId, tie.awayId] : [tie.homeId];
   for (const id of sides) {
     const club = game.clubs[id];
-    if (!club.foreign) addGate(game, club, (result.attendance * EURO_TICKET_FACTOR) / sides.length);
+    if (!club.foreign) addGate(game, club, (result.attendance * EURO_TICKET_FACTOR) / sides.length, { atHome: !tie.neutral });
   }
 }
 

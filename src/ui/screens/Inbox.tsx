@@ -78,9 +78,11 @@ export function Inbox() {
                 <small>{formatDate(dateIn(i.season, i.week, i.day ?? 1))}</small>
               </button>
               {expanded ? (
-                i.kind === 'bid' && !i.resolved ? <BidCard item={i} /> : <p className="mail-body">{i.text}</p>
+                i.kind === 'bid' && !i.resolved ? <BidCard item={i} /> : (
+                  <button type="button" className="mail-body" aria-label="Close message" onClick={() => setOpen(null)}>{i.text}</button>
+                )
               ) : (
-                <p className="mail-preview">{i.text}</p>
+                <button type="button" className="mail-preview" onClick={() => { setOpen(i.id); markRead(i.id); }}>{i.text}</button>
               )}
             </li>
           );

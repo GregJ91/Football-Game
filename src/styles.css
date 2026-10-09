@@ -412,8 +412,8 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 .cat-medical { color: var(--warn); }
 .cat-scouting { color: #c9b6f2; }
 .cat-club { color: var(--text); }
-.mail-preview { margin: 0; padding: 0 14px 12px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mail-body { margin: 0; padding: 4px 14px 14px; font-size: 15px; line-height: 1.45; }
+.mail-preview { display: block; width: 100%; text-align: left; background: none; border: none; text-transform: none; letter-spacing: 0; font-family: var(--body); font-weight: 400; margin: 0; padding: 0 14px 12px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-body { display: block; width: 100%; text-align: left; background: none; border: none; text-transform: none; letter-spacing: 0; font-family: var(--body); font-weight: 400; color: var(--text); margin: 0; padding: 4px 14px 14px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
 .mail .bid-card { margin: 4px 10px 10px; }
 .unread-link { text-align: left; border: 1px solid var(--line); color: var(--text); width: 100%; }
 .toggle.no-rule { border-top: none; padding-top: 0; }
@@ -586,3 +586,17 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 /* Installed on a phone: keep full-screen pages clear of the status bar / notch. */
 #root > .screen { padding-top: calc(16px + env(safe-area-inset-top)); }
 #root > :not(.app-shell):not(.screen) { padding-top: env(safe-area-inset-top); }
+.work-option small { font-size: 13px; color: var(--text); opacity: 0.85; line-height: 1.35; }
+.work-option:disabled { opacity: 0.55; }
+.ledger div > span { min-width: 0; padding-right: 8px; }
+.card-label .good { color: var(--good); }
+.card-label .warn { color: var(--warn); }
+.staff-ovr { font-size: 14px; min-width: 52px; }
+.staff-rating { white-space: nowrap; }
+.grading-alert { text-align: left; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--warn); background: #2a1a10; color: var(--text); }
+.grading-alert strong { color: var(--warn); font-size: 15px; }
+.grading-alert small { font-size: 13px; line-height: 1.4; color: var(--text); opacity: 0.9; }
+.steps { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.steps i { width: 28px; height: 4px; border-radius: 2px; background: var(--line); }
+.steps i.on { background: var(--accent); }
+.steps small { margin-left: 6px; color: var(--muted); font-size: 12px; }

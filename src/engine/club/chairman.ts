@@ -9,7 +9,8 @@ import { sack } from './career';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, squadOf } from '../world';
 import { FACILITY_INFO, facilitiesOf, totalUpkeep } from './facilities';
-import { completeStadiumWork, nextLevelGrading, stadiumOf, syncCapacity } from './stadium';
+import { commercialUpkeep, weeklyMerchandise } from './matchday';
+import { completeStadiumWork, groundUpkeep, nextLevelGrading, stadiumOf, syncCapacity } from './stadium';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
@@ -264,9 +265,12 @@ export function chairmanWeek(game: GameState, rng: Rng) {
     club.balance += club.sponsor.weekly;
     l.sponsor = (l.sponsor ?? 0) + club.sponsor.weekly;
   }
-  const upkeep = totalUpkeep(club);
+  const upkeep = totalUpkeep(club) + commercialUpkeep(club) + groundUpkeep(game, club);
   club.balance -= upkeep;
   l.upkeep = (l.upkeep ?? 0) + upkeep;
+  const merch = weeklyMerchandise(game, club);
+  club.balance += merch;
+  l.merch = (l.merch ?? 0) + merch;
   // Older saves: a backroom team appropriate to the level.
   if (!club.staff) hireInitialStaff(game, club);
   const staff = staffWages(club);
@@ -316,7 +320,7 @@ export function gradingWarning(game: GameState, position: number) {
   const check = nextLevelGrading(game);
   if (!check || check.ok) return;
   b.gradingWarned = true;
-  const missing = check.items.filter((i) => !i.ok).map((i) => `${i.label.toLowerCase()} (${i.have} of ${i.need})`);
+  const missing = check.items.filter((i) => !i.ok).map((i) => (i.label === 'Floodlights' ? 'floodlights' : `${i.label.toLowerCase()} (${i.have} of ${i.need})`));
   addInbox(game, 'contract', `Ground warning: you're in the promotion race, but the ground doesn't meet the rules for the next level. Missing: ${missing.join(', ')}. Without it you can't go up.`, { subject: 'Ground warning' });
 }
 

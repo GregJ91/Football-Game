@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
 import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
 import {
-  floodlightOption, nextLevelGrading, stadiumBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
+  floodlightOption, groundUpkeep, nextLevelGrading, stadiumBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
 } from '../../engine/club/stadium';
+import {
+  FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
+  weeklyMerchandise, type Commercial,
+} from '../../engine/club/matchday';
 import { crowdFill, guideTicketPrice, ledgerOf, moneyPw, ticketPrice, wageBill, weeklyTv } from '../../engine/economy/finance';
 import { divisionTable } from '../../engine/season/table';
 import type { Build, FacilityKind, Stand, StaffRole } from '../../engine/types';
@@ -28,6 +32,8 @@ const STYLE_LABEL = { steady: 'Steady deal', upfront: 'Cash up front', bonus: 'P
 function buildLabel(b: Build, stands: Stand[]) {
   if (b.kind === 'facility') return `${FACILITY_INFO[b.facility!].name} upgrade`;
   if (b.kind === 'floodlights') return 'Floodlights';
+  if (b.kind === 'food') return `Food and drink: ${FOOD_LEVELS[b.level!].name}`;
+  if (b.kind === 'vip') return `Hospitality: ${VIP_LEVELS[b.level!].name}`;
   const stand = stands[b.stand!].name;
   if (b.kind === 'extend') return `${stand}: +${b.size!.toLocaleString('en-GB')} places`;
   if (b.kind === 'seats') return `${stand}: seating`;
@@ -52,6 +58,7 @@ export function Club() {
   const [identityDraft, setIdentityDraft] = useState<Identity | null>(null);
   const setIdentity = useGame((s) => s.setIdentity);
   const hire = useGame((s) => s.hireStaff);
+  const buildCommercial = useGame((s) => s.buildCommercial);
 
   const club = userClub(game);
   const stadium = stadiumOf(club);
@@ -90,19 +97,41 @@ export function Club() {
   const pos = table.findIndex((r) => r.clubId === club.id) + 1;
 
   const income = [
+    ['Season tickets', ledger.seasonTickets ?? 0],
     ['Gate receipts', ledger.gate],
+    ['Food and drink', ledger.food ?? 0],
+    ['Hospitality', ledger.hospitality ?? 0],
+    ['Shirts and club shop', ledger.merch ?? 0],
     ['TV and prize money', ledger.tv + (ledger.prize ?? 0)],
     ['Sponsorship', ledger.sponsor ?? 0],
     ['Player sales', ledger.transfersIn],
   ] as const;
   const spending = [
-    ['Wages', ledger.wages],
+    ['Player wages', ledger.wages],
+    ['Staff wages', ledger.staff ?? 0],
     ['Transfer fees', ledger.transfersOut],
     ['Building work', ledger.building ?? 0],
-    ['Facility upkeep', ledger.upkeep ?? 0],
-    ['Staff wages', ledger.staff ?? 0],
+    ['Upkeep (ground, facilities, food, VIP)', ledger.upkeep ?? 0],
     ['Pay-offs', Math.max(0, -ledger.other)],
   ] as const;
+  const totalIn = income.reduce((n, [, v]) => n + v, 0) + Math.max(0, ledger.loan ?? 0);
+  const totalOut = spending.reduce((n, [, v]) => n + v, 0) + Math.max(0, -(ledger.loan ?? 0));
+
+  // A normal week, and a normal home league game, at today's prices.
+  const weekly = {
+    tv: weeklyTv(game, club),
+    sponsor: club.sponsor && club.sponsor.endsSeason >= game.season ? club.sponsor.weekly : 0,
+    merch: weeklyMerchandise(game, club),
+    wages: wageBill(game, club),
+    staff: staffWages(club),
+    facilities: totalUpkeep(club),
+    ground: groundUpkeep(game, club) + commercialUpkeep(club),
+    loan: club.loan ? Math.min(club.loan.weekly, club.loan.remaining) : 0,
+  };
+  const weeklyNet = weekly.tv + weekly.sponsor + weekly.merch - weekly.wages - weekly.staff - weekly.facilities - weekly.ground - weekly.loan;
+  const holders = seasonTicketHolders(game, club);
+  const payers = Math.max(0, expectedCrowd - holders);
+  const homeGame = { gate: payers * price, food: foodTakings(club, expectedCrowd), vip: vipTakings(game, club) };
   const loanNet = ledger.loan ?? 0;
 
   return (
@@ -166,8 +195,10 @@ export function Club() {
           {!stadium.floodlights && !stadium.builds.some((b) => b.kind === 'floodlights') && (() => {
             const opt = floodlightOption(game);
             return (
-              <button type="button" className="btn secondary" disabled={busy} onClick={() => start(opt)}>
-                Install floodlights · {money(opt.cost)} · {opt.weeks} weeks
+              <button type="button" className="work-option" disabled={busy || opt.cost > club.balance} onClick={() => start(opt)}>
+                <strong>Install floodlights</strong>
+                <small>{opt.about}</small>
+                <span>Cost {money(opt.cost)} · {opt.weeks} weeks · upkeep {moneyPw(opt.upkeep)}</span>
               </button>
             );
           })()}
@@ -201,7 +232,59 @@ export function Club() {
               {!grading.ok && <p className="muted small">You can't be promoted until the ground passes. Builds must be finished by the end of the season.</p>}
             </section>
           )}
-          <p className="hint left">Tap a stand to extend it, add seats or put a roof on. One stadium project at a time.</p>
+          <p className="hint left">Tap a stand to extend it, add seats or put a roof on. One stand project at a time.</p>
+
+          <div className="card-label"><span>Matchday business</span></div>
+          {(['food', 'vip'] as Commercial[]).map((kind) => {
+            const level = kind === 'food' ? foodLevel(club) : vipLevel(club);
+            const cur = kind === 'food' ? FOOD_LEVELS[level] : VIP_LEVELS[level];
+            const takings = kind === 'food' ? foodTakings(club, expectedCrowd) : vipTakings(game, club);
+            const next = commercialUpgrade(game, club, kind);
+            const nextTakings = next ? (kind === 'food' ? foodTakings(club, expectedCrowd, next.level) : vipTakings(game, club, next.level)) : 0;
+            const building = stadium.builds.find((b) => b.kind === kind);
+            const max = (kind === 'food' ? FOOD_LEVELS : VIP_LEVELS).length - 1;
+            return (
+              <section key={kind} className="card facility">
+                <div className="facility-head">
+                  <span>
+                    <strong>{kind === 'food' ? 'Food and drink' : 'VIP hospitality'}</strong>
+                    <small className="block muted">{cur.name}</small>
+                  </span>
+                  <span className="pips" aria-label={`Level ${level} of ${max}`}>
+                    {Array.from({ length: max }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
+                  </span>
+                </div>
+                <p className="muted small">
+                  {cur.about}{' '}
+                  {kind === 'food'
+                    ? `Fans spend about £${FOOD_LEVELS[level].spend.toFixed(2)} each: around ${money(takings)} a home game.`
+                    : level > 0 ? `${VIP_LEVELS[level].guests} places at ${money(vipPrice(game, club))}: around ${money(takings)} a home game.` : 'Hospitality sells places to local businesses and well-off fans every home game.'}
+                  {cur.upkeep ? ` Upkeep ${moneyPw(cur.upkeep)}.` : ''}
+                </p>
+                {building ? (
+                  <p className="small">Building {(kind === 'food' ? FOOD_LEVELS : VIP_LEVELS)[building.level!].name.toLowerCase()}: {building.weeksLeft} weeks to go.</p>
+                ) : next ? (
+                  <button type="button" className="work-option" disabled={!!next.blocked || commercialBusy(club) || next.cost > club.balance} onClick={() => act(buildCommercial(kind), `Work has started: ${next.name.toLowerCase()}.`)}>
+                    <strong>Upgrade to {next.name}</strong>
+                    <small>{next.about} About {money(nextTakings)} a home game ({nextTakings > takings ? `+${money(nextTakings - takings)}` : 'no change'}).</small>
+                    <span>{next.blocked ?? `Cost ${money(next.cost)} · ${next.weeks} weeks · upkeep ${moneyPw(next.upkeep)}`}</span>
+                  </button>
+                ) : (
+                  <p className="small">Top level.</p>
+                )}
+              </section>
+            );
+          })}
+
+          <section className="card">
+            <div className="card-label"><span>Ground running costs</span><span>{moneyPw(groundUpkeep(game, club) + commercialUpkeep(club))}</span></div>
+            <div className="ledger">
+              <div><span>Stands, seats, roofs and floodlights</span><b>{moneyPw(groundUpkeep(game, club))}</b></div>
+              <div><span>Food and drink</span><b>{moneyPw(FOOD_LEVELS[foodLevel(club)].upkeep)}</b></div>
+              <div><span>Hospitality</span><b>{moneyPw(VIP_LEVELS[vipLevel(club)].upkeep)}</b></div>
+            </div>
+            <p className="muted small">Paid every week. Bigger grounds cost more to staff, steward and repair.</p>
+          </section>
         </>
       )}
 
@@ -217,7 +300,7 @@ export function Club() {
                     <strong>{STAFF_INFO[role].name}</strong>
                     <small className="block muted">{s ? `${s.name} · ${moneyPw(s.wage)}` : 'Vacant'}</small>
                   </span>
-                  <span className={`staff-rating ${s && s.rating >= 15 ? 'a-top' : s && s.rating >= 11 ? 'a-good' : s && s.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{s?.rating ?? '–'}</span>
+                  <span className={`staff-rating ${s && s.rating >= 15 ? 'a-top' : s && s.rating >= 11 ? 'a-good' : s && s.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{s ? `${s.rating}/20` : '–'}</span>
                 </div>
                 <p className="muted small">{STAFF_INFO[role].effect}</p>
                 <button type="button" className="btn tile" onClick={() => setStaffSheet(role)}>Find a replacement</button>
@@ -262,7 +345,7 @@ export function Club() {
               <button type="button" className="link-btn" onClick={() => setStaffSheet(null)}>Close</button>
             </div>
             <p className="muted small">
-              This month's shortlist. {club.staff?.[staffSheet] ? `${club.staff[staffSheet]!.name} (rated ${club.staff[staffSheet]!.rating}) leaves if you hire someone.` : ''} A new shortlist comes every month.
+              This month's shortlist. {club.staff?.[staffSheet] ? `${club.staff[staffSheet]!.name} (rated ${club.staff[staffSheet]!.rating}) /20) leaves if you hire someone.` : ''} A new shortlist comes every month.
             </p>
             <ul className="player-list">
               {staffCandidates(game, staffSheet).map((c, i) => (
@@ -276,8 +359,8 @@ export function Club() {
                       if (!err) setStaffSheet(null);
                     }}
                   >
-                    <span className={`ovr ${c.rating >= 15 ? 'a-top' : c.rating >= 11 ? 'a-good' : c.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{c.rating}</span>
-                    <span className="who"><strong>{c.name}</strong><small>Rating {c.rating} of 20</small></span>
+                    <span className={`ovr staff-ovr ${c.rating >= 15 ? 'a-top' : c.rating >= 11 ? 'a-good' : c.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{c.rating}/20</span>
+                    <span className="who"><strong>{c.name}</strong><small>Rated {c.rating}/20</small></span>
                     <span className="role">{moneyPw(c.wage)}</span>
                   </button>
                 </li>
@@ -294,6 +377,46 @@ export function Club() {
             <div><small>Wages</small><strong>{moneyPw(wageBill(game, club))}</strong></div>
             <div><small>TV & sponsors</small><strong>{moneyPw(weeklyTv(game, club) + (club.sponsor?.weekly ?? 0))}</strong></div>
           </div>
+
+          <section className="card">
+            <div className="card-label"><span>A normal week</span><span className={weeklyNet >= 0 ? 'good' : 'warn'}>{weeklyNet >= 0 ? '+' : '−'}{moneyPw(Math.abs(weeklyNet))}</span></div>
+            <div className="ledger">
+              <h3>Money in</h3>
+              <div><span>TV money</span><b>{moneyPw(weekly.tv)}</b></div>
+              {weekly.sponsor > 0 && <div><span>Shirt sponsor</span><b>{moneyPw(weekly.sponsor)}</b></div>}
+              <div><span>Shirts and club shop</span><b>{moneyPw(weekly.merch)}</b></div>
+              <h3>Money out</h3>
+              <div><span>Player wages</span><b>{moneyPw(weekly.wages)}</b></div>
+              <div><span>Staff wages</span><b>{moneyPw(weekly.staff)}</b></div>
+              <div><span>Facility upkeep</span><b>{moneyPw(weekly.facilities)}</b></div>
+              <div><span>Ground, food and VIP upkeep</span><b>{moneyPw(weekly.ground)}</b></div>
+              {weekly.loan > 0 && <div><span>Loan repayment</span><b>{moneyPw(weekly.loan)}</b></div>}
+            </div>
+            <p className="muted small">Plus the takings from each home game below. Away games bring in nothing at the gate.</p>
+          </section>
+
+          <section className="card">
+            <div className="card-label"><span>Each home league game</span><span>about {money(homeGame.gate + homeGame.food + homeGame.vip)}</span></div>
+            <div className="ledger">
+              <div><span>Gate: {payers.toLocaleString('en-GB')} paying fans at £{price}</span><b>{money(homeGame.gate)}</b></div>
+              <div><span>Food and drink</span><b>{money(homeGame.food)}</b></div>
+              <div><span>Hospitality</span><b>{money(homeGame.vip)}</b></div>
+            </div>
+            <p className="muted small">
+              Expected crowd {expectedCrowd.toLocaleString('en-GB')} of {club.capacity.toLocaleString('en-GB')}
+              {holders ? `, of whom ${holders.toLocaleString('en-GB')} are season-ticket holders who've already paid` : ''}. Cup games: everyone pays on the gate.
+            </p>
+          </section>
+
+          {club.seasonTickets?.season === game.season && (
+            <section className="card">
+              <div className="card-label"><span>Season tickets</span><span>{money(club.seasonTickets.revenue)}</span></div>
+              <p className="small">
+                {club.seasonTickets.holders.toLocaleString('en-GB')} sold at {money(club.seasonTickets.price)} each, paid in the summer. Sold every summer at a fifth off the
+                match price: more fans and a bigger ground sell more.
+              </p>
+            </section>
+          )}
 
           <section className="card">
             <div className="card-label"><span>Ticket price</span><span>Typical at this level £{guide}</span></div>
@@ -384,7 +507,7 @@ export function Club() {
           </section>
 
           <section className="card">
-            <div className="card-label"><span>This season</span></div>
+            <div className="card-label"><span>This season so far</span><span className={totalIn - totalOut >= 0 ? 'good' : 'warn'}>{totalIn - totalOut >= 0 ? '+' : '−'}{money(Math.abs(totalIn - totalOut))}</span></div>
             <div className="ledger">
               <h3>Money in</h3>
               {income.map(([label, v]) => <div key={label}><span>{label}</span><b>{money(v)}</b></div>)}
@@ -571,7 +694,8 @@ export function Club() {
               {standOptions(game, club, standSheet).map((o) => (
                 <button key={`${o.kind}-${o.size ?? ''}`} type="button" className="work-option" disabled={busy || o.cost > club.balance} onClick={() => start(o)}>
                   <strong>{o.label}</strong>
-                  <span>{money(o.cost)} · {o.weeks} weeks</span>
+                  <small>{o.about}</small>
+                  <span>Cost {money(o.cost)} · {o.weeks} weeks · upkeep +{moneyPw(o.upkeep)}</span>
                 </button>
               ))}
             </div>

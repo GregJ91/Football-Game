@@ -295,7 +295,9 @@ export function renewalDemand(game: GameState, p: Player): { wage: number; refus
   const club = game.clubs[p.clubId!];
   if (p.loanFrom) return { wage: p.wage, refuses: `${p.lastName} is on loan from ${game.clubs[p.loanFrom].name}.` };
   const quality = divisionOf(game, club.id).def.quality;
-  const base = Math.max(Math.min(p.wage * 1.1, fairWage(game, club, p) * 1.5), fairWage(game, club, p));
+  // He won't take a pay cut to stay, and a player who's outgrown the level
+  // wants paying for his ability, not the league's going rate.
+  const base = Math.max(p.wage * 1.08, fairWage(game, club, p), playerWage(p.overall) * 0.4);
   const moraleMult = p.morale < 40 ? 1.25 : 1;
   const ageMult = p.age >= 31 ? 0.9 : 1;
   const refuses = game.settings?.allInterested

@@ -167,8 +167,8 @@ export function PreMatch() {
       </section>
 
       <div className="sticky-cta grid-2">
-        <button type="button" className="btn primary big" disabled={busy} onClick={kickOff}>Play match</button>
-        <button type="button" className="btn secondary big" disabled={busy} onClick={() => void simNextMatch()}>Sim match</button>
+        <button type="button" className="btn primary big" disabled={busy} onClick={kickOff}>Play match<small>Watch it live</small></button>
+        <button type="button" className="btn secondary big" disabled={busy} onClick={() => void simNextMatch()}>Sim match<small>Plays the full 90 minutes instantly</small></button>
       </div>
     </main>
   );

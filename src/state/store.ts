@@ -22,7 +22,8 @@ import {
 } from '../engine/economy/finance';
 import { chooseSponsor, repayLoan, takeLoan } from '../engine/club/chairman';
 import { startFacilityUpgrade } from '../engine/club/facilities';
-import { startStadiumWork, type WorkOption } from '../engine/club/stadium';
+import { startCommercialWork, startStadiumWork, type WorkOption } from '../engine/club/stadium';
+import type { Commercial } from '../engine/club/matchday';
 import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
   isKnown, releasePlayer, renewContract, type BidAction, type BidResponse,
@@ -114,6 +115,8 @@ interface Store {
 
   // Chairman decisions; each returns a problem, or null when done.
   buildStadium: (opt: WorkOption) => string | null;
+  /** Build the next level of food outlets or VIP hospitality. */
+  buildCommercial: (kind: Commercial) => string | null;
   upgradeFacility: (kind: FacilityKind) => string | null;
   setTicketPrice: (price: number) => void;
   pickSponsor: (index: number) => void;
@@ -445,6 +448,14 @@ export const useGame = create<Store>()((set, get) => {
       if (!game) return 'No game loaded.';
       const err = startStadiumWork(game.clubs[game.userClubId], opt);
       if (!err) addInbox(game, 'info', `Work has started: ${opt.label.toLowerCase()} (${opt.weeks} weeks).`, { subject: 'Building work' });
+      commit();
+      return err;
+    },
+
+    buildCommercial: (kind) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = startCommercialWork(game, game.clubs[game.userClubId], kind);
       commit();
       return err;
     },

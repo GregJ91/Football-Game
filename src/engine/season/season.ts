@@ -6,6 +6,7 @@ import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/
 import { returnLoans } from '../transfers/loans';
 import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
+import { sellSeasonTickets } from '../club/matchday';
 import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
 import { MATCHDAY, SEASON_START_DAY, advanceHalfDay, deliverScoutReports, isMatchdayMorning, todaysUserMatch } from '../calendar';
 import { awardLeagueTitles, completeUserCupTie, isCupTie, playDueCupRounds, setupCups, tieMatchOptions } from './cups';
@@ -117,7 +118,7 @@ export function playMatch(
   if (opts.neutral) {
     addGate(game, home, result.attendance / 2);
     addGate(game, away, result.attendance / 2);
-  } else addGate(game, home, result.attendance);
+  } else addGate(game, home, result.attendance, { league: !opts.knockout, atHome: true });
   return result;
 }
 
@@ -173,14 +174,14 @@ export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveM
     } else if (fixture.neutral) {
       addGate(game, game.clubs[fixture.homeId], result.attendance / 2);
       addGate(game, game.clubs[fixture.awayId], result.attendance / 2);
-    } else addGate(game, game.clubs[fixture.homeId], result.attendance);
+    } else addGate(game, game.clubs[fixture.homeId], result.attendance, { atHome: true });
     completeUserCupTie(game, fixture);
     // Any other competition's games on the same day.
     playDueCupRounds(game, game.week, game.day ?? MATCHDAY);
     game.half = 'pm';
     return result;
   }
-  addGate(game, game.clubs[fixture.homeId], result.attendance);
+  addGate(game, game.clubs[fixture.homeId], result.attendance, { league: true, atHome: true });
   playWeek(game);
   return result;
 }
@@ -504,6 +505,9 @@ export function startNextSeason(game: GameState) {
 /** Board target, sponsor offers, budgets and the window opening. */
 export function startOfSeasonBusiness(game: GameState) {
   setSeasonTarget(game);
+  const tickets = sellSeasonTickets(game);
+  const st = game.clubs[game.userClubId].seasonTickets;
+  if (tickets && st) addInbox(game, 'info', `Season tickets: ${st.holders.toLocaleString('en-GB')} sold at ${money(st.price)} each, bringing in ${money(tickets)}. Holders don't pay on the gate at home league games.`, { subject: 'Season tickets sold' });
   withRng(game, (rng) => makeSponsorOffers(game, rng));
   announceBudgets(game);
   addInbox(game, 'info', `The summer transfer window is open for ${transferWindow(game).weeksLeft} weeks.`, { category: 'transfers', subject: 'Window open' });

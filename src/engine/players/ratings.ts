@@ -98,9 +98,26 @@ export function effectiveRating(p: Player, slot: Position, energy = p.fitness): 
 export function playerValue(overall: number, age: number, potential: number): number {
   const ageMult = age <= 21 ? 1.5 : age <= 24 ? 1.3 : age <= 29 ? 1 : age <= 32 ? 0.6 : 0.3;
   const potMult = 1 + Math.max(0, potential - overall) / 40;
-  // Exponential through the leagues, flattening out among the elite.
-  const base = 300 * Math.exp((Math.min(overall, 84) - 40) / 4.2) * (1 + Math.max(0, overall - 84) * 0.08);
-  return roundMoney(base * ageMult * potMult);
+  return roundMoney(baseValue(overall) * ageMult * potMult);
+}
+
+/** Prime-age value above 70: the elite cost serious money (log-linear between these). */
+const ELITE_VALUES: [number, number][] = [
+  [70, 375_000], [74, 2_500_000], [78, 9_000_000], [82, 25_000_000], [86, 50_000_000], [90, 85_000_000], [94, 130_000_000], [99, 180_000_000],
+];
+
+function baseValue(overall: number): number {
+  // Exponential through the leagues…
+  if (overall <= 70) return 300 * Math.exp((overall - 40) / 4.2);
+  // …then steeper into the elite, easing off at the very top.
+  const o = Math.min(overall, 99);
+  for (let i = 1; i < ELITE_VALUES.length; i++) {
+    const [o1, v1] = ELITE_VALUES[i];
+    if (o > o1) continue;
+    const [o0, v0] = ELITE_VALUES[i - 1];
+    return v0 * Math.pow(v1 / v0, (o - o0) / (o1 - o0));
+  }
+  return ELITE_VALUES[ELITE_VALUES.length - 1][1];
 }
 
 export function playerWage(overall: number): number {

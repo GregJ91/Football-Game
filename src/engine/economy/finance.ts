@@ -1,5 +1,6 @@
 import type { Budgets, Club, CountryId, GameState, Ledger } from '../types';
 import { divisionOf, domesticClubs, squadOf } from '../world';
+import { homeMatchExtras, seasonTicketHolders } from '../club/matchday';
 
 /** Typical ticket price by level (£). */
 const TICKET: Record<CountryId, number[]> = {
@@ -63,14 +64,21 @@ export function weeklyIncomeEstimate(game: GameState, club: Club): number {
   return weeklyTv(game, club) + (club.capacity * crowdFill(game, club) * ticketPrice(game, club)) / 2;
 }
 
-export function addGate(game: GameState, club: Club, attendance: number) {
+/**
+ * Ticket money from a crowd. For the user's club, season-ticket holders have
+ * already paid for league games, and a home game (not a shared or neutral
+ * gate) also brings in food, drink and hospitality.
+ */
+export function addGate(game: GameState, club: Club, attendance: number, opts: { league?: boolean; atHome?: boolean } = {}) {
   // Seats sell for a quarter more than terracing.
   const s = club.stadium;
   const cap = s ? s.stands.reduce((n, x) => n + x.capacity, 0) : 0;
   const seatedShare = s && cap ? s.stands.reduce((n, x) => n + x.seats, 0) / cap : 0;
-  const gate = Math.round(attendance * ticketPrice(game, club) * (1 + 0.25 * seatedShare));
+  const payers = club.isUser && opts.league ? Math.max(0, attendance - seasonTicketHolders(game, club)) : attendance;
+  const gate = Math.round(payers * ticketPrice(game, club) * (1 + 0.25 * seatedShare));
   club.balance += gate;
   ledgerOf(club).gate += gate;
+  if (club.isUser && opts.atHome) homeMatchExtras(game, club, attendance);
 }
 
 /** Pay wages and collect TV money for every club, once per week. */

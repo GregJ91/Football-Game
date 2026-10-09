@@ -1,6 +1,7 @@
 import { ledgerOf } from '../economy/finance';
 import type { Build, Club, CountryId, GameState, Stadium, StadiumWork } from '../types';
 import { divisionOf } from '../world';
+import { FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, costScale, type Commercial } from './matchday';
 
 export const STAND_NAMES = ['Main Stand', 'North End', 'East Terrace', 'South End'];
 export const MAX_STAND = 20_000;
@@ -25,7 +26,12 @@ export function stadiumOf(club: Club): Stadium {
 }
 
 function standUnderWork(stadium: Stadium, i: number) {
-  return stadium.builds.some((b) => b.stand === i && b.kind !== 'facility');
+  return stadium.builds.some((b) => b.stand === i && b.stand !== undefined);
+}
+
+/** Stand and floodlight work (food and VIP have their own builders). */
+function isGroundWork(b: Build) {
+  return b.kind !== 'facility' && b.kind !== 'food' && b.kind !== 'vip';
 }
 
 /** Usable capacity: a stand being worked on holds half its fans. */
@@ -115,18 +121,56 @@ export interface WorkOption {
   stand?: number;
   size?: number;
   label: string;
+  /** What the work does for the club. */
+  about: string;
   cost: number;
   weeks: number;
+  /** Extra weekly running cost once it's built. */
+  upkeep: number;
 }
 
-function costScale(country: CountryId) {
-  return country === 'eng' ? 1 : 0.7;
+// ---------------------------------------------------------------- running costs
+
+/** Weekly upkeep per terrace place, per seat, per roofed place, and for floodlights (£). */
+const UPKEEP = { place: 0.04, seat: 0.02, roof: 0.02, floodlights: 40 };
+
+/** Weekly cost of keeping the ground itself in order (stewarding, repairs, pitch, power). */
+export function groundUpkeep(game: GameState, club: Club): number {
+  const s = stadiumOf(club);
+  const k = costScale(game.country);
+  const roofed = s.stands.reduce((n, x) => n + (x.roof ? x.capacity : 0), 0);
+  return Math.round((totalCapacity(s) * UPKEEP.place + totalSeats(s) * UPKEEP.seat + roofed * UPKEEP.roof + (s.floodlights ? UPKEEP.floodlights : 0)) * k);
+}
+
+/** Start building the next level of food outlets or hospitality. */
+export function startCommercialWork(game: GameState, club: Club, kind: Commercial): string | null {
+  const opt = commercialUpgrade(game, club, kind);
+  if (!opt) return 'Already at the top level.';
+  if (opt.blocked) return opt.blocked;
+  if (commercialBusy(club)) return 'Already building food or hospitality. One at a time.';
+  const problem = cannotBuild(club, opt.cost);
+  if (problem) return problem;
+  stadiumOf(club).builds.push({ kind, level: opt.level, weeksLeft: opt.weeks, totalWeeks: opt.weeks, cost: opt.cost });
+  club.balance -= opt.cost;
+  const l = ledgerOf(club);
+  l.building = (l.building ?? 0) + opt.cost;
+  return null;
+}
+
+/**
+ * Building costs: non-league builders and second-hand floodlights are much
+ * cheaper, so a small club can afford to get its ground up to grade.
+ */
+function buildScale(game: GameState): number {
+  const level = divisionOf(game, game.userClubId).def.level;
+  const bottom = Math.max(...game.divisions.map((d) => d.def.level));
+  return costScale(game.country) * ([0.45, 0.6, 0.8][bottom - level] ?? 1);
 }
 
 /** What can be done to a stand right now. */
 export function standOptions(game: GameState, club: Club, i: number): WorkOption[] {
   const s = stadiumOf(club).stands[i];
-  const k = costScale(game.country);
+  const k = buildScale(game);
   const opts: WorkOption[] = [];
   for (const size of EXTEND_SIZES) {
     if (s.capacity + size > MAX_STAND) continue;
@@ -136,8 +180,10 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
       stand: i,
       size,
       label: `Extend by ${size.toLocaleString('en-GB')} (terracing)`,
+      about: `Room for ${size.toLocaleString('en-GB')} more standing fans: bigger crowds and gates, and counts towards the ground rules.`,
       cost: Math.round(size * perPlace * k),
       weeks: Math.min(20, 3 + Math.round(size / 400)),
+      upkeep: Math.round(size * UPKEEP.place * k),
     });
   }
   const terrace = s.capacity - s.seats;
@@ -146,22 +192,39 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
       kind: 'seats',
       stand: i,
       label: `Seat the whole stand (+${terrace.toLocaleString('en-GB')} seats)`,
+      about: 'Seats sell for a quarter more than terracing, and higher leagues require a number of seats.',
       cost: Math.round(terrace * 90 * (1 + s.capacity / 10000) * k),
       weeks: Math.min(12, 2 + Math.round(terrace / 800)),
+      upkeep: Math.round(terrace * UPKEEP.seat * k),
     });
   }
   if (!s.roof) {
-    opts.push({ kind: 'roof', stand: i, label: 'Add a roof', cost: Math.round(Math.max(5000, s.capacity * 40) * k), weeks: Math.min(10, 3 + Math.round(s.capacity / 2000)) });
+    opts.push({
+      kind: 'roof',
+      stand: i,
+      label: 'Add a roof',
+      about: 'Keeps the fans dry: crowds hold up better in bad weather.',
+      cost: Math.round(Math.max(5000, s.capacity * 40) * k),
+      weeks: Math.min(10, 3 + Math.round(s.capacity / 2000)),
+      upkeep: Math.round(s.capacity * UPKEEP.roof * k),
+    });
   }
   return opts;
 }
 
 export function floodlightOption(game: GameState): WorkOption {
-  return { kind: 'floodlights', label: 'Install floodlights', cost: game.country === 'eng' ? 40_000 : 25_000, weeks: 4 };
+  return {
+    kind: 'floodlights',
+    label: 'Install floodlights',
+    about: 'Needed to play at the level above, and for evening kick-offs.',
+    cost: Math.round(40_000 * buildScale(game)),
+    weeks: 4,
+    upkeep: Math.round(UPKEEP.floodlights * costScale(game.country)),
+  };
 }
 
 export function stadiumBusy(club: Club): boolean {
-  return stadiumOf(club).builds.some((b) => b.kind !== 'facility');
+  return stadiumOf(club).builds.some(isGroundWork);
 }
 
 export function cannotBuild(club: Club, cost: number): string | null {
@@ -199,6 +262,12 @@ export function completeStadiumWork(club: Club, b: Build): string {
     case 'floodlights':
       s.floodlights = true;
       return 'The floodlights are switched on for the first time.';
+    case 'food':
+      s.food = b.level;
+      return `New food and drink outlets are open: ${FOOD_LEVELS[b.level!].name.toLowerCase()}.`;
+    case 'vip':
+      s.vip = b.level;
+      return `The ${VIP_LEVELS[b.level!].name.toLowerCase()} is open for business.`;
     default:
       return '';
   }
