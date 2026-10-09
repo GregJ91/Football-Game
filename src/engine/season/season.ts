@@ -256,9 +256,9 @@ export function playWeek(game: GameState): Fixture[] {
     marketWeek(game, rng);
   });
   userMatchMood(game, fixtures);
-  if (game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
-  // Once a month the board takes stock; on hard it may end your career here.
-  if (game.week >= 8 && game.week % 4 === 2 && boardCheck(game)) return fixtures;
+  if (!game.unemployed && game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
+  // Once a month the board takes stock; on hard it may sack you.
+  if (game.week >= 8 && game.week % 4 === 2) boardCheck(game);
   const wasOpen = transferWindow(game).open;
   game.week++;
   // Saturday evening: day -1 of the new week is the Saturday just gone,
@@ -365,6 +365,7 @@ export function endSeason(game: GameState) {
 
 /** No promotion without a ground that meets the next level's rules; the next club goes up instead. */
 function denyPromotionIfGroundFails(game: GameState, summary: SeasonSummary) {
+  if (game.unemployed) return;
   const user = game.clubs[game.userClubId];
   const div = divisionOf(game, user.id);
   const promoted = summary.promoted[div.def.id];

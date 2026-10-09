@@ -14,7 +14,7 @@ import { League } from './ui/screens/League';
 import { Match } from './ui/screens/Match';
 import { PreMatch } from './ui/screens/PreMatch';
 import { SeasonEnd } from './ui/screens/SeasonEnd';
-import { Sacked } from './ui/screens/Sacked';
+import { Unemployed } from './ui/screens/Unemployed';
 import { Squad } from './ui/screens/Squad';
 import { Start } from './ui/screens/Start';
 import { Tactics } from './ui/screens/Tactics';
@@ -23,12 +23,12 @@ import { Transfers } from './ui/screens/Transfers';
 export function App() {
   const screen = useGame((s) => s.screen);
   const hasGame = useGame((s) => s.game !== null);
-  const sacked = useGame((s) => s.game?.phase === 'sacked');
+  const unemployed = useGame((s) => !!s.game?.unemployed);
 
   if (screen === 'start' || !hasGame) return screen === 'create' ? <CreateClub /> : <Start />;
   if (screen === 'create') return <CreateClub />;
-  // The board sacked you: the career is over until you start a new one.
-  if (sacked) return <Sacked />;
+  // Sacked: out of work until you take a job (or start again).
+  if (unemployed) return <Unemployed />;
   if (screen === 'seasonEnd') return <SeasonEnd />;
   if (screen === 'match') return <Match />;
   if (screen === 'prematch') return <PreMatch />;

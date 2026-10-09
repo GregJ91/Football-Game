@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { advanceHalfDay } from '../src/engine/calendar';
+import { careerOf, takeJob, waitAWeek, waitForOffer } from '../src/engine/club/career';
 import { boardCheck, boardOf, difficultyOf, judge, shiftConfidence } from '../src/engine/club/chairman';
-import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
+import { playToSeasonEnd, playWeek } from '../src/engine/season/season';
 import type { Difficulty } from '../src/engine/types';
 import { buildTable } from '../src/engine/season/table';
 import { divisionOf, userClub } from '../src/engine/world';
@@ -87,8 +87,7 @@ describe('the board', () => {
     expect(judge(g, false)).toBe(false);
     g.week = 14;
     expect(judge(g, false)).toBe(true);
-    expect(g.phase).toBe('sacked');
-    expect(g.sacked?.reason).toMatch(/final warning/);
+    expect(g.unemployed?.reason).toMatch(/final warning/);
   });
 
   it('on hard, recovering lifts the warning', () => {
@@ -117,23 +116,78 @@ describe('the board', () => {
     expect(judge(g, true)).toBe(true);
   });
 
-  it('once sacked, the season stops and nothing moves on', () => {
-    const g = game('hard', 98);
-    g.startSeason = g.season - 1;
-    boardOf(userClub(g)).confidence = 5;
-    judge(g, false);
-    const week = g.week;
-    playToSeasonEnd(g);
-    expect(g.week).toBe(week);
-    expect(advanceHalfDay(g)).toBe('seasonEnd');
-    startNextSeason(g);
-    expect(g.phase).toBe('sacked');
-  });
-
-  it('a season on hard runs to the end or to the sack, never both', () => {
+  it('a season on hard runs to the end, sacked or not', () => {
     const g = game('hard', 99);
     playToSeasonEnd(g);
-    expect(['seasonEnd', 'sacked']).toContain(g.phase);
-    if (g.phase === 'sacked') expect(g.sacked).toBeDefined();
+    expect(g.phase).toBe('seasonEnd');
+  });
+});
+
+describe('out of work', () => {
+  const sacked = () => {
+    const g = game('hard', 101);
+    g.startSeason = g.season - 1;
+    while (g.week < 10) playWeek(g);
+    boardOf(userClub(g)).confidence = 5;
+    judge(g, false);
+    return g;
+  };
+
+  it('the old club gets a new manager and clubs get in touch straight away', () => {
+    const g = sacked();
+    const old = g.clubs[g.unemployed!.fromClubId];
+    expect(old.isUser).toBe(false);
+    expect(g.unemployed!.offers.length).toBeGreaterThan(0);
+    expect(g.unemployed!.offers.every((o) => o.clubId !== old.id)).toBe(true);
+    // Offers come from your level or a step or two down.
+    const level = g.unemployed!.level;
+    for (const o of g.unemployed!.offers) {
+      const l = divisionOf(g, o.clubId).def.level;
+      expect(l).toBeGreaterThanOrEqual(level - 1);
+      expect(l).toBeLessThanOrEqual(level + 2);
+    }
+    expect(careerOf(g)[0].left).toBe('sacked');
+    expect((g.inbox ?? []).filter((i) => i.kind === 'bid' && !i.resolved)).toHaveLength(0);
+  });
+
+  it('the world plays on while you wait, offers lapse and new ones arrive, across seasons too', () => {
+    const g = sacked();
+    const week = g.week;
+    waitAWeek(g);
+    expect(g.week).toBe(week + 1);
+    const season = g.season;
+    for (let i = 0; i < 60 && g.unemployed; i++) waitAWeek(g);
+    expect(g.season).toBeGreaterThan(season);
+    expect(g.unemployed!.offers.length).toBeLessThanOrEqual(3);
+    // Nothing lands in an inbox you don't have.
+    expect(g.inbox!.filter((i) => i.season > season)).toHaveLength(0);
+  });
+
+  it('taking a job hands you the club, with a new board, target, budgets and ground', () => {
+    const g = sacked();
+    const offer = g.unemployed!.offers[0];
+    expect(takeJob(g, 'not-a-club')).not.toBeNull();
+    expect(takeJob(g, offer.clubId)).toBeNull();
+    const club = userClub(g);
+    expect(club.id).toBe(offer.clubId);
+    expect(club.isUser).toBe(true);
+    expect(g.unemployed).toBeUndefined();
+    expect(club.board!.target).toBeDefined();
+    expect(club.budgets).toBeDefined();
+    expect(club.stadium!.stands).toHaveLength(4);
+    expect(club.capacity).toBeGreaterThan(0);
+    expect(careerOf(g).map((s) => s.clubId)).toEqual([g.career![0].clubId, club.id]);
+    // A new manager gets his first season.
+    expect(g.startSeason).toBe(g.season);
+    // And the season carries on with you in charge.
+    playToSeasonEnd(g);
+    expect(club.history.at(-1)!.season).toBe(g.season);
+  });
+
+  it('wait for an offer stops as soon as one arrives', () => {
+    const g = sacked();
+    g.unemployed!.offers = [];
+    waitForOffer(g);
+    expect(g.unemployed!.offers.length).toBeGreaterThan(0);
   });
 });

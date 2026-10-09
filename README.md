@@ -51,6 +51,7 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Bank loans:** repaid weekly over two seasons.
   - **Season money:** prize money for every club, parachute payments after relegation, and a season ledger.
 - **Day by day, CM 01/02 style:** Continue moves on half a day (AM, then PM, then the next morning), with the date top right. Matches are on Saturdays; Continue on matchday morning takes you to the match. Play match and Sim match on the Hub skip straight to the next game.
+- **Player search (CM 01/02 style):** every player in the game, most valuable first. Re-sort by value, ability, age, name or asking price, and filter by name, position, age, division (or free agents), maximum value, transfer-listed, or realistic targets.
 - **Inbox** (top left, with an unread count), filtered by Transfers, Training, Medical, Scouting and Club. It includes Friday training reports, training knocks, match injuries, bids you can answer in place, and scout reports that arrive a few days after you send a scout, with a verdict on the player.
 - **Cups:**
   - **England:**
@@ -82,7 +83,7 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Normal:** the board warns you about poor results but never sacks you.
   - **Hard:** less money and an impatient board that can sack you. Below 20 confidence you get a final warning; if it hasn't recovered a month later, or by the end of the season, you're out (and at once if it hits 8). New managers get their first season.
   - **The board** checks your league position against its target every month, and dislikes debt.
-  - **Sacked** ends the career, with a look back at your seasons and honours, and a fresh start.
+  - **Sacked:** you're out of work and the world plays on. Struggling clubs at your level or a step or two down get in touch (two straight away, more as the weeks pass, each open for four weeks). Wait a week, wait for an offer, or accept one and take over that club's squad, ground and finances with a new board. Your career record carries across clubs.
 - **Squad depth:**
   - **Fitness:** recovers a little every day (3–5% depending on stamina). One game a week leaves time to recover fully; two a week wears a side down unless you rotate. Tired players show in orange. Auto-pick leaves out badly tired players.
   - **Rotation:** "Rest tired players" on the Tactics and pre-match screens, and an assistant option to rest them in simmed matches.

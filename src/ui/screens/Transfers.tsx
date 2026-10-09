@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
-import { POSITION_GROUP, positionsLabel } from '../../engine/players/ratings';
+import { POSITION_ORDER, positionsLabel } from '../../engine/players/ratings';
 import {
   askingPrice, interestIn, isKnown, openInboxItems, ratingRange, transferWindow, wageDemand, type Interest,
 } from '../../engine/transfers/market';
-import type { Player, PositionGroup } from '../../engine/types';
+import type { Player, Position } from '../../engine/types';
 import { divisionOf, squadOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { BidCard } from '../components/BidCard';
@@ -20,7 +20,16 @@ const AGES: { v: Age; label: string; test: (a: number) => boolean }[] = [
   { v: 'prime', label: '24–29', test: (a) => a >= 24 && a <= 29 },
   { v: 'vet', label: '30+', test: (a) => a >= 30 },
 ];
-const GROUPS: (PositionGroup | 'ALL')[] = ['ALL', 'GK', 'DEF', 'MID', 'ATT'];
+const MAX_VALUES = [0, 100_000, 500_000, 1_000_000, 5_000_000, 20_000_000, 50_000_000];
+type SortKey = 'value' | 'ability' | 'age' | 'name' | 'price';
+const SORTS: { k: SortKey; label: string }[] = [
+  { k: 'value', label: 'Value' },
+  { k: 'ability', label: 'Ability' },
+  { k: 'age', label: 'Age' },
+  { k: 'name', label: 'Name' },
+  { k: 'price', label: 'Price' },
+];
+const PAGE = 50;
 const INTEREST_DOT: Record<Interest, string> = { keen: 'Keen', open: 'Open', reluctant: 'Reluctant', no: 'Big wage' };
 
 export function Transfers() {
@@ -28,10 +37,15 @@ export function Transfers() {
   const rev = useGame((s) => s.rev);
   const adjust = useGame((s) => s.adjustBudgets);
   const [tab, setTab] = useState<Tab>('search');
-  const [group, setGroup] = useState<PositionGroup | 'ALL'>('ALL');
+  const [name, setName] = useState('');
+  const [position, setPosition] = useState<Position | 'ANY'>('ANY');
   const [age, setAge] = useState<Age>('any');
-  const [freeOnly, setFreeOnly] = useState(false);
-  const [affordable, setAffordable] = useState(true);
+  const [division, setDivision] = useState<string>('any');
+  const [maxValue, setMaxValue] = useState(0);
+  const [listedOnly, setListedOnly] = useState(false);
+  const [affordable, setAffordable] = useState(false);
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'value', desc: true });
+  const [shown, setShown] = useState(PAGE);
   const [open, setOpen] = useState<Player | null>(null);
   const [budgetSheet, setBudgetSheet] = useState(false);
 
@@ -43,25 +57,53 @@ export function Transfers() {
   const wageRoom = Math.max(0, budgets.wage - bill);
   const avgWage = bill / Math.max(1, club.playerIds.length);
 
+  // Every player in the game (CM 01/02 style), most valuable first unless re-sorted.
   const results = useMemo(() => {
     const ageTest = AGES.find((a) => a.v === age)!.test;
-    const out: { p: Player; known: boolean; est: number; interest: Interest; fee: number }[] = [];
+    const q = name.trim().toLowerCase();
+    const levelOf = new Map(game.divisions.flatMap((d) => d.clubIds.map((id) => [id, d] as const)));
+    const out: { p: Player; known: boolean; est: number; fee: number }[] = [];
     for (const p of Object.values(game.players)) {
       if (p.clubId === club.id) continue;
-      if (freeOnly && p.clubId) continue;
-      if (group !== 'ALL' && POSITION_GROUP[p.position] !== group) continue;
+      if (division === 'free' ? p.clubId : division !== 'any' && levelOf.get(p.clubId ?? '')?.def.id !== division) continue;
+      if (position !== 'ANY' && !p.positions.includes(position)) continue;
       if (!ageTest(p.age)) continue;
-      const interest = interestIn(game, club, p);
-      const fee = p.clubId ? askingPrice(game, p) : 0;
-      if (affordable && fee > budgets.transfer * 1.1) continue;
-      // Wages you could fit in, at most by moving on one typical earner.
-      if (affordable && wageDemand(game, club, p) > wageRoom + avgWage) continue;
+      if (maxValue && p.value > maxValue) continue;
+      if (listedOnly && !p.listed && !p.transferRequest) continue;
+      if (q && !`${p.firstName} ${p.lastName}`.toLowerCase().includes(q)) continue;
+      const needFee = sort.key === 'price' || affordable;
+      const fee = needFee && p.clubId ? askingPrice(game, p) : 0;
+      if (affordable) {
+        if (fee > budgets.transfer * 1.1) continue;
+        // Wages you could fit in, at most by moving on one typical earner.
+        if (wageDemand(game, club, p) > wageRoom + avgWage) continue;
+      }
       const known = isKnown(game, club, p);
       const [lo, hi] = ratingRange(p);
-      out.push({ p, known, est: known ? p.overall : (lo + hi) / 2, interest, fee });
+      out.push({ p, known, est: known ? p.overall : (lo + hi) / 2, fee });
     }
-    return out.sort((a, b) => b.est - a.est).slice(0, 40);
-  }, [rev, group, age, freeOnly, affordable]); // `rev` marks engine changes to `game`
+    const dir = sort.desc ? -1 : 1;
+    const key = {
+      value: (x: (typeof out)[number]) => x.p.value,
+      ability: (x: (typeof out)[number]) => x.est,
+      age: (x: (typeof out)[number]) => x.p.age,
+      price: (x: (typeof out)[number]) => x.fee,
+      name: () => 0,
+    }[sort.key];
+    if (sort.key === 'name') out.sort((a, b) => dir * `${a.p.lastName} ${a.p.firstName}`.localeCompare(`${b.p.lastName} ${b.p.firstName}`));
+    else out.sort((a, b) => dir * (key(a) - key(b)) || b.p.value - a.p.value);
+    return out;
+  }, [rev, name, position, age, division, maxValue, listedOnly, affordable, sort]); // `rev` marks engine changes to `game`
+
+  const pickSort = (k: SortKey) => {
+    setSort((s) => (s.key === k ? { key: k, desc: !s.desc } : { key: k, desc: k !== 'name' }));
+    setShown(PAGE);
+  };
+  // Any change of filter starts the list from the top again.
+  const filter = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setShown(PAGE);
+  };
 
   const bids = openInboxItems(game);
   const listed = squadOf(game, club.id).filter((p) => p.listed);
@@ -101,42 +143,75 @@ export function Transfers() {
 
       {tab === 'search' && (
         <>
-          <div className="pills compact">
-            {GROUPS.map((g) => (
-              <button key={g} type="button" className="pill" aria-pressed={group === g} onClick={() => setGroup(g)}>
-                {g === 'ALL' ? 'All' : g}
-              </button>
-            ))}
-          </div>
-          <div className="pills compact">
-            {AGES.map((a) => (
-              <button key={a.v} type="button" className="pill" aria-pressed={age === a.v} onClick={() => setAge(a.v)}>
-                {a.label}
-              </button>
-            ))}
-          </div>
-          <div className="pills compact">
-            <button type="button" className="pill" aria-pressed={affordable} onClick={() => setAffordable(!affordable)}>Realistic targets</button>
-            <button type="button" className="pill" aria-pressed={freeOnly} onClick={() => setFreeOnly(!freeOnly)}>Free agents only</button>
+          <div className="search-filters">
+            <label className="field search-name">
+              <span className="visually-hidden">Player name</span>
+              <input type="search" placeholder="Search by name" value={name} onChange={(e) => filter(setName)(e.target.value)} />
+            </label>
+            <div className="grid-3">
+              <label className="field">
+                <span>Position</span>
+                <select value={position} onChange={(e) => filter(setPosition)(e.target.value as Position | 'ANY')}>
+                  <option value="ANY">Any</option>
+                  {POSITION_ORDER.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Age</span>
+                <select value={age} onChange={(e) => filter(setAge)(e.target.value as Age)}>
+                  {AGES.map((a) => <option key={a.v} value={a.v}>{a.label}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Max value</span>
+                <select value={maxValue} onChange={(e) => filter(setMaxValue)(Number(e.target.value))}>
+                  {MAX_VALUES.map((v) => <option key={v} value={v}>{v ? money(v) : 'Any'}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="field">
+              <span>Division</span>
+              <select value={division} onChange={(e) => filter(setDivision)(e.target.value)}>
+                <option value="any">All divisions</option>
+                {game.divisions.map((d) => <option key={d.def.id} value={d.def.id}>{d.def.name}</option>)}
+                <option value="free">Free agents</option>
+              </select>
+            </label>
+            <div className="pills compact">
+              <button type="button" className="pill" aria-pressed={listedOnly} onClick={() => filter(setListedOnly)(!listedOnly)}>Transfer listed</button>
+              <button type="button" className="pill" aria-pressed={affordable} onClick={() => filter(setAffordable)(!affordable)}>Realistic targets</button>
+            </div>
           </div>
           {!window.open && <p className="hint left">The window is closed, so only free agents can join right now.</p>}
+
+          <div className="sort-bar" role="group" aria-label="Sort by">
+            <span className="muted small">{results.length.toLocaleString('en-GB')} players</span>
+            {SORTS.map(({ k, label }) => (
+              <button key={k} type="button" className="sort-btn" aria-pressed={sort.key === k} onClick={() => pickSort(k)}>
+                {label}{sort.key === k ? (sort.desc ? ' ▼' : ' ▲') : ''}
+              </button>
+            ))}
+          </div>
+
           <ul className="player-list">
-            {results.map(({ p, known, interest, fee }) => {
+            {results.slice(0, shown).map(({ p, known, fee }) => {
               const [lo, hi] = ratingRange(p);
               const from = p.clubId ? game.clubs[p.clubId] : null;
+              const interest = interestIn(game, club, p);
               return (
                 <li key={p.id}>
                   <button type="button" className="player-row" onClick={() => setOpen(p)}>
                     <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
                     <span className={`ovr ${known ? '' : 'range'}`}>{known ? p.overall : `${lo}–${hi}`}</span>
                     <span className="who">
-                      <strong>{p.firstName} {p.lastName}</strong>
+                      <strong>{p.firstName} {p.lastName}{p.listed || p.transferRequest ? <small className="warn"> Listed</small> : null}</strong>
                       <small>
-                        {p.age} yrs · {from ? `${from.name} · L${divisionOf(game, from.id).def.level}` : 'Free agent'}
+                        {p.age} yrs · {from ? `${from.name} · ${divisionOf(game, from.id).def.name}` : 'Free agent'}
                       </small>
                     </span>
                     <span className="role">
-                      {from ? money(fee) : 'Free'}
+                      {money(p.value)}
+                      <small>{sort.key === 'price' && from ? `Asking ${money(fee)}` : from ? '' : 'Free'}</small>
                       <small className={`interest-text interest-${interest}`}>{INTEREST_DOT[interest]}</small>
                     </span>
                   </button>
@@ -144,6 +219,11 @@ export function Transfers() {
               );
             })}
           </ul>
+          {results.length > shown && (
+            <button type="button" className="btn secondary" onClick={() => setShown(shown + PAGE)}>
+              Show more ({(results.length - shown).toLocaleString('en-GB')} left)
+            </button>
+          )}
           {results.length === 0 && <p className="hint">No players match. Try fewer filters.</p>}
         </>
       )}

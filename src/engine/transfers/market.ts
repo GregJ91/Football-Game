@@ -27,6 +27,8 @@ export function addInbox(game: GameState, kind: InboxKind, text: string, extra: 
     text,
     ...extra,
   };
+  // Out of work, there's no club inbox to fill.
+  if (game.unemployed) return item;
   game.inbox ??= [];
   game.inbox.unshift(item);
   if (game.inbox.length > 150) game.inbox.length = 150;

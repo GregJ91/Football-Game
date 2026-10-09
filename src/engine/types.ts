@@ -467,9 +467,11 @@ export interface GameState {
   fixtures: Fixture[];
   /** Filled when the regular season has ended. */
   lastSummary: SeasonSummary | null;
-  phase: 'season' | 'seasonEnd' | 'sacked';
-  /** Set when the board sacked you (hard difficulty): the career is over. */
-  sacked?: { season: number; week: number; reason: string };
+  phase: 'season' | 'seasonEnd';
+  /** Set while you're out of work after being sacked: the world plays on and clubs may offer you a job. */
+  unemployed?: Unemployed;
+  /** The clubs you've managed, in order. */
+  career?: CareerSpell[];
   nextId: number;
   settings?: GameSettings;
   inbox?: InboxItem[];
@@ -487,6 +489,31 @@ export interface GameState {
   cups?: CupState[];
   /** European competitions and the foreign clubs in them. */
   europe?: EuropeState;
+}
+
+export interface JobOffer {
+  clubId: string;
+  /** Absolute week (season * 100 + week) after which the offer lapses. */
+  expires: number;
+}
+
+export interface Unemployed {
+  reason: string;
+  season: number;
+  week: number;
+  /** The club that sacked you, and its level then. */
+  fromClubId: string;
+  level: number;
+  offers: JobOffer[];
+}
+
+export interface CareerSpell {
+  clubId: string;
+  clubName: string;
+  from: number;
+  /** Last season in charge, once you've left. */
+  to?: number;
+  left?: 'sacked';
 }
 
 export interface GameSettings {

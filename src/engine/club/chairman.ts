@@ -4,6 +4,7 @@ import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Board, Club, Difficulty, GameState, SeasonSummary } from '../types';
 import { buildTable } from '../season/table';
+import { sack } from './career';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, squadOf } from '../world';
 import { FACILITY_INFO, facilitiesOf, totalUpkeep } from './facilities';
@@ -41,6 +42,7 @@ export function shiftConfidence(game: GameState, delta: number) {
  * the board's verdict (see judge). Returns true if the user was sacked.
  */
 export function boardCheck(game: GameState): boolean {
+  if (game.unemployed) return false;
   const club = game.clubs[game.userClubId];
   const b = boardOf(club);
   const div = divisionOf(game, club.id);
@@ -63,6 +65,7 @@ export function boardCheck(game: GameState): boolean {
  * (or by the end of the season) is the sack, and so is falling to 8.
  */
 export function judge(game: GameState, seasonEnd: boolean): boolean {
+  if (game.unemployed) return false;
   const difficulty = difficultyOf(game);
   const b = boardOf(game.clubs[game.userClubId]);
   const c = b.confidence;
@@ -103,12 +106,6 @@ export function judge(game: GameState, seasonEnd: boolean): boolean {
   return false;
 }
 
-/** The end of the career at this club. */
-function sack(game: GameState, reason: string) {
-  game.sacked = { season: game.season, week: game.week, reason };
-  game.phase = 'sacked';
-  addInbox(game, 'contract', `You have been relieved of your duties. ${reason}`, { category: 'club', subject: 'Sacked' });
-}
 
 // ---------------------------------------------------------------- season target
 

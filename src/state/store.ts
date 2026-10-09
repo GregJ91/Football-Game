@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { assignToBench, restTired, setRole } from '../engine/players/squad';
+import { takeJob, waitAWeek, waitForOffer } from '../engine/club/career';
 import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
@@ -61,6 +62,11 @@ interface Store {
   restTiredPlayers: () => number;
   setAutoRotate: (on: boolean) => void;
   setPlayerRole: (playerId: string, role: SquadRole) => void;
+  /** Out of work: let a week pass. */
+  waitAWeek: () => Promise<void>;
+  /** Out of work: wait until a club gets in touch. */
+  waitForOffer: () => Promise<void>;
+  takeJob: (clubId: string) => void;
 
   /** Send a scout; the report lands in the inbox a few days later. */
   scout: (playerId: string) => ScoutResult;
@@ -391,6 +397,35 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return;
       game.settings = { ...game.settings, assistantTactics: !!game.settings?.assistantTactics, autoRotate: on };
+      commit();
+    },
+
+    waitAWeek: async () => {
+      const { game } = get();
+      if (!game?.unemployed) return;
+      set({ busy: true });
+      await new Promise((r) => setTimeout(r, 0));
+      waitAWeek(game);
+      set({ busy: false });
+      commit();
+    },
+
+    waitForOffer: async () => {
+      const { game } = get();
+      if (!game?.unemployed) return;
+      set({ busy: true });
+      await new Promise((r) => setTimeout(r, 0));
+      waitForOffer(game);
+      set({ busy: false });
+      commit();
+    },
+
+    takeJob: (clubId) => {
+      const { game } = get();
+      if (!game) return;
+      const err = takeJob(game, clubId);
+      if (err) get().showToast(err);
+      else set({ screen: 'hub', live: null, liveFixture: null, resultPopup: null });
       commit();
     },
 

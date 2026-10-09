@@ -490,3 +490,14 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .tired-box { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
 .squad small .warn { color: var(--warn); }
 .target-chip.danger { border-color: var(--warn); color: var(--warn); font-weight: 700; }
+
+/* Player search */
+.search-filters { display: flex; flex-direction: column; gap: 8px; }
+.search-filters .field span { font-size: 12px; }
+.search-filters select, .search-filters input[type='search'] { width: 100%; min-width: 0; }
+.sort-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sort-bar > span { margin-right: auto; }
+.sort-btn { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; min-height: 30px; }
+.sort-btn[aria-pressed='true'] { color: var(--text); border-color: var(--accent); }
+.offer-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(44, 66, 52, 0.5); }
+.offer-row .btn { min-height: 40px; padding: 0 14px; }

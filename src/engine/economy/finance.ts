@@ -104,7 +104,7 @@ export const UNLIMITED_BANK = 1_000_000_000;
 
 /** Testing aid: keep the user's bank and budgets full while unlimited money is on. */
 export function topUpUnlimited(game: GameState) {
-  if (!game.settings?.unlimitedMoney) return;
+  if (!game.settings?.unlimitedMoney || game.unemployed) return;
   const club = game.clubs[game.userClubId];
   club.balance = Math.max(club.balance, UNLIMITED_BANK);
   club.budgets = { transfer: UNLIMITED_BANK, wage: UNLIMITED_BANK / 10 };
