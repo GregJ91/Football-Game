@@ -23,7 +23,6 @@ export function cannotLoan(game: GameState, p: Player): string | null {
   if (!p.clubId) return 'Free agents sign permanently, not on loan.';
   if (p.clubId === club.id) return 'Already at your club.';
   if (p.loanFrom) return "He's already out on loan.";
-  if (game.clubs[p.clubId].foreign) return "Clubs abroad don't loan players to us.";
   if (!transferWindow(game).open) return 'Loans can only be agreed while the transfer window is open.';
   if (club.playerIds.length >= SQUAD_MAX) return `Your squad is full (${SQUAD_MAX}).`;
   if (loansIn(game).length >= MAX_LOANS) return `You can only have ${MAX_LOANS} players in on loan at once.`;
@@ -44,8 +43,15 @@ export function loanIn(game: GameState, p: Player): string | null {
   if (problem) return problem;
   const parent = game.clubs[p.clubId!];
   const club = game.clubs[game.userClubId];
-  parent.playerIds = parent.playerIds.filter((id) => id !== p.id);
-  if (parent.lineup) parent.lineup = parent.lineup.map((id) => (id === p.id ? null : id));
+  if (parent.foreign && game.europe) {
+    // From abroad: he comes into the main player database while he's here.
+    game.europe.squads[parent.id] = (game.europe.squads[parent.id] ?? []).filter((id) => id !== p.id);
+    delete game.europe.players[p.id];
+    game.players[p.id] = p;
+  } else {
+    parent.playerIds = parent.playerIds.filter((id) => id !== p.id);
+    if (parent.lineup) parent.lineup = parent.lineup.map((id) => (id === p.id ? null : id));
+  }
   club.playerIds.push(p.id);
   p.clubId = club.id;
   p.loanFrom = parent.id;
@@ -66,7 +72,11 @@ export function endLoan(game: GameState, p: Player) {
   club.playerIds = club.playerIds.filter((id) => id !== p.id);
   if (club.lineup) club.lineup = club.lineup.map((id) => (id === p.id ? null : id));
   if (club.bench) club.bench = club.bench.filter((id) => id !== p.id);
-  parent.playerIds.push(p.id);
+  if (parent.foreign && game.europe) {
+    delete game.players[p.id];
+    game.europe.players[p.id] = p;
+    (game.europe.squads[parent.id] ??= []).push(p.id);
+  } else parent.playerIds.push(p.id);
   p.clubId = parent.id;
   p.loanFrom = undefined;
   p.role = undefined;

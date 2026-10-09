@@ -90,8 +90,9 @@ describe('season flow', () => {
 describe('multi-season stability', () => {
   it('keeps divisions full, squads healthy and ratings anchored over several seasons', () => {
     const game = testGame('sco', 21);
+    // Players at pyramid clubs (free agents include the odd star from abroad).
     const avg = () => {
-      const all = Object.values(game.players).map((p) => p.overall);
+      const all = Object.values(game.players).filter((p) => p.clubId).map((p) => p.overall);
       return all.reduce((s, x) => s + x, 0) / all.length;
     };
     const start = avg();

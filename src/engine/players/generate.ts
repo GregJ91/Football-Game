@@ -101,6 +101,16 @@ export function generatePlayer(rng: Rng, opts: GenerateOptions): Player {
   };
 }
 
+/**
+ * Turn a young player into a wonderkid: potential in the high 80s or 90s,
+ * well beyond what normal youngsters can reach.
+ */
+export function makeWonderkid(rng: Rng, p: Player): Player {
+  p.potential = Math.max(p.overall + 10, Math.min(97, rng.int(88, 96)));
+  p.value = playerValue(p.overall, p.age, p.potential);
+  return p;
+}
+
 export function playerName(p: Player): string {
   return `${p.firstName} ${p.lastName}`;
 }

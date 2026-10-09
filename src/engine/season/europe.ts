@@ -5,7 +5,7 @@ import { addGate, crowdFill, ledgerOf } from '../economy/finance';
 import { simulateMatch, type SimOptions } from '../match/engine';
 import type { Rng } from '../rng';
 import type { Club, CupRound, CupState, CupTie, EuroEntry, EuroStage, EuropeState, GameState, MatchResult, SeasonSummary } from '../types';
-import { addInbox } from '../transfers/market';
+import { addInbox, trimFreeAgents } from '../transfers/market';
 import { pickTeam } from '../match/selection';
 import { attr100 } from '../players/ratings';
 import { newId, squadOf, withRng } from '../world';
@@ -138,6 +138,7 @@ export function setupEurope(game: GameState) {
     setForeignStrengths(game, rng, eu.shift, !firstSeason);
     if (!firstSeason) rolloverForeignSquads(game, rng);
     ensureForeignSquads(game);
+    trimFreeAgents(game);
     drawPlayoffs(game, rng);
   });
   const mine = eu.entries.find((e) => e.clubId === game.userClubId);

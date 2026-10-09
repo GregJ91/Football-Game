@@ -364,6 +364,52 @@ export function sellUpStars(game: GameState, rng: Rng, moves: Map<string, { from
   }
 }
 
+/**
+ * The top flight's biggest stars attract offers from abroad: each summer an
+ * AI player far above his league's level may be bought by a club abroad that
+ * matches him. It's the one way out of the top of the pyramid, and keeps it
+ * from filling up with stars.
+ */
+export function sellAbroad(game: GameState, rng: Rng) {
+  const eu = game.europe;
+  const top = game.divisions.find((d) => d.def.level === 1);
+  if (!eu || !top) return;
+  for (const clubId of top.clubIds) {
+    const club = game.clubs[clubId];
+    if (club.isUser) continue;
+    const p = squadOf(game, clubId)
+      // Scotland's best are routinely sold on; the Premier League keeps all but its very best.
+      .filter((x) => x.overall > top.def.quality + (game.country === 'eng' ? 12 : 10) && !x.loanFrom)
+      .sort((a, b) => b.overall - a.overall)[0];
+    if (!p || !rng.chance(0.35)) continue;
+    const foreign = eu.foreignIds.map((id) => game.clubs[id]).sort((a, b) => b.foreign!.strength - a.foreign!.strength);
+    const fits = foreign.filter((c) => c.foreign!.strength >= p.overall - 6);
+    const buyer = rng.pick(fits.length ? fits : foreign.slice(0, 5));
+    const fee = p.value;
+    club.balance += fee;
+    ledgerOf(club).transfersIn += fee;
+    removeFromClub(game, p);
+    delete game.players[p.id];
+    p.clubId = buyer.id;
+    p.listed = false;
+    p.contractEnd = game.season + rng.int(3, 5);
+    eu.players[p.id] = p;
+    const squad = (eu.squads[buyer.id] ??= []);
+    squad.push(p.id);
+    // The buyer lets its weakest player go to make room.
+    const weakest = squad.map((id) => eu.players[id]).filter(Boolean).sort((a, b) => a.overall - b.overall)[0];
+    if (weakest && squad.length > SQUAD_TEMPLATE_SIZE) {
+      eu.squads[buyer.id] = squad.filter((id) => id !== weakest.id);
+      delete eu.players[weakest.id];
+    }
+    game.transfers ??= [];
+    game.transfers.unshift({ season: game.season, week: game.week, playerId: p.id, playerName: playerName(p), fromClubId: clubId, toClubId: buyer.id, fee });
+    if (club.playerIds.length < 18) signFreeOrYouth(game, rng, club, p.position);
+  }
+}
+
+const SQUAD_TEMPLATE_SIZE = 22;
+
 export function expiringUserContracts(game: GameState): Player[] {
   return squadOf(game, game.userClubId).filter((p) => p.contractEnd <= game.season);
 }
@@ -549,6 +595,14 @@ export function freeAgents(game: GameState): Player[] {
 }
 
 /** Keep the free agent pool a sensible size and spread across levels. */
+/** Keep the free-agent pool to a manageable size: the best stay on the market. */
+export function trimFreeAgents(game: GameState) {
+  const pool = freeAgents(game);
+  if (pool.length <= FREE_AGENT_CAP) return;
+  pool.sort((a, b) => a.overall - b.overall);
+  for (const p of pool.slice(0, pool.length - FREE_AGENT_CAP)) delete game.players[p.id];
+}
+
 export function maintainFreeAgents(game: GameState, rng: Rng) {
   // Veterans nobody wants hang up their boots.
   for (const p of freeAgents(game)) if (p.age >= 33) delete game.players[p.id];

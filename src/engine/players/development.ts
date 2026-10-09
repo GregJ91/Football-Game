@@ -1,9 +1,9 @@
 import type { Rng } from '../rng';
 import type { GameState, Player } from '../types';
-import { trainingBonus, youthIntake } from '../club/facilities';
+import { facilitiesOf, trainingBonus, youthIntake } from '../club/facilities';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, newId } from '../world';
-import { SQUAD_TEMPLATE, generatePlayer } from './generate';
+import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from './generate';
 import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
 
 
@@ -98,10 +98,20 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       for (let i = 0; i < intake.count; i++) {
         const p = sign(game, rng, clubId, rng.pick(SQUAD_TEMPLATE), quality - 13 + intake.qualityBonus + rng.normal() * 3, rng.int(16, 18));
         p.potential = Math.min(99, p.potential + intake.potentialBonus);
+        // A top academy now and then produces a real gem.
+        if (i === 0 && rng.chance((facilitiesOf(club).youth - 1) * 0.04)) makeWonderkid(rng, p);
         p.contractEnd = game.season + 3;
         names.push(`${p.firstName} ${p.lastName} (${p.position})`);
       }
       addInbox(game, 'info', `Youth intake: ${names.join(', ')} join from the academy.`, { category: 'training', subject: 'Youth intake' });
+    }
+
+    // Now and then a big club's academy produces a wonderkid.
+    if (!club.isUser) {
+      const level = divisionOf(game, clubId).def.level;
+      if (rng.chance(level === 1 ? 0.04 : level === 2 ? 0.015 : 0.003)) {
+        makeWonderkid(rng, sign(game, rng, clubId, rng.pick(SQUAD_TEMPLATE), quality - 6 + rng.normal() * 2, rng.int(16, 18)));
+      }
     }
 
     // AI clubs that changed division reshape their squad; the user uses the transfer market.

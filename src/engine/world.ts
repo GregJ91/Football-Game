@@ -1,6 +1,6 @@
 import { COUNTRIES } from '../data/pyramids';
 import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../data/names';
-import { SQUAD_TEMPLATE, generatePlayer } from './players/generate';
+import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from './players/generate';
 import { Rng } from './rng';
 import { MAX_FACILITY } from './club/facilities';
 import { STAND_NAMES, createStadium, syncCapacity } from './club/stadium';
@@ -108,20 +108,26 @@ export function createSquad(
   quality: number,
   stars = 0,
   maxAge = 99,
+  worldClass = 0,
+  wonderkids = 0,
 ): Player[] {
   const players: Player[] = [];
-  const starSlots = new Set(rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i)).slice(0, stars));
+  // Which squad places go to the world-class players, the stars and the wonderkids.
+  const order = rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i));
+  const kind = new Map<number, 'world' | 'star' | 'kid'>();
+  order.slice(0, worldClass).forEach((i) => kind.set(i, 'world'));
+  order.slice(worldClass, worldClass + stars).forEach((i) => kind.set(i, 'star'));
+  order.slice(worldClass + stars, worldClass + stars + wonderkids).forEach((i) => kind.set(i, 'kid'));
   SQUAD_TEMPLATE.forEach((position, i) => {
-    const star = starSlots.has(i);
-    const age = maxAge < 99 ? rng.int(17, maxAge) : star ? rng.int(23, 29) : randomAge(rng);
-    const p = generatePlayer(rng, {
-      id: newId(game, 'p'),
-      position,
-      quality: star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3,
-      age,
-      clubId: club.id,
-      season: game.season,
-    });
+    const k = kind.get(i);
+    const age = maxAge < 99 ? rng.int(17, maxAge) : k === 'world' ? rng.int(24, 29) : k === 'star' ? rng.int(23, 29) : k === 'kid' ? rng.int(17, 19) : randomAge(rng);
+    const target =
+      k === 'world' ? Math.min(94, quality + 14 + rng.next() * 5)
+        : k === 'star' ? quality + 6 + rng.next() * 7
+          : k === 'kid' ? quality - 5 + rng.normal() * 2
+            : quality - stillToGrow(age) + rng.normal() * 3;
+    const p = generatePlayer(rng, { id: newId(game, 'p'), position, quality: target, age, clubId: club.id, season: game.season });
+    if (k === 'kid') makeWonderkid(rng, p);
     players.push(p);
     game.players[p.id] = p;
     club.playerIds.push(p.id);
@@ -170,7 +176,7 @@ function createClub(
  */
 function makeGiant(game: GameState, rng: Rng, user: Club, def: DivisionDef) {
   const eng = game.country === 'eng';
-  createSquad(game, rng, user, def.quality + 6, 4);
+  createSquad(game, rng, user, def.quality + 6, 3, 99, 2, 1);
   const stands = eng ? [16000, 12000, 12000, 12000] : [14000, 10000, 10000, 10000];
   user.stadium = {
     stands: STAND_NAMES.map((name, i) => ({ name, capacity: stands[i], seats: stands[i], roof: true })),
@@ -228,7 +234,10 @@ export function createGame(config: NewGameConfig): GameState {
       // Top-flight clubs have stars, more at the bigger clubs; elsewhere the odd standout.
       const edge = strength - def.quality;
       const stars = def.level === 1 ? (edge > 3 ? 3 : edge > 0 ? 2 : 1) : rng.chance(0.4) ? 1 : 0;
-      createSquad(game, rng, club, strength, stars);
+      // The biggest clubs have a world-class player; wonderkids are mostly at the top.
+      const worldClass = def.level === 1 && edge > 3 ? 1 : 0;
+      const kids = rng.chance(def.level === 1 ? 0.35 : def.level === 2 ? 0.15 : 0.03) ? 1 : 0;
+      createSquad(game, rng, club, strength, stars, 99, worldClass, kids);
       division.clubIds.push(club.id);
     }
     if (def.id === userDivision.id) {

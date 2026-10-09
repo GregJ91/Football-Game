@@ -1,6 +1,6 @@
 import { CLUB_NAMES, NATIONS, PLAYER_NAMES, type Nation } from '../../data/europe';
 import { KIT_COLOURS, clubSuffixes, townNameParts } from '../../data/names';
-import { SQUAD_TEMPLATE, generatePlayer } from '../players/generate';
+import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from '../players/generate';
 import { Rng } from '../rng';
 import { randomAge, stillToGrow } from '../world';
 import { developPlayer } from '../players/development';
@@ -105,12 +105,25 @@ export function foreignSquad(game: GameState, clubId: string): Player[] {
     // Stronger clubs have more stars; the best eleven come out close to the club's strength.
     const strength = club.foreign.strength;
     const stars = strength >= 76 ? 3 : strength >= 70 ? 2 : 1;
-    const quality = strength - 1.5 - stars * 0.5;
-    const starSlots = new Set(rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i)).slice(0, stars));
+    // The giants of Europe have world-class players, and the big clubs the best young talent.
+    const worldClass = strength >= 78 ? 2 : strength >= 75 ? 1 : 0;
+    const kids = strength >= 72 ? 1 : strength >= 66 && rng.chance(0.4) ? 1 : 0;
+    const quality = strength - 1.5 - stars * 0.5 - worldClass * 0.6;
+    const order = rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i));
+    const kind = new Map<number, 'world' | 'star' | 'kid'>();
+    order.slice(0, worldClass).forEach((i) => kind.set(i, 'world'));
+    order.slice(worldClass, worldClass + stars).forEach((i) => kind.set(i, 'star'));
+    order.slice(worldClass + stars, worldClass + stars + kids).forEach((i) => kind.set(i, 'kid'));
     ids = SQUAD_TEMPLATE.map((position, i) => {
-      const star = starSlots.has(i);
-      const age = star ? rng.int(23, 29) : randomAge(rng);
-      const p = makePlayer(game, rng, club, `${clubId}p${i}`, position, star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3, age);
+      const k = kind.get(i);
+      const age = k === 'world' ? rng.int(24, 29) : k === 'star' ? rng.int(23, 29) : k === 'kid' ? rng.int(17, 19) : randomAge(rng);
+      const target =
+        k === 'world' ? Math.min(94, quality + 13 + rng.next() * 5)
+          : k === 'star' ? quality + 6 + rng.next() * 7
+            : k === 'kid' ? quality - 5 + rng.normal() * 2
+              : quality - stillToGrow(age) + rng.normal() * 3;
+      const p = makePlayer(game, rng, club, `${clubId}p${i}`, position, target, age);
+      if (k === 'kid') makeWonderkid(rng, p);
       eu.players[p.id] = p;
       return p.id;
     });
@@ -143,11 +156,21 @@ export function rolloverForeignSquads(game: GameState, rng: Rng) {
       p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
       p.fitness = 100;
       p.injuryWeeks = 0;
+      const retiring = p.age >= 35 || (p.age >= 33 && rng.chance(0.3));
+      // Out of contract: most re-sign, a few leave on a free transfer.
+      // Only squad players leave for nothing; clubs keep their stars.
+      const leaving = !retiring && p.contractEnd <= game.season && p.overall < club.foreign!.strength - 1 && rng.chance(0.15);
       if (p.contractEnd <= game.season) p.contractEnd = game.season + rng.int(1, 4);
-      if (p.age >= 35 || (p.age >= 33 && rng.chance(0.3))) {
+      if (leaving) {
         delete eu.players[id];
-        // A youngster from the academy takes his place.
+        p.clubId = null;
+        p.contractEnd = game.season;
+        game.players[p.id] = p;
+      } else if (retiring) {
+        delete eu.players[id];
+        // A youngster from the academy takes his place (now and then a real talent).
         const young = makePlayer(game, rng, club, `${clubId}y${game.nextId++}`, p.position, club.foreign!.strength - 11 + rng.normal() * 3, rng.int(17, 19));
+        if (club.foreign!.strength >= 70 && rng.chance(0.2)) makeWonderkid(rng, young);
         eu.players[young.id] = young;
         keep.push(young.id);
       } else keep.push(id);

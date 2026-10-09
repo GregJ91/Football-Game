@@ -37,11 +37,19 @@ describe('difficulty', () => {
 
 describe('the board', () => {
   it('loses patience when you are well behind the target, and warms when on track', () => {
-    const g = game('normal', 92);
+    // A season where the user is well down the table after eight weeks.
+    let g = game('normal', 92);
+    let pos = 0;
+    for (let seed = 92; seed < 120; seed++) {
+      g = game('normal', seed);
+      while (g.week < 8) playWeek(g);
+      const d = divisionOf(g, g.userClubId);
+      pos = buildTable(d.clubIds, g.fixtures.filter((f) => f.divisionId === d.def.id)).findIndex((r) => r.clubId === g.userClubId) + 1;
+      if (pos >= 8) break;
+    }
+    expect(pos).toBeGreaterThanOrEqual(8);
     const b = boardOf(userClub(g));
-    while (g.week < 8) playWeek(g);
     const div = divisionOf(g, g.userClubId);
-    const pos = buildTable(div.clubIds, g.fixtures.filter((f) => f.divisionId === div.def.id)).findIndex((r) => r.clubId === g.userClubId) + 1;
     // Well behind: a title target from a mid-table position.
     b.target = { label: 'Win the league', position: Math.max(1, pos - 6) };
     b.confidence = 50;

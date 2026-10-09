@@ -16,7 +16,7 @@ import { rolloverPlayers } from '../players/development';
 import { attr100 } from '../players/ratings';
 import { assignRoles, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
 import {
-  addInbox, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
+  addInbox, sellAbroad, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
 import { Rng } from '../rng';
 import { isEuroId } from '../../data/europe';
@@ -474,6 +474,7 @@ export function startNextSeason(game: GameState) {
   withRng(game, (rng) => {
     handleContractExpiries(game, rng);
     sellUpStars(game, rng, moves);
+    sellAbroad(game, rng);
     rolloverPlayers(game, rng, new Set(moves.keys()));
     trimAiSquads(game);
     maintainFreeAgents(game, rng);

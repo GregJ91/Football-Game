@@ -96,6 +96,8 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Transfer Embargo:** no fees, only free agents and loans, and every bid for your players is accepted.
   - **Old But Gold:** only sign players aged 30 or over.
   - **Relegation Battlers:** take over the side second from bottom with 10 games left (within about six points of safety). Stay up to win; go down and it's game over.
+- **World-class players and wonderkids:** the biggest clubs at home and abroad have world-class stars rated in the 90s, and wonderkids with 90+ potential come through every year (including, now and then, from your own academy if it's good enough). The top flight's biggest stars can be bought by clubs abroad, and Scotland's best regularly are.
+- **Players abroad:** every foreign club has a real squad you can search, scout, buy from, borrow from, or pick up on a free when their contracts run out.
 - **Loans:** borrow a fringe or young player from another club until the end of the season (you pay his wages, up to 4 at once), and send him back early if you like.
 - **Crest and kits:** build a crest (shape, icon, optional initials) and design home and away kits when you found the club, and change them any time from the Club screen. When the colours clash, the away side wears its away kit.
 - **Backroom staff:** an assistant manager, coach, chief scout and physio, each rated 1–20, hired from a monthly shortlist under Club → Staff.

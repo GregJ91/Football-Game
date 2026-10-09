@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playToSeasonEnd, startNextSeason } from '../src/engine/season/season';
-import { cannotLoan } from '../src/engine/transfers/loans';
+import { cannotLoan, loanIn } from '../src/engine/transfers/loans';
 import { askingPrice, cannotBuy, completeTransfer, interestIn, isKnown, levelOf } from '../src/engine/transfers/market';
 import { playerById, squadOf, userClub } from '../src/engine/world';
 import { testGame } from './helpers';
@@ -22,7 +22,6 @@ describe('players abroad', () => {
     const p = eu.players[eu.squads[eu.foreignIds[20]][5]];
     expect(isKnown(g, club, p)).toBe(false);
     expect(cannotBuy(g, p)).toBeNull();
-    expect(cannotLoan(g, p)).toMatch(/abroad/);
     expect(askingPrice(g, p)).toBeGreaterThan(0);
     expect(['keen', 'open', 'reluctant', 'no']).toContain(interestIn(g, club, p));
     completeTransfer(g, p, club.id, askingPrice(g, p), p.wage, 3);
@@ -51,5 +50,43 @@ describe('players abroad', () => {
     expect(now).toHaveLength(22);
     const same = now.find((p) => p.id === first.id);
     if (same) expect(same.age).toBe(age + 1);
+  });
+
+  it('foreign clubs lend fringe players, who go home in the summer', () => {
+    const g = testGame('sco', 164);
+    const eu = g.europe!;
+    const parent = eu.foreignIds[10];
+    const fringe = squadOf(g, parent).sort((a, b) => a.overall - b.overall)[0];
+    g.clubs[g.userClubId].budgets!.wage = 1e9;
+    g.settings = { ...g.settings!, allInterested: true };
+    expect(cannotLoan(g, fringe)).toBeNull();
+    expect(loanIn(g, fringe)).toBeNull();
+    expect(fringe.clubId).toBe(g.userClubId);
+    expect(g.players[fringe.id]).toBe(fringe);
+    expect(squadOf(g, parent)).not.toContain(fringe);
+    playToSeasonEnd(g);
+    startNextSeason(g);
+    expect(fringe.clubId).toBe(parent);
+    expect(g.players[fringe.id]).toBeUndefined();
+    expect(squadOf(g, parent)).toContain(fringe);
+  });
+
+  it('some foreign players leave on free transfers each summer', () => {
+    const g = testGame('eng', 165);
+    const before = new Set(Object.keys(g.europe!.players));
+    playToSeasonEnd(g);
+    startNextSeason(g);
+    const freed = Object.values(g.players).filter((p) => !p.clubId && before.has(p.id));
+    expect(freed.length).toBeGreaterThan(5);
+  });
+});
+
+describe('world-class players and wonderkids', () => {
+  it('there are 90-rated stars and 90-potential youngsters from the start', () => {
+    const g = testGame('eng', 166);
+    const everyone = [...Object.values(g.players), ...Object.values(g.europe!.players)];
+    expect(everyone.filter((p) => p.overall >= 90).length).toBeGreaterThanOrEqual(3);
+    const kids = everyone.filter((p) => p.age <= 20 && p.potential >= 90);
+    expect(kids.length).toBeGreaterThanOrEqual(10);
   });
 });

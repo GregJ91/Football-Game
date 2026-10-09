@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoLineup, pickTeam } from '../src/engine/match/selection';
+import { FORMATIONS, autoLineup, pickTeam } from '../src/engine/match/selection';
 import {
   BENCH_SIZE, ROLE_SHARE, assignToBench, dailyRecovery, playingTimeCheck, recoverTo, restTired, roleOf, setRole, withBench,
 } from '../src/engine/players/squad';
@@ -44,9 +44,11 @@ describe('rotation', () => {
     const game = testGame('eng', 83);
     const squad = squadOf(game, game.userClubId);
     const best = pickTeam(squad, '4-4-2').xi;
-    const striker = best.find((p) => p.position === 'ST')!;
-    striker.fitness = 40;
-    expect(pickTeam(squad, '4-4-2').xi.map((p) => p.id)).not.toContain(striker.id);
+    // A starter with a natural replacement of similar ability waiting.
+    const starter = best.find((p) => squad.some((q) => !best.includes(q) && q.positions.includes(p.position) && q.overall >= p.overall - 3))!;
+    expect(starter).toBeDefined();
+    starter.fitness = 40;
+    expect(pickTeam(squad, '4-4-2').xi.map((p) => p.id)).not.toContain(starter.id);
   });
 
   it('the assistant rests tired picks in simmed matches, but your lineup is kept', () => {
@@ -54,11 +56,18 @@ describe('rotation', () => {
     const club = userClub(game);
     const squad = squadOf(game, club.id);
     club.lineup = autoLineup(squad, club.tactics.formation);
-    const tired = squad.find((p) => p.id === club.lineup![1])!;
+    const slots = FORMATIONS[club.tactics.formation];
+    // A starter with a fresh natural replacement of similar ability on the bench.
+    const i = slots.findIndex((slot, k) => {
+      const starter = squad.find((p) => p.id === club.lineup![k])!;
+      return squad.some((p) => !club.lineup!.includes(p.id) && p.positions.includes(slot) && p.overall >= starter.overall - 4);
+    });
+    expect(i).toBeGreaterThanOrEqual(0);
+    const tired = squad.find((p) => p.id === club.lineup![i])!;
     tired.fitness = 40;
     expect(userSelection(game).selection.xi).toContain(tired);
     expect(userSelection(game, undefined, true).selection.xi).not.toContain(tired);
-    expect(club.lineup[1]).toBe(tired.id);
+    expect(club.lineup[i]).toBe(tired.id);
   });
 });
 
