@@ -2,9 +2,13 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+// `--mode single` builds one self-contained HTML file (no service worker)
+// for sharing a playable link; see scripts/inline.mjs.
+export default defineConfig(({ mode }) => ({
+  build: mode === 'single' ? { outDir: 'dist-single', assetsInlineLimit: 100_000_000, cssCodeSplit: false } : {},
   plugins: [
     react(),
+    mode !== 'single' &&
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
@@ -29,4 +33,4 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     testTimeout: 60000,
   },
-});
+}));

@@ -27,7 +27,19 @@ function db() {
   return dbPromise;
 }
 
-export async function saveGame(game: GameState, slot = 'slot1'): Promise<SaveMeta> {
+/**
+ * Storage can be unavailable (private browsing, blocked site data). Saving
+ * then fails quietly and the game carries on in memory.
+ */
+export async function saveGame(game: GameState, slot = 'slot1'): Promise<SaveMeta | null> {
+  try {
+    return await writeSave(game, slot);
+  } catch {
+    return null;
+  }
+}
+
+async function writeSave(game: GameState, slot: string): Promise<SaveMeta> {
   const meta: SaveMeta = {
     slot,
     clubName: game.clubs[game.userClubId].name,
@@ -41,7 +53,12 @@ export async function saveGame(game: GameState, slot = 'slot1'): Promise<SaveMet
 }
 
 export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
-  const record = (await (await db()).get(STORE, slot)) as SaveRecord | undefined;
+  let record: SaveRecord | undefined;
+  try {
+    record = (await (await db()).get(STORE, slot)) as SaveRecord | undefined;
+  } catch {
+    return null;
+  }
   if (!record) return null;
   // Saves from before pressing existed.
   for (const c of Object.values(record.game.clubs)) c.tactics.pressing ??= 'medium';
@@ -49,6 +66,14 @@ export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
 }
 
 export async function listSaves(): Promise<SaveMeta[]> {
+  try {
+    return await readSaveList();
+  } catch {
+    return [];
+  }
+}
+
+async function readSaveList(): Promise<SaveMeta[]> {
   const d = await db();
   const keys = await d.getAllKeys(STORE);
   const metas: SaveMeta[] = [];
