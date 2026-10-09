@@ -12,7 +12,7 @@ import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { addInbox, maintainFreeAgents } from './transfers/market';
 import { hireInitialStaff, scoutReportsPerWeek } from './club/staff';
 import type {
-  ChallengeId, Club, ClubColours, CountryId, Difficulty, Division, DivisionDef, GameState, Player, Region,
+  ChallengeId, Club, ClubColours, CountryId, CrestDesign, Difficulty, Division, DivisionDef, GameState, Player, Region,
 } from './types';
 
 export const START_SEASON = 2026;
@@ -43,6 +43,8 @@ export interface NewGameConfig {
   difficulty?: Difficulty;
   /** Challenge mode (Relegation Battlers is set up separately). */
   challenge?: ChallengeId;
+  awayKit?: ClubColours;
+  crest?: CrestDesign;
 }
 
 /** Club-level economics by pyramid level (rough; refined in the chairman phase). */
@@ -235,6 +237,8 @@ export function createGame(config: NewGameConfig): GameState {
         name: config.clubName,
         shortName: config.shortName || makeShortName(config.clubName),
         colours: config.colours,
+        awayKit: config.awayKit,
+        crest: config.crest,
         stadiumName: config.stadiumName,
         capacity: 500,
         region: userDivision.region ?? config.region,

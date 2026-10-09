@@ -1,19 +1,10 @@
 import { useState } from 'react';
 import { COUNTRIES, bottomDivisions } from '../../data/pyramids';
-import type { ClubColours, CountryId, Difficulty, KitPattern, Region } from '../../engine/types';
+import type { CountryId, Difficulty, Region } from '../../engine/types';
 import { useGame } from '../../state/store';
-import { Crest, Kit } from '../components/ClubArt';
+import { Crest, DEFAULT_CREST } from '../components/ClubArt';
+import { IdentityEditor, type Identity } from '../components/IdentityEditor';
 import { challengeDef } from '../../engine/club/challenge';
-
-const PRIMARIES = [
-  ['Red', '#B3202A'], ['Royal blue', '#1F4FB8'], ['Claret', '#6B1832'], ['Green', '#1E7A43'],
-  ['Black', '#111111'], ['Amber', '#F2B632'], ['Purple', '#5B2A86'], ['White', '#F5F1E6'],
-] as const;
-const SECONDARIES = [
-  ['White', '#F5F1E6'], ['Sky', '#8EC5F0'], ['Gold', '#E8C04A'], ['Black', '#111111'],
-  ['Navy', '#14234D'], ['Tangerine', '#F07A1F'], ['Red', '#B3202A'], ['Green', '#1E7A43'],
-] as const;
-const PATTERNS: KitPattern[] = ['plain', 'stripes', 'hoops', 'halves', 'sash'];
 
 const DIFFICULTIES: { d: Difficulty; label: string; note: string }[] = [
   { d: 'easy', label: 'Easy', note: 'More money, a patient board' },
@@ -29,7 +20,12 @@ export function CreateClub() {
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [ground, setGround] = useState('');
-  const [colours, setColours] = useState<ClubColours>({ primary: '#B3202A', secondary: '#F5F1E6', pattern: 'stripes' });
+  const [identity, setIdentity] = useState<Identity>({
+    colours: { primary: '#B3202A', secondary: '#F5F1E6', pattern: 'stripes' },
+    awayKit: { primary: '#F5F1E6', secondary: '#B3202A', pattern: 'plain' },
+    crest: DEFAULT_CREST,
+  });
+  const { colours } = identity;
   const [country, setCountry] = useState<CountryId>('eng');
   const [region, setRegion] = useState<Region>('N');
   const [topFlight, setTopFlight] = useState(false);
@@ -46,6 +42,8 @@ export function CreateClub() {
       shortName: short,
       stadiumName: ground.trim() || `${clubName.split(' ')[0]} Park`,
       colours,
+      awayKit: identity.awayKit,
+      crest: identity.crest,
       country,
       region,
       topFlight: challenge ? false : topFlight,
@@ -82,8 +80,7 @@ export function CreateClub() {
       )}
 
       <section className="card preview">
-        <Crest colours={colours} size={72} />
-        <Kit colours={colours} size={88} />
+        <Crest colours={colours} size={72} design={identity.crest} initials={short} />
         <div className="preview-name">
           <strong>{clubName || 'Your club'}</strong>
           <span>
@@ -108,48 +105,7 @@ export function CreateClub() {
           </label>
         </div>
 
-        <fieldset className="field">
-          <legend>Primary colour</legend>
-          <div className="swatches">
-            {PRIMARIES.map(([label, hex]) => (
-              <button
-                key={hex}
-                type="button"
-                aria-label={label}
-                aria-pressed={colours.primary === hex}
-                className="swatch"
-                style={{ background: hex }}
-                onClick={() => setColours({ ...colours, primary: hex })}
-              />
-            ))}
-          </div>
-        </fieldset>
-        <fieldset className="field">
-          <legend>Secondary colour</legend>
-          <div className="swatches">
-            {SECONDARIES.map(([label, hex]) => (
-              <button
-                key={hex}
-                type="button"
-                aria-label={label}
-                aria-pressed={colours.secondary === hex}
-                className="swatch"
-                style={{ background: hex }}
-                onClick={() => setColours({ ...colours, secondary: hex })}
-              />
-            ))}
-          </div>
-        </fieldset>
-        <fieldset className="field">
-          <legend>Kit pattern</legend>
-          <div className="pills">
-            {PATTERNS.map((p) => (
-              <button key={p} type="button" className="pill" aria-pressed={colours.pattern === p} onClick={() => setColours({ ...colours, pattern: p })}>
-                {p[0].toUpperCase() + p.slice(1)}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <IdentityEditor value={identity} onChange={setIdentity} shortName={short} />
 
         <fieldset className="field">
           <legend>Start in</legend>

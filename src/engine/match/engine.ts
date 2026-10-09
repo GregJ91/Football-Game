@@ -41,7 +41,7 @@ const ZONE_WEIGHTS: Record<Position, Partial<Record<Zone, number>>> = {
 };
 
 const SHOOT_WEIGHT: Record<Position, number> = {
-  GK: 0, DC: 0.6, DR: 0.4, DL: 0.4, DMC: 0.6, MC: 1.2, MR: 2, ML: 2, AMC: 3, ST: 6,
+  GK: 0, DC: 0.9, DR: 0.5, DL: 0.5, DMC: 0.8, MC: 1.5, MR: 2, ML: 2, AMC: 3, ST: 4.2,
 };
 
 const DEFENDERS: Position[] = ['DC', 'DR', 'DL'];
@@ -386,7 +386,8 @@ export function stepMinute(m: LiveMatch) {
 
   const ratio = chanceRatio(att, def);
   if (rng.chance(ENGINE.baseChance * Math.pow(ratio, ENGINE.chanceExp))) {
-    const shooter = rng.weighted(att.onPitch, (o) => SHOOT_WEIGHT[o.slot] * (attr100(o.player, 'finishing') / 50)).player;
+    // Finishing decides whether it goes in; it only nudges who takes the shot.
+    const shooter = rng.weighted(att.onPitch, (o) => SHOOT_WEIGHT[o.slot] * (0.5 + attr100(o.player, 'finishing') / 100)).player;
     if (homeAttacks) m.shotsHome++;
     else m.shotsAway++;
     const finish = attr100(shooter, 'finishing') / Math.max(20, keeperRating(def));

@@ -10,6 +10,8 @@ import type { Build, FacilityKind, Stand, StaffRole } from '../../engine/types';
 import { STAFF_INFO, STAFF_ROLES, staffCandidates, staffWages } from '../../engine/club/staff';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
+import { ClubCrest, DEFAULT_CREST, awayKitOf } from '../components/ClubArt';
+import { IdentityEditor, type Identity } from '../components/IdentityEditor';
 import { money, ordinal, seasonLabel } from '../format';
 
 type Tab = 'ground' | 'facilities' | 'money' | 'board' | 'honours';
@@ -46,6 +48,8 @@ export function Club() {
   const [tab, setTab] = useState<Tab>('ground');
   const [standSheet, setStandSheet] = useState<number | null>(null);
   const [staffSheet, setStaffSheet] = useState<StaffRole | null>(null);
+  const [identityDraft, setIdentityDraft] = useState<Identity | null>(null);
+  const setIdentity = useGame((s) => s.setIdentity);
   const hire = useGame((s) => s.hireStaff);
 
   const club = userClub(game);
@@ -102,10 +106,39 @@ export function Club() {
 
   return (
     <main className="screen club-screen">
-      <header className="screen-head">
-        <div className="eyebrow">Chairman's office</div>
-        <h1>{club.stadiumName}</h1>
+      <header className="screen-head row">
+        <div className="grow">
+          <div className="eyebrow">Chairman's office</div>
+          <h1>{club.stadiumName}</h1>
+        </div>
+        <button type="button" className="crest-btn" aria-label="Kits and crest" onClick={() => setIdentityDraft({ colours: club.colours, awayKit: awayKitOf(club), crest: club.crest ?? DEFAULT_CREST })}>
+          <ClubCrest club={club} size={40} />
+          <small>Kits &amp; crest</small>
+        </button>
       </header>
+
+      {identityDraft && (
+        <div className="sheet-backdrop" onClick={() => setIdentityDraft(null)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Kits and crest" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <strong className="grow">Kits and crest</strong>
+              <button type="button" className="link-btn" onClick={() => setIdentityDraft(null)}>Cancel</button>
+            </div>
+            <IdentityEditor value={identityDraft} onChange={setIdentityDraft} shortName={club.shortName} />
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                setIdentity(identityDraft);
+                setIdentityDraft(null);
+                showToast('New kits and crest saved.');
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="segmented" role="tablist">
         {TABS.map(({ t, label }) => (

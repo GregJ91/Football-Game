@@ -67,11 +67,25 @@ export interface ClubColours {
   pattern: KitPattern;
 }
 
+export type CrestShape = 'shield' | 'round' | 'diamond' | 'square' | 'badge';
+export type CrestIcon = 'star' | 'ball' | 'crown' | 'castle' | 'anchor' | 'tree' | 'bird' | 'bolt' | 'none';
+
+export interface CrestDesign {
+  shape: CrestShape;
+  icon: CrestIcon;
+  /** Show the club's short name on the crest. */
+  initials?: boolean;
+}
+
 export interface Club {
   id: string;
   name: string;
   shortName: string;
+  /** Home kit (and the club's colours). */
   colours: ClubColours;
+  /** Away kit; unset = the home colours swapped. */
+  awayKit?: ClubColours;
+  crest?: CrestDesign;
   stadiumName: string;
   capacity: number;
   region: Region;

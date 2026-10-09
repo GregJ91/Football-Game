@@ -10,7 +10,7 @@ import {
 import {
   advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch, userSelection,
 } from '../engine/season/season';
-import type { ChallengeId, CountryId, FacilityKind, Fixture, GameState, SquadRole, StaffRole, Tactics } from '../engine/types';
+import type { ChallengeId, ClubColours, CountryId, CrestDesign, FacilityKind, Fixture, GameState, SquadRole, StaffRole, Tactics } from '../engine/types';
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
@@ -56,6 +56,8 @@ interface Store {
   continueAfterChallenge: () => void;
   loanPlayer: (playerId: string) => string | null;
   hireStaff: (role: StaffRole, index: number) => string | null;
+  /** Your club's crest and home and away kits. */
+  setIdentity: (identity: { colours: ClubColours; awayKit: ClubColours; crest: CrestDesign }) => void;
   sendBackLoan: (playerId: string) => void;
   showToast: (text: string | null) => void;
 
@@ -191,6 +193,16 @@ export const useGame = create<Store>()((set, get) => {
       if (!game?.challenge) return;
       game.challenge.continued = true;
       set({ screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub' });
+      commit();
+    },
+
+    setIdentity: ({ colours, awayKit, crest }) => {
+      const { game } = get();
+      if (!game) return;
+      const club = game.clubs[game.userClubId];
+      club.colours = colours;
+      club.awayKit = awayKit;
+      club.crest = crest;
       commit();
     },
 

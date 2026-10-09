@@ -1,7 +1,7 @@
 import { challengeDef, seasonsSurvived } from '../../engine/club/challenge';
 import { userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
-import { Crest } from '../components/ClubArt';
+import { ClubCrest } from '../components/ClubArt';
 
 /** A challenge has been won or lost. */
 export function ChallengeResult() {
@@ -17,7 +17,7 @@ export function ChallengeResult() {
   return (
     <main className="screen season-end challenge-result">
       <section className={`hero-card ${won ? 'outcome-champions' : 'outcome-relegated'}`}>
-        <Crest colours={club.colours} size={64} />
+        <ClubCrest club={club} size={64} />
         <div className="eyebrow">{def.name}</div>
         <h1>{won ? 'Challenge complete' : 'Game over'}</h1>
         <p>{c.result}</p>

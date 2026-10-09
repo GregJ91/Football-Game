@@ -3,13 +3,14 @@ import { isCupTie } from '../../engine/season/cups';
 import { aggregate } from '../../engine/season/europe';
 import type { Fixture, GameState } from '../../engine/types';
 import { playerById } from '../../engine/world';
-import { ClubDot } from './ClubArt';
+import { ClubDot, matchKits } from './ClubArt';
 
 export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture }) {
   const r = fixture.result;
   if (!r) return null;
   const home = game.clubs[fixture.homeId];
   const away = game.clubs[fixture.awayId];
+  const kits = matchKits(home, away);
   const scorers = (side: 'home' | 'away') =>
     r.events
       .filter((e) => e.type === 'goal' && e.side === side)
@@ -23,14 +24,14 @@ export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture
     <div className="match-card">
       <div className="score-row">
         <div className="team">
-          <ClubDot colours={home.colours} size={22} />
+          <ClubDot colours={kits.home} size={22} />
           <span>{home.name}</span>
         </div>
         <div className="score">
           {r.homeGoals} – {r.awayGoals}
         </div>
         <div className="team right">
-          <ClubDot colours={away.colours} size={22} />
+          <ClubDot colours={kits.away} size={22} />
           <span>{away.name}</span>
         </div>
       </div>

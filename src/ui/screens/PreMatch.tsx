@@ -9,7 +9,7 @@ import { divisionTable } from '../../engine/season/table';
 import type { Tactics } from '../../engine/types';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
 import { nextUserFixture, useGame } from '../../state/store';
-import { ClubDot } from '../components/ClubArt';
+import { ClubDot, matchKits } from '../components/ClubArt';
 import { TacticsPicker, tacticsLabel } from '../components/TacticsPicker';
 import { ordinal } from '../format';
 
@@ -67,6 +67,7 @@ export function PreMatch() {
   const theirStrength = isHome ? preview.strengthAway : preview.strengthHome;
   const same = (a: Tactics, b: Tactics) => a.formation === b.formation && a.mentality === b.mentality && a.pressing === b.pressing;
   const usingAdvice = same(club.tactics, advice.tactics);
+  const kits = matchKits(game.clubs[fixture.homeId], game.clubs[fixture.awayId]);
 
   return (
     <main className="screen prematch">
@@ -79,7 +80,7 @@ export function PreMatch() {
       <section className="card">
         <div className="compare">
           <div className="side">
-            <ClubDot colours={club.colours} size={28} />
+            <ClubDot colours={isHome ? kits.home : kits.away} size={28} />
             <strong>{club.shortName}</strong>
             <span>{posOf(club.id)}</span>
           </div>
@@ -88,7 +89,7 @@ export function PreMatch() {
             <div className="compare-row"><b>{ourXg.toFixed(1)}</b><span>Expected goals</span><b>{theirXg.toFixed(1)}</b></div>
           </div>
           <div className="side">
-            <ClubDot colours={opponent.colours} size={28} />
+            <ClubDot colours={isHome ? kits.away : kits.home} size={28} />
             <strong>{opponent.shortName}</strong>
             <span>{posOf(opponent.id)}</span>
           </div>

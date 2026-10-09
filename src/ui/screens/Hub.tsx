@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { divisionTable } from '../../engine/season/table';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
 import { lastUserFixture, nextUserFixture, useGame } from '../../state/store';
-import { ClubDot, Crest } from '../components/ClubArt';
+import { ClubCrest, ClubDot, matchKits } from '../components/ClubArt';
 import { LeagueTable } from '../components/LeagueTable';
 import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
@@ -32,6 +32,7 @@ export function Hub() {
   const last = lastUserFixture(game);
   const opponent = next ? game.clubs[next.homeId === club.id ? next.awayId : next.homeId] : null;
   const isHome = next?.homeId === club.id;
+  const kits = next ? matchKits(game.clubs[next.homeId], game.clubs[next.awayId]) : null;
   const oppPos = opponent && started ? table.findIndex((r) => r.clubId === opponent.id) + 1 : 0;
   const ourFixtures = game.fixtures.filter((f) => f.homeId === club.id || f.awayId === club.id);
   const matchday = Math.min(ourFixtures.filter((f) => f.result).length + 1, ourFixtures.length);
@@ -59,7 +60,7 @@ export function Hub() {
   return (
     <main className="screen hub">
       <header className="club-head">
-        <Crest colours={club.colours} size={40} />
+        <ClubCrest club={club} size={40} />
         <div className="grow">
           <div className="club-title">{club.name}</div>
           <div className="sub">
@@ -112,13 +113,13 @@ export function Hub() {
           </div>
           <div className="versus">
             <div className="side">
-              <ClubDot colours={club.colours} size={34} />
+              <ClubDot colours={isHome ? kits!.home : kits!.away} size={34} />
               <strong>{club.name}</strong>
               <span>{pos ? ordinal(pos) : '–'} · {form(club.id) || 'No games yet'}</span>
             </div>
             <div className="vs">VS</div>
             <div className="side">
-              <ClubDot colours={opponent.colours} size={34} />
+              <ClubDot colours={isHome ? kits!.away : kits!.home} size={34} />
               <strong>{opponent.name}</strong>
               <span>{opponent.foreign ? opponent.foreign.nationName : `${oppPos ? ordinal(oppPos) : '–'} · ${form(opponent.id) || 'No games yet'}`}</span>
             </div>

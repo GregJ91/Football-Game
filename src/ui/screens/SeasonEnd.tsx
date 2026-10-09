@@ -3,7 +3,7 @@ import { euroDef } from '../../data/europe';
 import { nationOf } from '../../engine/season/europe';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
-import { ClubDot, Crest } from '../components/ClubArt';
+import { ClubCrest, ClubDot } from '../components/ClubArt';
 import { LeagueTable, TableKey } from '../components/LeagueTable';
 import { ordinal, seasonLabel } from '../format';
 
@@ -31,7 +31,7 @@ export function SeasonEnd() {
   return (
     <main className="screen season-end">
       <section className={`hero-card outcome-${record.outcome}`}>
-        <Crest colours={club.colours} size={64} />
+        <ClubCrest club={club} size={64} />
         <div className="eyebrow">{seasonLabel(summary.season)} · {division.def.name}</div>
         <h1>{HEADLINES[record.outcome]}</h1>
         <p>

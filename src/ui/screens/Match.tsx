@@ -3,7 +3,7 @@ import { describeEvent, playerLabel, type CommentaryLine } from '../../engine/ma
 import { ENGINE, playerEnergy, type TeamTalk } from '../../engine/match/engine';
 import { useGame, userSide } from '../../state/store';
 import { positionsLabel } from '../../engine/players/ratings';
-import { ClubDot } from '../components/ClubArt';
+import { ClubDot, matchKits } from '../components/ClubArt';
 import { TacticsPicker } from '../components/TacticsPicker';
 
 type Speed = 'normal' | 'fast';
@@ -57,6 +57,7 @@ export function Match() {
   if (!live || !fixture) return null;
   const home = game.clubs[fixture.homeId];
   const away = game.clubs[fixture.awayId];
+  const kits = matchKits(home, away);
   const side = userSide(game, fixture);
   const ours = live[side];
   const possession = Math.round((live.homePossession / Math.max(1, live.ticks)) * 100);
@@ -66,9 +67,9 @@ export function Match() {
     <main className="screen match">
       <section className="scoreboard">
         <div className="score-row">
-          <div className="team"><ClubDot colours={home.colours} size={20} /><span>{home.name}</span></div>
+          <div className="team"><ClubDot colours={kits.home} size={20} /><span>{home.name}</span></div>
           <div className="score big">{live.homeGoals} – {live.awayGoals}</div>
-          <div className="team right"><ClubDot colours={away.colours} size={20} /><span>{away.name}</span></div>
+          <div className="team right"><ClubDot colours={kits.away} size={20} /><span>{away.name}</span></div>
         </div>
         {live.opts.firstLeg && (
           <div className="agg">Aggregate {live.homeGoals + live.opts.firstLeg.home} – {live.awayGoals + live.opts.firstLeg.away}</div>
