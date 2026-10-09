@@ -38,7 +38,7 @@ describe('stadium building', () => {
     expect(startStadiumWork(club, opt)).toBeNull();
     expect(club.balance).toBe(bank - opt.cost);
     expect(effectiveCapacity(stadiumOf(club))).toBe(450);
-    expect(startStadiumWork(club, opt)).toMatch(/one project at a time/i);
+    expect(startStadiumWork(club, opt)).toMatch(/already working on that stand/);
     for (let i = 0; i < opt.weeks; i++) playWeek(game);
     expect(totalCapacity(stadiumOf(club))).toBe(750);
     expect(club.capacity).toBe(750);

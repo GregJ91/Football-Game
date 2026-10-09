@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
 import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
 import {
-  floodlightOption, groundUpkeep, nextLevelGrading, stadiumBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
+  floodlightOption, groundUpkeep, nextLevelGrading, standBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
 } from '../../engine/club/stadium';
 import {
-  FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
+  FOOD_LEVELS, VIP_LEVELS, commercialUpgrade, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
   weeklyMerchandise, type Commercial,
 } from '../../engine/club/matchday';
 import { crowdFill, guideTicketPrice, ledgerOf, moneyPw, ticketPrice, wageBill, weeklyTv } from '../../engine/economy/finance';
@@ -64,7 +64,6 @@ export function Club() {
   const club = userClub(game);
   const stadium = stadiumOf(club);
   const grading = nextLevelGrading(game);
-  const busy = stadiumBusy(club);
   const facilities = facilitiesOf(club);
   const board = boardOf(club);
   const ledger = ledgerOf(club);
@@ -196,7 +195,7 @@ export function Club() {
           {!stadium.floodlights && !stadium.builds.some((b) => b.kind === 'floodlights') && (() => {
             const opt = floodlightOption(game);
             return (
-              <button type="button" className="work-option" disabled={busy || opt.cost > club.balance} onClick={() => start(opt)}>
+              <button type="button" className="work-option" disabled={opt.cost > club.balance} onClick={() => start(opt)}>
                 <strong>Install floodlights</strong>
                 <small>{opt.about}</small>
                 <span>Cost {money(opt.cost)} · {opt.weeks} weeks · upkeep {moneyPw(opt.upkeep)}</span>
@@ -233,7 +232,7 @@ export function Club() {
               {!grading.ok && <p className="muted small">You can't be promoted until the ground passes. Builds must be finished by the end of the season.</p>}
             </section>
           )}
-          <p className="hint left">Tap a stand to extend it, add seats or put a roof on. One stand project at a time.</p>
+          <p className="hint left">Tap a stand to extend it, add seats or put a roof on. Several stands can be worked on at once, one job per stand.</p>
 
           <div className="card-label"><span>Matchday business</span></div>
           {(['food', 'vip'] as Commercial[]).map((kind) => {
@@ -265,7 +264,7 @@ export function Club() {
                 {building ? (
                   <p className="small">Building {(kind === 'food' ? FOOD_LEVELS : VIP_LEVELS)[building.level!].name.toLowerCase()}: {building.weeksLeft} weeks to go.</p>
                 ) : next ? (
-                  <button type="button" className="work-option" disabled={!!next.blocked || commercialBusy(club) || next.cost > club.balance} onClick={() => act(buildCommercial(kind), `Work has started: ${next.name.toLowerCase()}.`)}>
+                  <button type="button" className="work-option" disabled={!!next.blocked || next.cost > club.balance} onClick={() => act(buildCommercial(kind), `Work has started: ${next.name.toLowerCase()}.`)}>
                     <strong>Upgrade to {next.name}</strong>
                     <small>{next.about} About {money(nextTakings)} a home game ({nextTakings > takings ? `+${money(nextTakings - takings)}` : 'no change'}).</small>
                     <span>{next.blocked ?? `Cost ${money(next.cost)} · ${next.weeks} weeks · upkeep ${moneyPw(next.upkeep)}`}</span>
@@ -325,7 +324,7 @@ export function Club() {
                 {inProgress ? (
                   <p className="small">Upgrading to level {level + 1}: {inProgress.weeksLeft} weeks to go.</p>
                 ) : next ? (
-                  <button type="button" className="btn tile" disabled={facilityBusy(club)} onClick={() => act(upgrade(kind), `${FACILITY_INFO[kind].name} upgrade started.`)}>
+                  <button type="button" className="btn tile" disabled={facilityBusy(club, kind)} onClick={() => act(upgrade(kind), `${FACILITY_INFO[kind].name} upgrade started.`)}>
                     Upgrade to level {level + 1} · {money(next.cost)} · {next.weeks} wks · then {moneyPw(next.upkeep)}
                   </button>
                 ) : (
@@ -334,7 +333,7 @@ export function Club() {
               </section>
             );
           })}
-          <p className="hint left">One facility upgrade at a time. Total running costs {moneyPw(totalUpkeep(club))}.</p>
+          <p className="hint left">Facilities can be upgraded at the same time as each other and the ground. Total running costs {moneyPw(totalUpkeep(club))}.</p>
         </>
       )}
 
@@ -689,11 +688,11 @@ export function Club() {
             <p className="muted small">
               {stadium.stands[standSheet].capacity.toLocaleString('en-GB')} capacity, {stadium.stands[standSheet].seats.toLocaleString('en-GB')} seated,
               {stadium.stands[standSheet].roof ? ' roofed' : ' open to the weather'}. Bank {money(club.balance)}.
-              {busy ? ' Builders are busy on another job.' : ' A stand under construction holds half its fans.'}
+              {standBusy(club, standSheet) ? ' Builders are already working on this stand; wait for them to finish.' : ' A stand under construction holds half its fans. Other stands can be built at the same time.'}
             </p>
             <div className="stack">
               {standOptions(game, club, standSheet).map((o) => (
-                <button key={`${o.kind}-${o.size ?? ''}`} type="button" className="work-option" disabled={busy || o.cost > club.balance} onClick={() => start(o)}>
+                <button key={`${o.kind}-${o.size ?? ''}`} type="button" className="work-option" disabled={standBusy(club, standSheet) || o.cost > club.balance} onClick={() => start(o)}>
                   <strong>{o.label}</strong>
                   <small>{o.about}</small>
                   <span>Cost {money(o.cost)} · {o.weeks} weeks · upkeep +{moneyPw(o.upkeep)}</span>

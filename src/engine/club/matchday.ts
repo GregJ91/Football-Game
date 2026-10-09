@@ -188,6 +188,6 @@ export function commercialUpgrade(game: GameState, club: Club, kind: Commercial)
   };
 }
 
-export function commercialBusy(club: Club): boolean {
-  return !!club.stadium?.builds.some((b) => b.kind === 'food' || b.kind === 'vip');
+export function commercialBusy(club: Club, kind: Commercial): boolean {
+  return !!club.stadium?.builds.some((b) => b.kind === kind);
 }

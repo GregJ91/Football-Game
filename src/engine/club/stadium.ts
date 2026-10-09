@@ -147,7 +147,7 @@ export function startCommercialWork(game: GameState, club: Club, kind: Commercia
   const opt = commercialUpgrade(game, club, kind);
   if (!opt) return 'Already at the top level.';
   if (opt.blocked) return opt.blocked;
-  if (commercialBusy(club)) return 'Already building food or hospitality. One at a time.';
+  if (commercialBusy(club, kind)) return kind === 'food' ? 'The food outlets are already being built.' : 'The hospitality is already being built.';
   const problem = cannotBuild(club, opt.cost);
   if (problem) return problem;
   stadiumOf(club).builds.push({ kind, level: opt.level, weeksLeft: opt.weeks, totalWeeks: opt.weeks, cost: opt.cost });
@@ -223,8 +223,9 @@ export function floodlightOption(game: GameState): WorkOption {
   };
 }
 
-export function stadiumBusy(club: Club): boolean {
-  return stadiumOf(club).builds.some(isGroundWork);
+/** Builders already on this stand (or on the floodlights, with no stand given). Other jobs can run alongside. */
+export function standBusy(club: Club, stand?: number): boolean {
+  return stadiumOf(club).builds.some((b) => isGroundWork(b) && (stand === undefined ? b.kind === 'floodlights' : b.stand === stand));
 }
 
 export function cannotBuild(club: Club, cost: number): string | null {
@@ -233,7 +234,7 @@ export function cannotBuild(club: Club, cost: number): string | null {
 }
 
 export function startStadiumWork(club: Club, opt: WorkOption): string | null {
-  if (stadiumBusy(club)) return 'Builders are already working on the ground. One project at a time.';
+  if (standBusy(club, opt.stand)) return opt.stand === undefined ? 'The floodlights are already going up.' : 'Builders are already working on that stand. Pick another stand, or wait for this job to finish.';
   const problem = cannotBuild(club, opt.cost);
   if (problem) return problem;
   const build: Build = { kind: opt.kind, stand: opt.stand, size: opt.size, weeksLeft: opt.weeks, totalWeeks: opt.weeks, cost: opt.cost };

@@ -31,14 +31,15 @@ export function totalUpkeep(club: Club) {
   return facilityUpkeep(f.training) + facilityUpkeep(f.youth) + facilityUpkeep(f.medical);
 }
 
-export function facilityBusy(club: Club) {
-  return stadiumOf(club).builds.some((b) => b.kind === 'facility');
+/** This facility is already being upgraded (others can be upgraded alongside). */
+export function facilityBusy(club: Club, kind: FacilityKind) {
+  return stadiumOf(club).builds.some((b) => b.kind === 'facility' && b.facility === kind);
 }
 
 export function startFacilityUpgrade(game: GameState, club: Club, kind: FacilityKind): string | null {
   const level = facilitiesOf(club)[kind];
   if (level >= MAX_FACILITY) return 'Already at the top level.';
-  if (facilityBusy(club)) return 'A facility upgrade is already under way.';
+  if (facilityBusy(club, kind)) return 'That facility is already being upgraded.';
   const { cost, weeks } = facilityUpgrade(game, level + 1);
   const problem = cannotBuild(club, cost);
   if (problem) return problem;

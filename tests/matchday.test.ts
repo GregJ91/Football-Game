@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { commercialUpgrade, foodLevel, vipLevel } from '../src/engine/club/matchday';
-import { floodlightOption, startCommercialWork } from '../src/engine/club/stadium';
+import { floodlightOption, standOptions, startCommercialWork, startStadiumWork } from '../src/engine/club/stadium';
+import { startFacilityUpgrade } from '../src/engine/club/facilities';
 import { playerValue } from '../src/engine/players/ratings';
 import { roundRobin } from '../src/engine/season/fixtures';
 import { playWeek } from '../src/engine/season/season';
@@ -52,17 +53,34 @@ describe('matchday money', () => {
     const club = userClub(game);
     club.balance = 1_000_000;
     expect(startCommercialWork(game, club, 'food')).toBeNull();
-    expect(startCommercialWork(game, club, 'vip')).toMatch(/One at a time/);
+    expect(startCommercialWork(game, club, 'food')).toMatch(/already/);
+    // Food and VIP can be built at the same time.
+    expect(startCommercialWork(game, club, 'vip')).toBeNull();
     for (let i = 0; i < 3; i++) playWeek(game);
     expect(foodLevel(club)).toBe(1);
-    expect(startCommercialWork(game, club, 'vip')).toBeNull();
-    for (let i = 0; i < 4; i++) playWeek(game);
     expect(vipLevel(club)).toBe(1);
     expect(commercialUpgrade(game, club, 'vip')!.blocked).toMatch(/Needs a ground/);
     const bank = club.balance;
     playWeek(game);
     expect(club.ledger!.hospitality ?? 0).toBeGreaterThanOrEqual(0);
     expect(club.balance).not.toBe(bank);
+  });
+
+  it('several stands, the floodlights, a facility, food and VIP can all be built at once', () => {
+    const game = testGame('eng', 405);
+    const club = userClub(game);
+    club.balance = 5_000_000;
+    const ext = (i: number) => standOptions(game, club, i).find((o) => o.kind === 'extend')!;
+    expect(startStadiumWork(club, ext(0))).toBeNull();
+    expect(startStadiumWork(club, ext(1))).toBeNull();
+    expect(startStadiumWork(club, ext(0))).toMatch(/already working on that stand/);
+    expect(startStadiumWork(club, floodlightOption(game))).toBeNull();
+    expect(startFacilityUpgrade(game, club, 'training')).toBeNull();
+    expect(startFacilityUpgrade(game, club, 'youth')).toBeNull();
+    expect(startFacilityUpgrade(game, club, 'training')).toMatch(/already/);
+    expect(startCommercialWork(game, club, 'food')).toBeNull();
+    expect(startCommercialWork(game, club, 'vip')).toBeNull();
+    expect(club.stadium!.builds).toHaveLength(7);
   });
 
   it('building is cheaper at the bottom of the pyramid', () => {
