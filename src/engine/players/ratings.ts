@@ -2,19 +2,27 @@ import type { AttributeKey, Attributes, Player, Position, PositionGroup } from '
 
 type Weights = Partial<Record<AttributeKey, number>>;
 
+const FULL_BACK: Weights = { tackling: 15, marking: 12, pace: 15, acceleration: 8, crossing: 12, positioning: 12, stamina: 10, workRate: 8, dribbling: 8 };
+const WINGER: Weights = { crossing: 18, dribbling: 15, pace: 15, acceleration: 10, passing: 12, stamina: 10, technique: 10, workRate: 5, offTheBall: 5 };
+
 /** How much each attribute matters for each position. Normalised on use. */
 export const POSITION_WEIGHTS: Record<Position, Weights> = {
-  GK: { handling: 35, reflexes: 35, positioning: 15, composure: 10, strength: 5 },
-  DC: { tackling: 25, heading: 20, positioning: 20, strength: 15, pace: 10, composure: 10 },
-  DR: { tackling: 20, pace: 20, positioning: 15, passing: 15, stamina: 15, dribbling: 15 },
-  DL: { tackling: 20, pace: 20, positioning: 15, passing: 15, stamina: 15, dribbling: 15 },
-  DMC: { tackling: 25, passing: 20, positioning: 20, workRate: 15, stamina: 10, strength: 10 },
-  MC: { passing: 25, vision: 20, workRate: 15, stamina: 15, dribbling: 10, tackling: 10, composure: 5 },
-  MR: { pace: 20, dribbling: 20, passing: 20, stamina: 15, vision: 15, workRate: 10 },
-  ML: { pace: 20, dribbling: 20, passing: 20, stamina: 15, vision: 15, workRate: 10 },
-  AMC: { vision: 25, passing: 20, dribbling: 20, finishing: 15, composure: 15, pace: 5 },
-  ST: { finishing: 30, composure: 15, heading: 15, pace: 15, dribbling: 10, strength: 10, positioning: 5 },
+  GK: { handling: 25, reflexes: 25, oneOnOnes: 15, aerialAbility: 15, communication: 8, positioning: 7, kicking: 5 },
+  DC: { tackling: 20, marking: 20, heading: 15, positioning: 15, strength: 10, jumping: 8, anticipation: 7, bravery: 5 },
+  DR: FULL_BACK,
+  DL: FULL_BACK,
+  DMC: { tackling: 20, positioning: 15, passing: 15, marking: 10, anticipation: 10, workRate: 10, stamina: 10, decisions: 10 },
+  MC: { passing: 20, creativity: 12, decisions: 12, technique: 10, workRate: 10, stamina: 10, tackling: 8, teamwork: 8, longShots: 5, anticipation: 5 },
+  MR: WINGER,
+  ML: WINGER,
+  AMC: { creativity: 20, passing: 15, technique: 15, dribbling: 12, flair: 10, offTheBall: 10, finishing: 10, longShots: 8 },
+  ST: { finishing: 25, offTheBall: 15, heading: 10, pace: 12, acceleration: 10, dribbling: 8, decisions: 8, strength: 7, anticipation: 5 },
 };
+
+/** An attribute on the 1–100 scale the match engine works in. */
+export function attr100(p: Player, key: AttributeKey): number {
+  return p.attributes[key] * 5;
+}
 
 export const POSITION_GROUP: Record<Position, PositionGroup> = {
   GK: 'GK',
@@ -31,6 +39,7 @@ export const POSITION_GROUP: Record<Position, PositionGroup> = {
 
 export const POSITION_ORDER: Position[] = ['GK', 'DR', 'DC', 'DL', 'DMC', 'MR', 'MC', 'ML', 'AMC', 'ST'];
 
+/** Ability in a position on a 1–100 scale (attributes are 1–20). */
 export function ratingAt(attributes: Attributes, position: Position): number {
   const w = POSITION_WEIGHTS[position];
   let sum = 0;
@@ -40,15 +49,35 @@ export function ratingAt(attributes: Attributes, position: Position): number {
     sum += attributes[k] * w[k]!;
     total += w[k]!;
   }
-  return Math.round(sum / total);
+  return Math.round((sum / total) * 5);
 }
 
 export function computeOverall(p: Pick<Player, 'attributes' | 'position'>): number {
   return ratingAt(p.attributes, p.position);
 }
 
-/** 0–1 multiplier for playing a player out of position. */
-export function positionFit(natural: Position, slot: Position): number {
+export function positionsOf(p: Pick<Player, 'position' | 'positions'>): Position[] {
+  return p.positions?.length ? p.positions : [p.position];
+}
+
+/** Can he play this position (one of his listed positions)? */
+export function canPlay(p: Pick<Player, 'position' | 'positions'>, slot: Position): boolean {
+  return positionsOf(p).includes(slot);
+}
+
+/** CM-style position label, e.g. "DC/DMC". */
+export function positionsLabel(p: Pick<Player, 'position' | 'positions'>): string {
+  return positionsOf(p).join('/');
+}
+
+/** 0–1 multiplier for playing in a slot: 1 in any of his positions, less elsewhere. */
+export function positionFit(positions: Position | Position[], slot: Position): number {
+  const list = Array.isArray(positions) ? positions : [positions];
+  if (list.includes(slot)) return 1;
+  return Math.max(...list.map((natural) => pairFit(natural, slot)));
+}
+
+function pairFit(natural: Position, slot: Position): number {
   if (natural === slot) return 1;
   if (natural === 'GK' || slot === 'GK') return 0.3;
   const pair = (a: Position, b: Position) =>
@@ -60,7 +89,7 @@ export function positionFit(natural: Position, slot: Position): number {
 
 /** Effective rating of a player in a slot, including fitness and morale. */
 export function effectiveRating(p: Player, slot: Position, energy = p.fitness): number {
-  const base = ratingAt(p.attributes, slot) * positionFit(p.position, slot);
+  const base = ratingAt(p.attributes, slot) * positionFit(positionsOf(p), slot);
   const fitness = 0.75 + 0.25 * (energy / 100);
   const morale = 0.95 + 0.1 * (p.morale / 100);
   return base * fitness * morale;

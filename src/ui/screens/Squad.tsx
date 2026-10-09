@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { userSelection } from '../../engine/season/season';
 import { playerName } from '../../engine/players/generate';
-import { POSITION_ORDER } from '../../engine/players/ratings';
+import { POSITION_ORDER, positionsLabel } from '../../engine/players/ratings';
 import type { Player } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -48,7 +48,7 @@ export function Squad() {
           return (
             <li key={p.id}>
               <button type="button" className="player-row" onClick={() => setSelected(p)}>
-                <span className={`pos pos-${p.position}`}>{p.position}</span>
+                <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
                 <span className="ovr">{p.overall}</span>
                 <span className="who">
                   <strong>{playerName(p)}</strong>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FORMATIONS } from '../../engine/match/selection';
-import { effectiveRating, positionFit } from '../../engine/players/ratings';
+import { canPlay, effectiveRating, positionFit, positionsLabel, positionsOf } from '../../engine/players/ratings';
 import { userSelection } from '../../engine/season/season';
 import type { Formation, Player, Position } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
@@ -19,7 +19,7 @@ const PITCH_ROWS: Record<Formation, number[][]> = {
 const surname = (p: Player) => p.lastName;
 
 function fitClass(p: Player, slot: Position) {
-  const fit = positionFit(p.position, slot);
+  const fit = positionFit(positionsOf(p), slot);
   return fit >= 1 ? 'fit-good' : fit >= 0.85 ? 'fit-ok' : 'fit-poor';
 }
 
@@ -59,13 +59,43 @@ export function Tactics() {
   const manual = !!club.lineup;
 
   const pickingSlot = picking !== null ? slots[picking] : null;
-  const candidates = pickingSlot
+  // Best to worst at this position: those who play there first, then everyone else.
+  const byRating = pickingSlot
     ? [...squad].sort((a, b) => {
         const ua = statusOf(a) ? 1 : 0;
         const ub = statusOf(b) ? 1 : 0;
         return ua - ub || effectiveRating(b, pickingSlot) - effectiveRating(a, pickingSlot);
       })
     : [];
+  const naturals = pickingSlot ? byRating.filter((p) => canPlay(p, pickingSlot)) : [];
+  const others = pickingSlot ? byRating.filter((p) => !canPlay(p, pickingSlot)) : [];
+
+  const row = (p: Player) => {
+    const st = statusOf(p);
+    const current = picking !== null && bySlot[picking]?.id === p.id;
+    return (
+      <li key={p.id}>
+        <button
+          type="button"
+          className="player-row"
+          aria-pressed={current}
+          disabled={!!st}
+          onClick={() => {
+            setLineupSlot(picking!, p.id);
+            setPicking(null);
+          }}
+        >
+          <span className="pos">{positionsLabel(p)}</span>
+          <span className={`ovr ${fitClass(p, pickingSlot!)}`}>{Math.round(effectiveRating(p, pickingSlot!))}</span>
+          <span className="who">
+            <strong>{p.firstName} {p.lastName}</strong>
+            <small>{p.age} yrs · Fit {Math.round(p.fitness)}%</small>
+          </span>
+          <span className="role">{st ? <em className="warn">{st}</em> : current ? 'Here' : starters.has(p.id) ? 'In XI' : ''}</span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <main className="screen tactics">
@@ -90,7 +120,7 @@ export function Tactics() {
                 <button key={i} type="button" className={`slot-chip ${p ? fitClass(p, slot) : 'empty'}`} onClick={() => setPicking(i)}>
                   <span className="slot-rating">{p ? Math.round(effectiveRating(p, slot)) : '–'}</span>
                   <span className="slot-name">{p ? surname(p) : 'Pick'}</span>
-                  <span className="slot-pos">{slot}{p && p.position !== slot ? ` (${p.position})` : ''}</span>
+                  <span className="slot-pos">{slot}{p && !canPlay(p, slot) ? ` (${p.position})` : ''}</span>
                 </button>
               );
             })}
@@ -146,7 +176,7 @@ export function Tactics() {
         <div className="card-label"><span>Substitutes</span><span>Best of the rest</span></div>
         <ul className="bench-list">
           {selection.bench.map((p) => (
-            <li key={p.id}><span className={`pos pos-${p.position}`}>{p.position}</span>{p.firstName} {p.lastName}<b>{p.overall}</b></li>
+            <li key={p.id}><span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>{p.firstName} {p.lastName}<b>{p.overall}</b></li>
           ))}
         </ul>
       </section>
@@ -158,37 +188,16 @@ export function Tactics() {
               <strong className="grow">Who plays {pickingSlot}?</strong>
               <button type="button" className="link-btn" onClick={() => setPicking(null)}>Close</button>
             </div>
-            <p className="muted small">Rating shown is for this position, including fitness.</p>
-            <ul className="player-list">
-              {candidates.map((p) => {
-                const st = statusOf(p);
-                const current = bySlot[picking]?.id === p.id;
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className="player-row"
-                      aria-pressed={current}
-                      disabled={!!st}
-                      onClick={() => {
-                        setLineupSlot(picking, p.id);
-                        setPicking(null);
-                      }}
-                    >
-                      <span className={`pos pos-${p.position}`}>{p.position}</span>
-                      <span className={`ovr ${fitClass(p, pickingSlot)}`}>{Math.round(effectiveRating(p, pickingSlot))}</span>
-                      <span className="who">
-                        <strong>{p.firstName} {p.lastName}</strong>
-                        <small>{p.age} yrs · OVR {p.overall} · Fit {Math.round(p.fitness)}%</small>
-                      </span>
-                      <span className="role">
-                        {st ? <em className="warn">{st}</em> : current ? 'Here' : starters.has(p.id) ? 'In XI' : ''}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <p className="muted small">Ratings are for this position, including fitness. Best first.</p>
+            <div className="card-label"><span>Plays {pickingSlot}</span><span>{naturals.length}</span></div>
+            {naturals.length === 0 && <p className="muted small">Nobody in the squad plays {pickingSlot}.</p>}
+            <ul className="player-list">{naturals.map(row)}</ul>
+            {others.length > 0 && (
+              <details className="others">
+                <summary>Out of position ({others.length})</summary>
+                <ul className="player-list">{others.map(row)}</ul>
+              </details>
+            )}
           </div>
         </div>
       )}

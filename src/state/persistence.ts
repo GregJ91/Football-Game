@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
+import { migratePlayers } from '../engine/players/migrate';
 import type { GameState } from '../engine/types';
 
 const DB_NAME = 'pyramid-fc';
@@ -62,6 +63,7 @@ export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
   if (!record) return null;
   // Saves from before pressing existed.
   for (const c of Object.values(record.game.clubs)) c.tactics.pressing ??= 'medium';
+  migratePlayers(record.game);
   // Saves from before the day-by-day calendar.
   record.game.day ??= -1;
   record.game.half ??= 'pm';

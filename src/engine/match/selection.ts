@@ -1,4 +1,4 @@
-import { effectiveRating } from '../players/ratings';
+import { canPlay, effectiveRating } from '../players/ratings';
 import type { Formation, Player, Position } from '../types';
 
 export const FORMATIONS: Record<Formation, Position[]> = {
@@ -29,9 +29,23 @@ export function pickTeam(squad: Player[], formation: Formation, benchSize = 7): 
   const chosen: (Player | undefined)[] = new Array(slots.length);
   const used = new Set<string>();
 
+  // First, only players who can play the position: best pairings first.
+  const pairs: { i: number; p: Player; score: number }[] = [];
+  slots.forEach((s, i) => {
+    for (const p of pool) if (canPlay(p, s)) pairs.push({ i, p, score: effectiveRating(p, s) });
+  });
+  pairs.sort((a, b) => b.score - a.score);
+  for (const { i, p } of pairs) {
+    if (chosen[i] || used.has(p.id)) continue;
+    chosen[i] = p;
+    used.add(p.id);
+  }
+
+  // Any gaps: nobody who plays there is available, so the best stand-in.
   const slotIdx = slots.map((s, i) => ({ s, i }));
   slotIdx.sort((a, b) => FILL_ORDER.indexOf(a.s) - FILL_ORDER.indexOf(b.s));
   for (const { s, i } of slotIdx) {
+    if (chosen[i]) continue;
     let best: Player | undefined;
     let bestScore = -1;
     for (const p of pool) {
@@ -156,7 +170,9 @@ export function remapLineup(squad: Player[], lineup: Lineup, formation: Formatio
   // Natural positions first, then the best fit for what is left.
   const order = slots.map((s, i) => ({ s, i })).sort((a, b) => FILL_ORDER.indexOf(a.s) - FILL_ORDER.indexOf(b.s));
   for (const { s, i } of order) {
-    const natural = picked.find((p) => !taken.has(p.id) && p.position === s);
+    const natural = picked
+      .filter((p) => !taken.has(p.id) && canPlay(p, s))
+      .sort((a, b) => effectiveRating(b, s) - effectiveRating(a, s))[0];
     if (natural) {
       out[i] = natural.id;
       taken.add(natural.id);

@@ -7,6 +7,7 @@ import { chairmanWeek, gradingWarning, makeSponsorOffers, moodAfterMatch, season
 import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
 import { rolloverPlayers } from '../players/development';
+import { attr100 } from '../players/ratings';
 import {
   SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
@@ -157,7 +158,7 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
       p.seasonStats.apps++;
       p.seasonStats.ratingSum += rating;
       p.form = Math.round((p.form * 0.7 + rating * 0.3) * 10) / 10;
-      p.fitness = Math.max(40, p.fitness - (24 - p.attributes.stamina / 10));
+      p.fitness = Math.max(40, p.fitness - (24 - attr100(p, 'stamina') / 10));
       p.morale = Math.max(0, Math.min(100, p.morale + moraleShift + (rating >= 7.5 ? 2 : rating < 5.5 ? -2 : 0)));
     }
   }
@@ -185,7 +186,7 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
 function weeklyRecovery(game: GameState) {
   for (const id in game.players) {
     const p = game.players[id];
-    p.fitness = Math.min(100, p.fitness + 14 + p.attributes.stamina / 20);
+    p.fitness = Math.min(100, p.fitness + 14 + attr100(p, 'stamina') / 20);
     if (p.injuryWeeks > 0) p.injuryWeeks--;
   }
 }

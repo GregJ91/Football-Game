@@ -14,7 +14,11 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - Scotland: 6 divisions over 5 levels.
   - Both have real-style promotion and relegation places, play-offs, and regional North/South splits.
 - **Match engine:** minute-by-minute simulation with team strength in defence, midfield and attack, home advantage, cards, injuries, extra time and penalties.
-- **Players:** CM-style attributes rolled up into an overall rating and a potential. Players develop, decline and retire, and a youth intake arrives each season.
+- **Players, CM 01/02 style:**
+  - **Attributes:** the CM set on a 1–20 scale (technical, mental, physical, and goalkeeping for keepers), shown in three colour-coded columns. They roll up into a rating for each position.
+  - **Positions:** players can play several (e.g. DC/DMC, AMC/ST).
+  - **Careers:** players develop, decline and retire, and a youth intake arrives each season.
+- **Best XI and the position picker** use players who can play each position. Tapping a position lists them best to worst, with out-of-position players listed separately.
 - **Tactics that matter:** formation, mentality and pressing are each compared against the opponent's setup:
   - a midfield three outnumbers a two;
   - two strikers pin a back two, while a lone striker gets crowded out by a back three;

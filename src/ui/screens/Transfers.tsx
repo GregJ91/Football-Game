@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
-import { POSITION_GROUP } from '../../engine/players/ratings';
+import { POSITION_GROUP, positionsLabel } from '../../engine/players/ratings';
 import {
   askingPrice, interestIn, isKnown, openInboxItems, ratingRange, transferWindow, wageDemand, type Interest,
 } from '../../engine/transfers/market';
@@ -127,7 +127,7 @@ export function Transfers() {
               return (
                 <li key={p.id}>
                   <button type="button" className="player-row" onClick={() => setOpen(p)}>
-                    <span className={`pos pos-${p.position}`}>{p.position}</span>
+                    <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
                     <span className={`ovr ${known ? '' : 'range'}`}>{known ? p.overall : `${lo}–${hi}`}</span>
                     <span className="who">
                       <strong>{p.firstName} {p.lastName}</strong>
@@ -161,7 +161,7 @@ export function Transfers() {
                 {listed.map((p) => (
                   <li key={p.id}>
                     <button type="button" className="player-row" onClick={() => setOpen(p)}>
-                      <span className={`pos pos-${p.position}`}>{p.position}</span>
+                      <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
                       <span className="ovr">{p.overall}</span>
                       <span className="who"><strong>{p.firstName} {p.lastName}</strong><small>Value {money(p.value)}</small></span>
                     </button>

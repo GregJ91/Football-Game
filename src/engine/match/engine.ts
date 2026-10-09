@@ -1,4 +1,4 @@
-import { effectiveRating, positionFit, ratingAt } from '../players/ratings';
+import { attr100, effectiveRating, positionFit, positionsOf, ratingAt } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { MatchEvent, MatchResult, Player, Position, Tactics } from '../types';
 import { pickTeam, type Selection } from './selection';
@@ -118,7 +118,7 @@ export interface SimOptions {
 
 function avgPace(side: LiveSide, slots: Position[]) {
   const ps = side.onPitch.filter((o) => slots.includes(o.slot));
-  return ps.length ? ps.reduce((s, o) => s + o.player.attributes.pace, 0) / ps.length : 50;
+  return ps.length ? ps.reduce((s, o) => s + attr100(o.player, 'pace'), 0) / ps.length : 50;
 }
 
 function refreshMods(m: LiveMatch) {
@@ -222,12 +222,12 @@ export function createLiveMatch(rng: Rng, home: TeamSheet, away: TeamSheet, opts
 function keeperRating(side: LiveSide): number {
   const gk = side.onPitch.find((o) => o.slot === 'GK');
   if (!gk) return 25;
-  return ratingAt(gk.player.attributes, 'GK') * positionFit(gk.player.position, 'GK');
+  return ratingAt(gk.player.attributes, 'GK') * positionFit(positionsOf(gk.player), 'GK');
 }
 
 function drainRate(p: Player, pressing: Tactics['pressing']): number {
   const press = pressing === 'high' ? 0.12 : pressing === 'low' ? -0.05 : 0;
-  return 0.22 + (100 - p.attributes.stamina) / 250 + press;
+  return 0.22 + (100 - attr100(p, 'stamina')) / 250 + press;
 }
 
 export function energyOf(m: Pick<LiveMatch, 'minute'>, o: OnPitch): number {
@@ -335,7 +335,7 @@ function sideMinute(m: LiveMatch, side: LiveSide, minute: number) {
   if (rng.chance(ENGINE.yellowPerMinute)) {
     const outfield = side.onPitch.filter((o) => o.slot !== 'GK');
     if (outfield.length) {
-      const culprit = rng.weighted(outfield, (o) => 30 + o.player.attributes.tackling).player;
+      const culprit = rng.weighted(outfield, (o) => 30 + attr100(o.player, 'aggression')).player;
       if (side.booked.has(culprit.id)) sendOff(m, side, culprit, minute);
       else {
         side.booked.add(culprit.id);
@@ -384,16 +384,16 @@ export function stepMinute(m: LiveMatch) {
 
   const ratio = chanceRatio(att, def);
   if (rng.chance(ENGINE.baseChance * Math.pow(ratio, ENGINE.chanceExp))) {
-    const shooter = rng.weighted(att.onPitch, (o) => SHOOT_WEIGHT[o.slot] * (o.player.attributes.finishing / 50)).player;
+    const shooter = rng.weighted(att.onPitch, (o) => SHOOT_WEIGHT[o.slot] * (attr100(o.player, 'finishing') / 50)).player;
     if (homeAttacks) m.shotsHome++;
     else m.shotsAway++;
-    const finish = shooter.attributes.finishing / Math.max(20, keeperRating(def));
+    const finish = attr100(shooter, 'finishing') / Math.max(20, keeperRating(def));
     const pGoal = ENGINE.baseGoal * Math.pow(ratio, ENGINE.goalExp) * Math.pow(finish, 0.7);
     if (rng.chance(pGoal)) {
       let assistId: string | undefined;
       if (rng.chance(0.72)) {
         const others = att.onPitch.filter((o) => o.player !== shooter && o.slot !== 'GK');
-        if (others.length) assistId = rng.weighted(others, (o) => o.player.attributes.passing).player.id;
+        if (others.length) assistId = rng.weighted(others, (o) => o.player.attributes.passing + o.player.attributes.crossing).player.id;
       }
       m.events.push({ minute, type: 'goal', side: att.name, playerId: shooter.id, assistId });
       if (homeAttacks) m.homeGoals++;

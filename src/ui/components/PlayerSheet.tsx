@@ -2,24 +2,34 @@ import { useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
 import { formatDate, scoutDueDate } from '../../engine/calendar';
 import { playerName } from '../../engine/players/generate';
-import { roundMoney } from '../../engine/players/ratings';
+import { positionsLabel, roundMoney } from '../../engine/players/ratings';
 import {
   SCOUT_REPORTS_PER_WEEK, cannotBuy, interestIn, isKnown, potentialStars, ratingRange,
   releaseCost, renewalDemand, wageDemand, type Interest,
 } from '../../engine/transfers/market';
-import type { AttributeKey, Player } from '../../engine/types';
+import { GOALKEEPING, MENTAL, PHYSICAL, TECHNICAL, type AttributeKey, type Player } from '../../engine/types';
 import { divisionOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { money } from '../format';
 
-const ATTR_GROUPS: { title: string; keys: AttributeKey[] }[] = [
-  { title: 'Technical', keys: ['finishing', 'passing', 'dribbling', 'tackling', 'heading'] },
-  { title: 'Mental', keys: ['positioning', 'vision', 'workRate', 'composure'] },
-  { title: 'Physical', keys: ['pace', 'strength', 'stamina'] },
-  { title: 'Goalkeeping', keys: ['handling', 'reflexes'] },
+// Goalkeepers see goalkeeping in place of the outfield technical column, as in CM.
+const groupsFor = (p: Player): { title: string; keys: readonly AttributeKey[] }[] => [
+  p.position === 'GK' ? { title: 'Goalkeeping', keys: GOALKEEPING } : { title: 'Technical', keys: TECHNICAL },
+  { title: 'Mental', keys: MENTAL },
+  { title: 'Physical', keys: PHYSICAL },
 ];
 
-const label = (k: string) => k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+const LABELS: Partial<Record<AttributeKey, string>> = {
+  longShots: 'Long shots',
+  offTheBall: 'Off the ball',
+  workRate: 'Work rate',
+  oneOnOnes: 'One on ones',
+  aerialAbility: 'Aerial ability',
+};
+const label = (k: AttributeKey) => LABELS[k] ?? k[0].toUpperCase() + k.slice(1);
+
+/** CM-style colour band for a 1–20 attribute. */
+const tier = (v: number) => (v >= 16 ? 'a-top' : v >= 11 ? 'a-good' : v >= 6 ? 'a-avg' : 'a-poor');
 
 const INTEREST_LABEL: Record<Interest, string> = {
   keen: 'Keen to join',
@@ -83,7 +93,11 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
     const r = bid(p.id, amount);
     if ('error' in r) return setStep({ kind: 'fee', message: r.error });
     if (r.result === 'accepted') return setStep({ kind: 'terms', fee: amount, message: `${currentClub?.name} accept ${money(amount)}.` });
-    if (r.result === 'countered') return setStep({ kind: 'fee', counter: r.asking, message: `${currentClub?.name} want ${money(r.asking)}.` });
+    if (r.result === 'countered') {
+      // Their counter-offer goes straight into the fee box.
+      setFee(r.asking);
+      return setStep({ kind: 'fee', counter: r.asking, message: `${currentClub?.name} want ${money(r.asking)}.` });
+    }
     return setStep({ kind: 'fee', message: `Rejected. ${currentClub?.name} would want around ${money(r.asking)}.` });
   };
 
@@ -111,7 +125,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
           <div className="grow">
             <strong>{playerName(p)}</strong>
             <small>
-              {p.position} · {p.age} yrs · {currentClub ? `${currentClub.name} (${level!.name})` : 'Free agent'}
+              {positionsLabel(p)} · {p.age} yrs · {currentClub ? `${currentClub.name} (${level!.name})` : 'Free agent'}
             </small>
           </div>
           <button type="button" className="link-btn" onClick={onClose}>Close</button>
@@ -131,15 +145,14 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
         {step.kind === 'view' && (
           <>
             {known ? (
-              <div className="attr-groups">
-                {ATTR_GROUPS.filter((g) => g.title !== 'Goalkeeping' || p.position === 'GK').map((g) => (
-                  <div key={g.title}>
+              <div className="cm-attrs">
+                {groupsFor(p).map((g) => (
+                  <div key={g.title} className="cm-col">
                     <h3>{g.title}</h3>
                     {g.keys.map((k) => (
-                      <div key={k} className="attr">
+                      <div key={k} className="cm-attr">
                         <span>{label(k)}</span>
-                        <span className="bar"><i style={{ width: `${p.attributes[k]}%` }} /></span>
-                        <b>{p.attributes[k]}</b>
+                        <b className={tier(p.attributes[k])}>{p.attributes[k]}</b>
                       </div>
                     ))}
                   </div>
@@ -231,18 +244,11 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
             </div>
             {step.message && <p className={`note ${step.counter ? 'neutral' : 'bad'}`}><span aria-hidden="true">•</span>{step.message}</p>}
             <div className="grid-2">
-              {step.counter ? (
-                <button type="button" className="btn primary" onClick={() => { setFee(step.counter!); submitBid(step.counter!); }}>
-                  Pay {money(step.counter)}
-                </button>
-              ) : (
-                <button type="button" className="btn primary" onClick={() => submitBid(fee)}>Submit offer</button>
-              )}
+              <button type="button" className="btn primary" onClick={() => submitBid(fee)}>
+                {step.counter && fee === step.counter ? `Agree ${money(fee)}` : 'Submit offer'}
+              </button>
               <button type="button" className="btn tile" onClick={() => setStep({ kind: 'view' })}>Walk away</button>
             </div>
-            {step.counter && (
-              <button type="button" className="link-btn" onClick={() => submitBid(fee)}>Or offer {money(fee)} instead</button>
-            )}
           </div>
         )}
 

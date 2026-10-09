@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { describeEvent, playerLabel, type CommentaryLine } from '../../engine/match/commentary';
 import { ENGINE, playerEnergy, type TeamTalk } from '../../engine/match/engine';
 import { useGame, userSide } from '../../state/store';
+import { positionsLabel } from '../../engine/players/ratings';
 import { ClubDot } from '../components/ClubArt';
 import { TacticsPicker } from '../components/TacticsPicker';
 
@@ -172,7 +173,7 @@ export function Match() {
                   >
                     <span className={`pos pos-${slot}`}>{slot}</span>
                     <span className="ovr">{player.overall}</span>
-                    <span className="who"><strong>{playerLabel(player)}</strong><small>{player.position}{ours.booked.has(player.id) ? ' · Booked' : ''}</small></span>
+                    <span className="who"><strong>{playerLabel(player)}</strong><small>{positionsLabel(player)}{ours.booked.has(player.id) ? ' · Booked' : ''}</small></span>
                     <span className="role"><small>Energy</small>{Math.round(playerEnergy(live, side, player.id))}%</span>
                   </button>
                 </li>

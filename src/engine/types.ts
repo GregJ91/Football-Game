@@ -4,24 +4,16 @@ export type Region = 'N' | 'S';
 export type Position = 'GK' | 'DR' | 'DL' | 'DC' | 'DMC' | 'MR' | 'ML' | 'MC' | 'AMC' | 'ST';
 export type PositionGroup = 'GK' | 'DEF' | 'MID' | 'ATT';
 
-export const ATTRIBUTE_KEYS = [
-  'finishing',
-  'passing',
-  'dribbling',
-  'tackling',
-  'heading',
-  'positioning',
-  'vision',
-  'workRate',
-  'composure',
-  'pace',
-  'strength',
-  'stamina',
-  'handling',
-  'reflexes',
+/** Championship Manager 01/02-style attributes, each 1–20. */
+export const TECHNICAL = ['crossing', 'dribbling', 'finishing', 'heading', 'longShots', 'marking', 'passing', 'tackling', 'technique'] as const;
+export const MENTAL = [
+  'aggression', 'anticipation', 'bravery', 'creativity', 'decisions', 'determination', 'flair', 'offTheBall', 'positioning', 'teamwork', 'workRate',
 ] as const;
+export const PHYSICAL = ['acceleration', 'agility', 'jumping', 'pace', 'stamina', 'strength'] as const;
+export const GOALKEEPING = ['handling', 'reflexes', 'oneOnOnes', 'aerialAbility', 'kicking', 'communication'] as const;
+export const ATTRIBUTE_KEYS = [...TECHNICAL, ...MENTAL, ...PHYSICAL, ...GOALKEEPING] as const;
 export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
-/** Attribute values are 1–100. */
+/** Attribute values are 1–20, as in CM 01/02. */
 export type Attributes = Record<AttributeKey, number>;
 
 export interface Player {
@@ -29,7 +21,10 @@ export interface Player {
   firstName: string;
   lastName: string;
   age: number;
+  /** Main position. */
   position: Position;
+  /** Every position he can play, main position first. */
+  positions: Position[];
   attributes: Attributes;
   /** Cached overall (1–100), recomputed when attributes change. */
   overall: number;

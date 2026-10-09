@@ -1,4 +1,4 @@
-import { positionFit } from '../players/ratings';
+import { positionFit, positionsOf } from '../players/ratings';
 import { Rng } from '../rng';
 import type { Formation, Mentality, Player, Pressing, Tactics } from '../types';
 import { ENGINE, chanceRatio, createLiveMatch, refreshZones, type LiveMatch, type SideName, type TeamSheet } from './engine';
@@ -29,7 +29,7 @@ function sideXg(m: LiveMatch, us: SideName): number {
 export function squadFit(sheet: TeamSheet): number {
   const { xi, slots } = sheet.selection;
   if (!xi.length) return 0;
-  return xi.reduce((s, p, i) => s + positionFit(p.position, slots[i]), 0) / 11;
+  return xi.reduce((s, p, i) => s + positionFit(positionsOf(p), slots[i]), 0) / 11;
 }
 
 function strength(sheet: TeamSheet): number {

@@ -6,7 +6,6 @@ import { divisionOf, newId } from '../world';
 import { SQUAD_TEMPLATE, generatePlayer } from './generate';
 import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
 
-const clamp = (n: number) => Math.max(1, Math.min(99, Math.round(n)));
 
 /** Yearly change towards potential while young, decline from ~28. */
 export function developPlayer(rng: Rng, p: Player, trainingBonus = 0) {
@@ -20,11 +19,15 @@ export function developPlayer(rng: Rng, p: Player, trainingBonus = 0) {
   else delta = -4 + rng.normal();
   if (p.age <= 27 && gap > 0) delta += trainingBonus;
 
+  // Attributes are 1–20; a change of 1 overall point is 0.2 of an attribute
+  // point, so round stochastically to keep the average change right.
   const keys = POSITION_WEIGHTS[p.position];
+  const step = delta / 5;
   for (const key in p.attributes) {
     const k = key as keyof Player['attributes'];
     const isKey = keys[k] !== undefined;
-    p.attributes[k] = clamp(p.attributes[k] + (isKey ? delta + rng.normal() * 0.8 : delta * 0.6));
+    const target = p.attributes[k] + (isKey ? step + rng.normal() * 0.15 : step * 0.6);
+    p.attributes[k] = Math.max(1, Math.min(20, Math.floor(target + rng.next())));
   }
   p.age++;
   p.overall = computeOverall(p);

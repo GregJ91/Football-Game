@@ -1,6 +1,6 @@
 import { FIRST_NAMES, LAST_NAMES } from '../../data/names';
 import type { Rng } from '../rng';
-import { ATTRIBUTE_KEYS, type Attributes, type Player, type Position } from '../types';
+import { ATTRIBUTE_KEYS, type AttributeKey, type Attributes, type Player, type Position } from '../types';
 import { POSITION_WEIGHTS, computeOverall, playerValue, playerWage } from './ratings';
 
 /** A balanced 22-man squad. */
@@ -23,22 +23,54 @@ export interface GenerateOptions {
   season: number;
 }
 
-export function generateAttributes(rng: Rng, position: Position, target: number): Attributes {
+const clamp20 = (n: number) => Math.max(1, Math.min(20, Math.round(n)));
+const GK_SKILLS: AttributeKey[] = ['handling', 'reflexes', 'oneOnOnes', 'aerialAbility', 'kicking', 'communication'];
+
+/** CM-style 1–20 attributes centred on a 1–100 quality target for the position. */
+export function generateAttributes(rng: Rng, position: Position, target: number, alsoPlays: Position[] = []): Attributes {
   const weights = POSITION_WEIGHTS[position];
+  const t = target / 5;
   const attrs = {} as Attributes;
   for (const key of ATTRIBUTE_KEYS) {
     const isKey = weights[key] !== undefined;
-    const isGkSkill = key === 'handling' || key === 'reflexes';
-    if (isKey) attrs[key] = clamp(target + rng.normal() * 5);
-    else if (isGkSkill) attrs[key] = clamp(10 + rng.normal() * 5);
-    else attrs[key] = clamp(target - 12 + rng.normal() * 8);
+    if (isKey) attrs[key] = clamp20(t + rng.normal() * 1.1);
+    else if (GK_SKILLS.includes(key)) attrs[key] = clamp20(position === 'GK' ? t - 2 + rng.normal() * 1.5 : 2 + rng.normal());
+    else attrs[key] = clamp20(t - 2.4 + rng.normal() * 1.7);
+  }
+  // He's listed at his other positions because he can do the job there.
+  for (const other of alsoPlays) {
+    for (const key in POSITION_WEIGHTS[other]) {
+      const k = key as AttributeKey;
+      attrs[k] = Math.max(attrs[k], clamp20(t - 0.8 + rng.normal() * 0.8));
+    }
   }
   return attrs;
 }
 
+/** Other positions a player can also play, CM style (e.g. DC/DMC, AMC/ST). */
+const ALSO_PLAYS: Record<Position, [Position, number][]> = {
+  GK: [],
+  DR: [['DL', 0.3], ['MR', 0.15], ['DC', 0.1]],
+  DL: [['DR', 0.3], ['ML', 0.15], ['DC', 0.1]],
+  DC: [['DMC', 0.25], ['DR', 0.08], ['DL', 0.08]],
+  DMC: [['MC', 0.45], ['DC', 0.25]],
+  MC: [['DMC', 0.35], ['AMC', 0.3]],
+  MR: [['ML', 0.35], ['AMC', 0.15], ['DR', 0.12]],
+  ML: [['MR', 0.35], ['AMC', 0.15], ['DL', 0.12]],
+  AMC: [['MC', 0.4], ['ST', 0.3], ['MR', 0.1], ['ML', 0.1]],
+  ST: [['AMC', 0.3]],
+};
+
+export function generatePositions(rng: Rng, primary: Position): Position[] {
+  const out: Position[] = [primary];
+  for (const [pos, chance] of ALSO_PLAYS[primary]) if (rng.chance(chance)) out.push(pos);
+  return out;
+}
+
 export function generatePlayer(rng: Rng, opts: GenerateOptions): Player {
   const age = opts.age ?? clamp(rng.int(17, 34) + rng.normal() * 2, 16, 37);
-  const attributes = generateAttributes(rng, opts.position, opts.quality);
+  const positions = generatePositions(rng, opts.position);
+  const attributes = generateAttributes(rng, opts.position, opts.quality, positions.slice(1));
   const overall = computeOverall({ attributes, position: opts.position });
   const headroom = age <= 19 ? rng.int(5, 25) : age <= 22 ? rng.int(2, 15) : age <= 26 ? rng.int(0, 7) : rng.int(0, 2);
   const potential = clamp(overall + headroom);
@@ -48,6 +80,7 @@ export function generatePlayer(rng: Rng, opts: GenerateOptions): Player {
     lastName: rng.pick(LAST_NAMES),
     age,
     position: opts.position,
+    positions,
     attributes,
     overall,
     potential,
