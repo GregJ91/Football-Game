@@ -164,11 +164,11 @@ export function relegationLeagues(country: CountryId) {
  * Relegation Battlers: play the season until 10 league games are left, then
  * hand the user the club second from bottom.
  */
-export function createRelegationBattle(seed: number, country: CountryId, divisionId: string): GameState {
+export function createRelegationBattle(seed: number, country: CountryId, divisionId: string, realNames = false): GameState {
   // Hard but winnable: re-roll a few times for a side within about six points of safety.
   let best: { game: GameState; gap: number } | null = null;
   for (let i = 0; i < 4 && (!best || best.gap > 6); i++) {
-    const tried = playToRunIn(seed + i, country, divisionId);
+    const tried = playToRunIn(seed + i, country, divisionId, realNames);
     if (!best || tried.gap < best.gap) best = tried;
   }
   const { game } = best!;
@@ -197,7 +197,7 @@ export function createRelegationBattle(seed: number, country: CountryId, divisio
 }
 
 /** Play a fresh season until 10 league games are left; how far is second-bottom from safety? */
-function playToRunIn(seed: number, country: CountryId, divisionId: string): { game: GameState; gap: number } {
+function playToRunIn(seed: number, country: CountryId, divisionId: string, realNames: boolean): { game: GameState; gap: number } {
   const game = createGame({
     seed,
     country,
@@ -207,6 +207,7 @@ function playToRunIn(seed: number, country: CountryId, divisionId: string): { ga
     shortName: country === 'eng' ? 'ASH' : 'KIN',
     stadiumName: 'The Rec',
     colours: { primary: '#14234D', secondary: '#F5F1E6', pattern: 'plain' },
+    realNames,
   });
   const div = game.divisions.find((d) => d.def.id === divisionId)!;
   const left = () => game.fixtures.filter((f) => f.divisionId === divisionId && !f.result && (f.homeId === div.clubIds[0] || f.awayId === div.clubIds[0])).length;

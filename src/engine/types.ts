@@ -671,6 +671,8 @@ export interface GameState {
   scoutAssignments?: { playerId: string; dueDay: number }[];
   /** Scouts out on a brief to find players; they report back on `dueDay`. */
   scoutMissions?: ScoutMission[];
+  /** The game uses real club names (set when it's created). */
+  realNames?: boolean;
   /** This season's cup competitions. */
   cups?: CupState[];
   /** European competitions and the foreign clubs in them. */

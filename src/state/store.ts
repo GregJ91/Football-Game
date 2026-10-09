@@ -193,7 +193,7 @@ export const useGame = create<Store>()((set, get) => {
     startRelegationBattle: async (country, divisionId) => {
       set({ busy: true });
       await new Promise((r) => setTimeout(r, 0));
-      const game = createRelegationBattle(Math.floor(Math.random() * 2 ** 32), country, divisionId);
+      const game = createRelegationBattle(Math.floor(Math.random() * 2 ** 32), country, divisionId, true);
       set({ game, busy: false, screen: 'hub', live: null, liveFixture: null, resultPopup: null, challengeDraft: null });
       commit();
     },

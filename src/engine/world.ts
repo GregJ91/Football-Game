@@ -1,3 +1,4 @@
+import { realDivision, type RealClub } from '../data/realClubs';
 import { COUNTRIES } from '../data/pyramids';
 import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../data/names';
 import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from './players/generate';
@@ -45,6 +46,13 @@ export interface NewGameConfig {
   challenge?: ChallengeId;
   awayKit?: ClubColours;
   crest?: CrestDesign;
+  /** Real club names, colours and grounds at home and in Europe (players stay fictional). */
+  realNames?: boolean;
+}
+
+/** The town in a real club's name, for a made-up ground name. */
+function townOf(name: string): string {
+  return name.replace(/ (Town|United|City|Rovers|Athletic|Wanderers|Albion|County|Borough|Rangers|Sports|Harriers|Spartans|Trinity|Celtic|Thistle|Academical)$/, '').replace(/^(AFC|FC) /, '');
 }
 
 /** Club-level economics by pyramid level (rough; refined in the chairman phase). */
@@ -141,18 +149,19 @@ function createClub(
   names: NameFactory,
   country: CountryId,
   def: DivisionDef,
+  real?: RealClub,
 ): Club {
-  const town = names.town();
-  const name = `${town} ${rng.pick(clubSuffixes(country))}`;
+  const town = real ? townOf(real.name) : names.town();
+  const name = real ? real.name : `${town} ${rng.pick(clubSuffixes(country))}`;
   const [primary, secondary] = rng.pick(KIT_COLOURS);
   const profile = levelProfile(country, def.level);
   const club: Club = {
     id: newId(game, 'c'),
     name,
-    shortName: makeShortName(town),
-    colours: { primary, secondary, pattern: rng.pick(['plain', 'plain', 'stripes', 'hoops', 'halves'] as const) },
-    stadiumName: `${town} ${rng.pick(STADIUM_SUFFIXES)}`,
-    capacity: Math.round(profile.capacity * (0.6 + rng.next() * 0.8)),
+    shortName: real ? real.shortName : makeShortName(town),
+    colours: real ? { ...real.colours } : { primary, secondary, pattern: rng.pick(['plain', 'plain', 'stripes', 'hoops', 'halves'] as const) },
+    stadiumName: real?.stadium ?? `${town} ${rng.pick(STADIUM_SUFFIXES)}`,
+    capacity: real?.capacity ?? Math.round(profile.capacity * (0.6 + rng.next() * 0.8)),
     region: def.region ?? (rng.chance(0.5) ? 'N' : 'S'),
     reputation: Math.round(profile.reputation + rng.normal() * 4),
     balance: Math.round(profile.balance * (0.5 + rng.next())),
@@ -213,6 +222,7 @@ export function createGame(config: NewGameConfig): GameState {
     // Avoid the Sack is hard mode, always.
     settings: { assistantTactics: false, difficulty: config.challenge === 'sack' ? 'hard' : config.difficulty ?? 'normal' },
     challenge: config.challenge ? { id: config.challenge, status: 'active', startSeason: START_SEASON } : undefined,
+    realNames: config.realNames || undefined,
   };
   const names = new NameFactory(rng, config.country);
   names.reserve(config.clubName);
@@ -226,10 +236,15 @@ export function createGame(config: NewGameConfig): GameState {
   for (const def of countryDef.divisions) {
     const division: Division = { def, clubIds: [] };
     const slots = def.id === userDivision.id ? def.size - 1 : def.size;
+    // Real clubs, best first; the weakest makes way for the user's club.
+    const real = config.realNames ? realDivision(def.id).filter((r) => r.name.toLowerCase() !== config.clubName.trim().toLowerCase()) : [];
     for (let i = 0; i < slots; i++) {
-      const club = createClub(game, rng, names, config.country, def);
-      // A spread of strength within each division so tables separate.
-      const strength = def.quality + rng.normal() * 3.5;
+      const club = createClub(game, rng, names, config.country, def, real[i]);
+      // A spread of strength within each division so tables separate; real
+      // clubs are spread by their standing, so the giants are the strongest.
+      const strength = real[i]
+        ? def.quality + (def.level === 1 ? 5.5 : 4) * (1 - (2 * i) / Math.max(1, slots - 1)) + rng.normal() * 1.2
+        : def.quality + rng.normal() * 3.5;
       club.reputation = Math.round(club.reputation + (strength - def.quality));
       // Top-flight clubs have stars, more at the bigger clubs; elsewhere the odd standout.
       const edge = strength - def.quality;

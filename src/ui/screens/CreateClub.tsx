@@ -29,6 +29,7 @@ export function CreateClub() {
   const [country, setCountry] = useState<CountryId>('eng');
   const [region, setRegion] = useState<Region>('N');
   const [topFlight, setTopFlight] = useState(false);
+  const [realNames, setRealNames] = useState(true);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
   const clubName = name.trim();
@@ -47,6 +48,7 @@ export function CreateClub() {
       country,
       region,
       topFlight: challenge ? false : topFlight,
+      realNames,
       difficulty,
       challenge: challenge ?? undefined,
     });
@@ -144,6 +146,16 @@ export function CreateClub() {
           </div>
         </fieldset>
         )}
+        <fieldset className="field">
+          <legend>The world</legend>
+          <label className="toggle no-rule" htmlFor="real-names">
+            <input id="real-names" type="checkbox" checked={realNames} onChange={(e) => setRealNames(e.target.checked)} />
+            <span>
+              Real club names
+              <small>Real clubs, colours and grounds at home and in Europe. Players are made up.</small>
+            </span>
+          </label>
+        </fieldset>
         {!challenge && (
         <fieldset className="field">
           <legend>Testing</legend>

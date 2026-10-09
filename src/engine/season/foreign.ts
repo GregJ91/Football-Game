@@ -1,3 +1,4 @@
+import { realForeign } from '../../data/realClubs';
 import { CLUB_NAMES, NATIONS, PLAYER_NAMES, type Nation } from '../../data/europe';
 import { KIT_COLOURS, clubSuffixes, townNameParts } from '../../data/names';
 import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from '../players/generate';
@@ -27,19 +28,22 @@ export function createForeignClubs(game: GameState, rng: Rng): string[] {
   const ids: string[] = [];
   for (const nation of NATIONS) {
     if (nation.country === game.country) continue;
+    // Real clubs, best first, if the game uses real names.
+    const real = game.realNames ? realForeign(nation.code).filter((r) => !used.has(r.name)) : [];
     for (let i = 0; i < nation.clubs; i++) {
-      let named = foreignName(rng, nation);
-      for (let tries = 0; used.has(named.name) && tries < 50; tries++) named = foreignName(rng, nation);
+      const r = real[i];
+      let named = r ? { name: r.name, town: r.name } : foreignName(rng, nation);
+      for (let tries = 0; !r && used.has(named.name) && tries < 50; tries++) named = foreignName(rng, nation);
       used.add(named.name);
       const base = Math.round((nation.top - i * nation.step + rng.normal() * 0.8) * 10) / 10;
       const [primary, secondary] = rng.pick(KIT_COLOURS);
       const club: Club = {
         id: `x${game.nextId++}`,
         name: named.name,
-        shortName: named.town.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase(),
-        colours: { primary, secondary, pattern: rng.pick(['plain', 'plain', 'stripes', 'hoops', 'halves'] as const) },
-        stadiumName: `${named.town} Stadium`,
-        capacity: Math.round(Math.max(6000, Math.min(85000, 9000 + (base - 55) * 2600)) / 500) * 500,
+        shortName: r ? r.shortName : named.town.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase(),
+        colours: r ? { ...r.colours } : { primary, secondary, pattern: rng.pick(['plain', 'plain', 'stripes', 'hoops', 'halves'] as const) },
+        stadiumName: r?.stadium ?? `${named.town} Stadium`,
+        capacity: r?.capacity ?? Math.round(Math.max(6000, Math.min(85000, 9000 + (base - 55) * 2600)) / 500) * 500,
         region: 'N',
         reputation: Math.round(base),
         balance: 0,
