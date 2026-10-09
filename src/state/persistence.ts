@@ -42,7 +42,10 @@ export async function saveGame(game: GameState, slot = 'slot1'): Promise<SaveMet
 
 export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
   const record = (await (await db()).get(STORE, slot)) as SaveRecord | undefined;
-  return record?.game ?? null;
+  if (!record) return null;
+  // Saves from before pressing existed.
+  for (const c of Object.values(record.game.clubs)) c.tactics.pressing ??= 'medium';
+  return record.game;
 }
 
 export async function listSaves(): Promise<SaveMeta[]> {

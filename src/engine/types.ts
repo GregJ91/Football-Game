@@ -83,10 +83,12 @@ export interface SeasonRecord {
 
 export type Formation = '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2';
 export type Mentality = 'defensive' | 'balanced' | 'attacking';
+export type Pressing = 'low' | 'medium' | 'high';
 
 export interface Tactics {
   formation: Formation;
   mentality: Mentality;
+  pressing: Pressing;
 }
 
 export interface PromotionRule {
@@ -125,7 +127,8 @@ export interface Fixture {
   result: MatchResult | null;
 }
 
-export type MatchEventType = 'goal' | 'chance' | 'save' | 'yellow' | 'red' | 'injury';
+/** `attack` is commentary colour only and is never stored with a result. */
+export type MatchEventType = 'goal' | 'chance' | 'save' | 'yellow' | 'red' | 'injury' | 'sub' | 'attack';
 
 export interface MatchEvent {
   minute: number;
@@ -133,6 +136,8 @@ export interface MatchEvent {
   side: 'home' | 'away';
   playerId: string;
   assistId?: string;
+  /** For `sub`: the player coming on (playerId is the one going off). */
+  inId?: string;
 }
 
 export interface MatchResult {
@@ -201,4 +206,10 @@ export interface GameState {
   lastSummary: SeasonSummary | null;
   phase: 'season' | 'seasonEnd';
   nextId: number;
+  settings?: GameSettings;
+}
+
+export interface GameSettings {
+  /** Let the assistant manager pick tactics for simulated matches. */
+  assistantTactics: boolean;
 }

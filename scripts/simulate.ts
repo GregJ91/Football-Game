@@ -1,6 +1,7 @@
 /**
  * Headless soak test: sims several seasons and reports on the health of the
- * world. Usage: npm run sim -- [seasons] [country] [seed]
+ * world. Usage: npm run sim -- [seasons] [country] [seed] [assist]
+ * Pass `assist` to let the assistant manager pick the user club's tactics.
  */
 import { COUNTRIES } from '../src/data/pyramids';
 import { playToSeasonEnd, startNextSeason } from '../src/engine/season/season';
@@ -10,6 +11,7 @@ import { createGame, divisionOf, userClub } from '../src/engine/world';
 const seasons = Number(process.argv[2] ?? 10);
 const country = (process.argv[3] ?? 'eng') as CountryId;
 const seed = Number(process.argv[4] ?? 2026);
+const assist = process.argv[5] === 'assist';
 
 const game = createGame({
   seed,
@@ -20,6 +22,7 @@ const game = createGame({
   stadiumName: 'The Meadow',
   colours: { primary: '#B3202A', secondary: '#F5F1E6', pattern: 'stripes' },
 });
+game.settings = { assistantTactics: assist };
 
 const avgOverall = (divId: string) => {
   const div = game.divisions.find((d) => d.def.id === divId)!;
@@ -27,7 +30,7 @@ const avgOverall = (divId: string) => {
   return (xs.reduce((s, x) => s + x, 0) / xs.length).toFixed(1);
 };
 
-console.log(`Simulating ${seasons} seasons of ${COUNTRIES[country].name} (seed ${seed})`);
+console.log(`Simulating ${seasons} seasons of ${COUNTRIES[country].name} (seed ${seed})${assist ? ', assistant picks tactics' : ''}`);
 const t0 = performance.now();
 for (let s = 0; s < seasons; s++) {
   const t = performance.now();

@@ -58,10 +58,10 @@ export function positionFit(natural: Position, slot: Position): number {
   return 0.7;
 }
 
-/** Effective rating of a player in a slot, including fitness/morale/form. */
-export function effectiveRating(p: Player, slot: Position): number {
+/** Effective rating of a player in a slot, including fitness and morale. */
+export function effectiveRating(p: Player, slot: Position, energy = p.fitness): number {
   const base = ratingAt(p.attributes, slot) * positionFit(p.position, slot);
-  const fitness = 0.75 + 0.25 * (p.fitness / 100);
+  const fitness = 0.75 + 0.25 * (energy / 100);
   const morale = 0.95 + 0.1 * (p.morale / 100);
   return base * fitness * morale;
 }

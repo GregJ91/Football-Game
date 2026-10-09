@@ -1,9 +1,10 @@
-import { simulateMatch, type TeamSheet } from '../match/engine';
-import { pickTeam } from '../match/selection';
+import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
+import { recommendTactics } from '../match/preview';
+import { isAvailable, pickTeam } from '../match/selection';
 import { rolloverPlayers } from '../players/development';
-import type { Rng } from '../rng';
+import { Rng } from '../rng';
 import type {
-  Club, Division, Fixture, GameState, MatchResult, PlayoffTie, Region, SeasonSummary,
+  Club, Division, Fixture, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
 } from '../types';
 import { newId, squadOf, withRng } from '../world';
 import { matchdayCount, roundRobin, weekForMatchday } from './fixtures';
@@ -25,11 +26,37 @@ export function scheduleSeason(game: GameState) {
   });
 }
 
-export function teamSheet(game: GameState, club: Club): TeamSheet {
-  return {
-    selection: pickTeam(squadOf(game, club.id), club.tactics.formation),
-    mentality: club.tactics.mentality,
-  };
+/** Quick strength estimate: the average of the best eleven available players. */
+function xiStrength(game: GameState, club: Club): number {
+  const best = squadOf(game, club.id)
+    .filter(isAvailable)
+    .map((p) => p.overall)
+    .sort((a, b) => b - a)
+    .slice(0, 11);
+  return best.reduce((s, x) => s + x, 0) / Math.max(1, best.length);
+}
+
+/** AI managers keep their shape but set their mentality by the opposition. */
+export function aiTactics(game: GameState, club: Club, opponent: Club): Tactics {
+  const gap = xiStrength(game, club) - xiStrength(game, opponent);
+  const mentality: Mentality = gap > 3 ? 'attacking' : gap < -3 ? 'defensive' : 'balanced';
+  return { formation: club.tactics.formation, pressing: club.tactics.pressing ?? 'medium', mentality };
+}
+
+export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { live?: boolean; home?: boolean } = {}): TeamSheet {
+  if (!club.isUser) {
+    const tactics = aiTactics(game, club, opponent);
+    return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics };
+  }
+  const squad = squadOf(game, club.id);
+  // Optionally delegate simmed matches to the assistant manager.
+  if (!opts.live && game.settings?.assistantTactics) {
+    const oppSheet = teamSheet(game, opponent, club);
+    const { tactics } = recommendTactics(squad, oppSheet, opts.home ? 'home' : 'away');
+    return { selection: pickTeam(squad, tactics.formation), tactics };
+  }
+  const tactics = { ...club.tactics, pressing: club.tactics.pressing ?? 'medium' };
+  return { selection: pickTeam(squad, tactics.formation), tactics };
 }
 
 function crowdFill(club: Club): number {
@@ -45,12 +72,48 @@ export function playMatch(
 ): MatchResult {
   const home = game.clubs[homeId];
   const away = game.clubs[awayId];
-  const result = simulateMatch(rng, teamSheet(game, home), teamSheet(game, away), {
+  const result = simulateMatch(rng, teamSheet(game, home, away, { home: true }), teamSheet(game, away, home), {
     ...opts,
     capacity: opts.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
     crowdFill: crowdFill(home),
   });
   applyMatchToPlayers(game, rng, result, home, away);
+  return result;
+}
+
+export function userFixtureNext(game: GameState): Fixture | undefined {
+  return game.fixtures.find((f) => !f.result && (f.homeId === game.userClubId || f.awayId === game.userClubId));
+}
+
+/** Play every week before the user's next fixture; returns that fixture (or nothing at season end). */
+export function advanceToUserMatch(game: GameState): Fixture | undefined {
+  let next = userFixtureNext(game);
+  while (game.phase === 'season' && next && next.week > game.week) {
+    playWeek(game);
+    next = userFixtureNext(game);
+  }
+  return game.phase === 'season' ? next : undefined;
+}
+
+/** A live, steppable match for the user's fixture, with the user's side managed by hand. */
+export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
+  const home = game.clubs[fixture.homeId];
+  const away = game.clubs[fixture.awayId];
+  const seed = withRng(game, (rng) => rng.int(0, 2 ** 31));
+  return createLiveMatch(new Rng(seed), teamSheet(game, home, away, { live: true }), teamSheet(game, away, home, { live: true }), {
+    capacity: home.capacity,
+    crowdFill: crowdFill(home),
+    commentary: true,
+    manual: { home: home.isUser, away: away.isUser },
+  });
+}
+
+/** Record the user's finished match, then play the rest of that week. */
+export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveMatch): MatchResult {
+  const result = finishMatch(live);
+  fixture.result = result;
+  withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId]));
+  playWeek(game);
   return result;
 }
 

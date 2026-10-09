@@ -113,7 +113,11 @@ function createClub(
     balance: Math.round(profile.balance * (0.5 + rng.next())),
     isUser: false,
     playerIds: [],
-    tactics: { formation: rng.pick(['4-4-2', '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2'] as const), mentality: 'balanced' },
+    tactics: {
+      formation: rng.pick(['4-4-2', '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2'] as const),
+      mentality: 'balanced',
+      pressing: rng.pick(['low', 'medium', 'medium', 'high'] as const),
+    },
     history: [],
   };
   game.clubs[club.id] = club;
@@ -171,7 +175,7 @@ export function createGame(config: NewGameConfig): GameState {
         balance: 50_000,
         isUser: true,
         playerIds: [],
-        tactics: { formation: '4-4-2', mentality: 'balanced' },
+        tactics: { formation: '4-4-2', mentality: 'balanced', pressing: 'medium' },
         history: [],
       };
       game.clubs[user.id] = user;

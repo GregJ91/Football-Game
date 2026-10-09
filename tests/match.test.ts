@@ -20,7 +20,7 @@ function run(qHome: number, qAway: number, n: number, seed = 5) {
   for (let i = 0; i < n; i++) {
     const home = pickTeam(squad(rng, qHome, 'h'), '4-4-2');
     const away = pickTeam(squad(rng, qAway, 'a'), '4-4-2');
-    const r = simulateMatch(rng, { selection: home, mentality: 'balanced' }, { selection: away, mentality: 'balanced' }, { capacity: 1000, crowdFill: 0.8 });
+    const r = simulateMatch(rng, { selection: home, tactics: { formation: '4-4-2', mentality: 'balanced', pressing: 'medium' } }, { selection: away, tactics: { formation: '4-4-2', mentality: 'balanced', pressing: 'medium' } }, { capacity: 1000, crowdFill: 0.8 });
     goals += r.homeGoals + r.awayGoals;
     if (r.homeGoals > r.awayGoals) homeWins++;
     else if (r.homeGoals < r.awayGoals) awayWins++;
@@ -61,8 +61,8 @@ describe('match engine calibration', () => {
     for (let i = 0; i < 100; i++) {
       const r = simulateMatch(
         rng,
-        { selection: pickTeam(squad(rng, 55, 'h'), '4-4-2'), mentality: 'balanced' },
-        { selection: pickTeam(squad(rng, 55, 'a'), '4-4-2'), mentality: 'balanced' },
+        { selection: pickTeam(squad(rng, 55, 'h'), '4-4-2'), tactics: { formation: '4-4-2', mentality: 'balanced', pressing: 'medium' } },
+        { selection: pickTeam(squad(rng, 55, 'a'), '4-4-2'), tactics: { formation: '4-4-2', mentality: 'balanced', pressing: 'medium' } },
         { capacity: 1000, crowdFill: 1, knockout: true, neutral: true },
       );
       if (r.homeGoals === r.awayGoals) {

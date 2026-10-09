@@ -6,7 +6,7 @@ See [docs/GAME_PLAN.md](docs/GAME_PLAN.md) for the full design and roadmap.
 
 ## Status
 
-Phases 1–2 of the plan (the foundation and the season core) are done:
+Phases 1–2 of the plan (the foundation and the season core) are done, plus the live match day from phase 4:
 
 - **Club creation:** name, colours, kit pattern and ground; start in England (level 7) or Scotland (level 5).
 - **Pyramids:**
@@ -15,7 +15,19 @@ Phases 1–2 of the plan (the foundation and the season core) are done:
   - Both have real-style promotion and relegation places, play-offs, and regional North/South splits.
 - **Match engine:** minute-by-minute simulation with team strength in defence, midfield and attack, home advantage, cards, injuries, extra time and penalties.
 - **Players:** CM-style attributes rolled up into an overall rating and a potential. Players develop, decline and retire, and a youth intake arrives each season.
-- **Playable UI:** Hub, Squad (formation and mentality), League tables, Fixtures and a season-review screen.
+- **Tactics that matter:** formation, mentality and pressing are each compared against the opponent's setup:
+  - a midfield three outnumbers a two;
+  - two strikers pin a back two, while a lone striker gets crowded out by a back three;
+  - wingers get in behind wing-backs;
+  - a high press tires players and risks quick forwards;
+  - a low block can counter an attacking side.
+
+  Each area of the team is capped at ±15%, so strength still comes first. A good set-up is worth roughly +10 points of win rate.
+- **Assistant manager:** before each match it shows a scout report on the opponent's shape, team ratings and expected goals, explains what each choice does, and offers a one-tap "use my pick". It can optionally set your tactics for simmed matches.
+- **Two ways to play a match:**
+  - **Play match:** live CM-style text commentary at Normal or Fast speed. You can pause, change tactics, make substitutions (players tire as the game goes on) and give a half-time team talk, or skip to full time.
+  - **Sim match:** an instant result that pops up.
+- **Playable UI:** Hub, Squad, League tables, Fixtures, Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.
@@ -28,13 +40,13 @@ npm run dev        # dev server
 npm test           # engine tests (Vitest)
 npm run typecheck
 npm run build      # production PWA build into dist/
-npm run sim -- 10 eng 2026   # headless soak test: seasons, country (eng|sco), seed
+npm run sim -- 10 eng 2026 [assist]   # headless soak test: seasons, country (eng|sco), seed, optional assistant tactics
 ```
 
 ## Layout
 
 - `src/engine/`: the pure TypeScript game engine (no React).
-  - `match/`: team selection and the match simulation.
+  - `match/`: team selection, the steppable match engine, tactical match-ups, pre-match preview and commentary.
   - `season/`: fixtures, tables, play-offs, promotion/relegation and season rollover.
   - `players/`: generation, ratings and development.
   - `world.ts`: new-game world generation.

@@ -11,7 +11,8 @@ export function Hub() {
   const game = useGame((s) => s.game)!;
   const rev = useGame((s) => s.rev);
   const busy = useGame((s) => s.busy);
-  const playNextMatch = useGame((s) => s.playNextMatch);
+  const openPreMatch = useGame((s) => s.openPreMatch);
+  const simNextMatch = useGame((s) => s.simNextMatch);
   const simToSeasonEnd = useGame((s) => s.simToSeasonEnd);
   const go = useGame((s) => s.go);
 
@@ -78,13 +79,16 @@ export function Hub() {
             </div>
           </div>
           <div className="grid-2">
-            <button type="button" className="btn primary" disabled={busy} onClick={() => void playNextMatch()}>
-              {busy ? 'Playing…' : 'Play match'}
+            <button type="button" className="btn primary" disabled={busy} onClick={openPreMatch}>
+              Play match
             </button>
-            <button type="button" className="btn secondary" disabled={busy} onClick={() => void simToSeasonEnd()}>
-              Sim season
+            <button type="button" className="btn secondary" disabled={busy} onClick={() => void simNextMatch()}>
+              {busy ? 'Simming…' : 'Sim match'}
             </button>
           </div>
+          <button type="button" className="link-btn center" disabled={busy} onClick={() => void simToSeasonEnd()}>
+            Sim to the end of the season
+          </button>
         </section>
       ) : (
         <section className="card">

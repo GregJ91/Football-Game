@@ -108,3 +108,33 @@ describe('multi-season stability', () => {
     expect(game.season).toBe(2030);
   });
 });
+
+describe('live user match', () => {
+  it('pauses at half time, accepts subs and tactics, then records the result', async () => {
+    const { advanceToUserMatch, startUserMatch, completeUserMatch } = await import('../src/engine/season/season');
+    const { stepMinute, giveTeamTalk, makeSub, changeTactics, runToEnd } = await import('../src/engine/match/engine');
+    const game = testGame('eng', 31);
+    const fixture = advanceToUserMatch(game)!;
+    const weekBefore = game.week;
+    const live = startUserMatch(game, fixture);
+    const side = fixture.homeId === game.userClubId ? 'home' : 'away';
+    while (!live.halfTimePending) stepMinute(live);
+    expect(live.minute).toBe(45);
+    stepMinute(live);
+    expect(live.minute).toBe(45); // paused until the talk
+    giveTeamTalk(live, side, 'rally');
+    live.halfTimePending = false;
+    const out = live[side].onPitch.find((o) => o.slot !== 'GK')!.player;
+    const inc = live[side].bench.find((b) => b.position !== 'GK')!;
+    expect(makeSub(live, side, out.id, inc.id)).toBe(true);
+    changeTactics(live, side, { formation: '4-3-3', mentality: 'attacking', pressing: 'high' });
+    expect(live[side].onPitch.map((o) => o.slot)).toContain('DMC');
+    runToEnd(live);
+    const result = completeUserMatch(game, fixture, live);
+    expect(fixture.result).toBe(result);
+    expect(result.events.some((e) => e.type === 'sub' && e.inId === inc.id)).toBe(true);
+    expect(result.events.some((e) => e.type === 'attack')).toBe(false);
+    expect(game.week).toBe(weekBefore + 1);
+    expect(game.fixtures.filter((f) => f.week === weekBefore).every((f) => f.result)).toBe(true);
+  });
+});

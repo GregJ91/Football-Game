@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { FORMATIONS, pickTeam } from '../../engine/match/selection';
+import { pickTeam } from '../../engine/match/selection';
 import { playerName } from '../../engine/players/generate';
 import { POSITION_ORDER } from '../../engine/players/ratings';
-import type { AttributeKey, Formation, Mentality, Player } from '../../engine/types';
+import type { AttributeKey, Player } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
+import { TacticsPicker } from '../components/TacticsPicker';
 import { money } from '../format';
-
-const MENTALITIES: Mentality[] = ['defensive', 'balanced', 'attacking'];
 
 const ATTR_GROUPS: { title: string; keys: AttributeKey[] }[] = [
   { title: 'Technical', keys: ['finishing', 'passing', 'dribbling', 'tackling', 'heading'] },
@@ -28,6 +27,7 @@ export function Squad() {
   const game = useGame((s) => s.game)!;
   useGame((s) => s.rev);
   const setTactics = useGame((s) => s.setTactics);
+  const setAssistantTactics = useGame((s) => s.setAssistantTactics);
   const [selected, setSelected] = useState<Player | null>(null);
   const club = userClub(game);
   const squad = squadOf(game, club.id).sort(
@@ -48,20 +48,18 @@ export function Squad() {
           <span>Tactics</span>
           <span>Best XI picked automatically</span>
         </div>
-        <div className="pills">
-          {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
-            <button key={f} type="button" className="pill" aria-pressed={club.tactics.formation === f} onClick={() => setTactics(f, club.tactics.mentality)}>
-              {f}
-            </button>
-          ))}
-        </div>
-        <div className="pills">
-          {MENTALITIES.map((m) => (
-            <button key={m} type="button" className="pill" aria-pressed={club.tactics.mentality === m} onClick={() => setTactics(club.tactics.formation, m)}>
-              {label(m)}
-            </button>
-          ))}
-        </div>
+        <TacticsPicker tactics={club.tactics} onChange={setTactics} />
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={!!game.settings?.assistantTactics}
+            onChange={(e) => setAssistantTactics(e.target.checked)}
+          />
+          <span>
+            Let my assistant set tactics for simmed matches
+            <small>He'll counter each opponent. Matches you play live use your own tactics.</small>
+          </span>
+        </label>
       </section>
 
       <ul className="player-list">
