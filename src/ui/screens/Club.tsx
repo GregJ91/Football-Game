@@ -45,6 +45,7 @@ export function Club() {
   const repay = useGame((s) => s.repay);
   const showToast = useGame((s) => s.showToast);
   const setUnlimited = useGame((s) => s.setUnlimitedMoney);
+  const setAllInterested = useGame((s) => s.setAllInterested);
   const [tab, setTab] = useState<Tab>('ground');
   const [standSheet, setStandSheet] = useState<number | null>(null);
   const [staffSheet, setStaffSheet] = useState<StaffRole | null>(null);
@@ -366,6 +367,18 @@ export function Club() {
               <span>
                 Unlimited money (testing)
                 <small>Bank and budgets stay topped up at £1bn. Switch off to go back to your real balance.</small>
+              </span>
+            </label>
+            <label className="toggle no-rule" htmlFor="all-interested">
+              <input
+                id="all-interested"
+                type="checkbox"
+                checked={!!game.settings?.allInterested}
+                onChange={(e) => setAllInterested(e.target.checked)}
+              />
+              <span>
+                All players interested (testing)
+                <small>Every player is keen to join you, at a normal wage, and will sign or renew whatever level you're at.</small>
               </span>
             </label>
           </section>

@@ -645,6 +645,8 @@ export interface GameSettings {
   assistantTactics: boolean;
   /** The assistant rests tired players in matches you sim. */
   autoRotate?: boolean;
+  /** Testing aid: every player is keen to join the user's club. */
+  allInterested?: boolean;
   /** Testing aid: the user's club never runs out of money. */
   unlimitedMoney?: boolean;
   /** Bank balance before unlimited money was switched on, restored when it's switched off. */

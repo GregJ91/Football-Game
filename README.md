@@ -102,7 +102,7 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
 - **Monthly awards:** Player, Young Player and Manager of the Month in every division (Manager of the Month lifts your board and fans).
 - **The year's big awards:** the Ballon d'Or (the best of the top flight against the stars of the leading foreign clubs, with a top-10 podium), the Players' Player and Young Players' Player of the Year, and the Golden Boot. All under League → Awards, with past winners.
 - **Awards and records:** Player and Young Player of the Season, the Golden Boot, most assists and a Team of the Season for every division; live top scorers on the League screen; club records and a Hall of Fame under Club → Honours.
-- **Testing aids:** unlimited money (Club → Finances), and a "Start as a top-flight giant" option when creating a club. It puts you in the Premier League (or Scottish Premiership) with a title-challenging squad, a 52,000 all-seater ground, top facilities and a Champions League place.
+- **Testing aids:** unlimited money and "All players interested" (Club → Money), and a "Start as a top-flight giant" option when creating a club. It puts you in the Premier League (or Scottish Premiership) with a title-challenging squad, a 52,000 all-seater ground, top facilities and a Champions League place.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.

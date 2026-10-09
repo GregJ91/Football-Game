@@ -166,3 +166,17 @@ describe('economy over several seasons', () => {
     }
   });
 });
+
+describe('all players interested (testing aid)', () => {
+  it('makes every player keen to join, even far above your level', () => {
+    const game = testGame('eng', 151);
+    const club = userClub(game);
+    const star = Object.values(game.players).filter((p) => p.clubId && p.clubId !== club.id).sort((a, b) => b.overall - a.overall)[0];
+    expect(interestIn(game, club, star)).not.toBe('keen');
+    game.settings = { ...game.settings!, allInterested: true };
+    expect(interestIn(game, club, star)).toBe('keen');
+    // Other clubs aren't affected.
+    const other = game.clubs[divisionOf(game, club.id).clubIds.find((id) => id !== club.id)!];
+    expect(interestIn(game, other, star)).not.toBe('keen');
+  });
+});

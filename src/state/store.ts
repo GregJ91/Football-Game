@@ -101,6 +101,7 @@ interface Store {
   answerBid: (itemId: string, action: BidAction) => string;
   adjustBudgets: (wageDelta: number) => void;
   setUnlimitedMoney: (on: boolean) => void;
+  setAllInterested: (on: boolean) => void;
 
   // Chairman decisions; each returns a problem, or null when done.
   buildStadium: (opt: WorkOption) => string | null;
@@ -362,6 +363,13 @@ export const useGame = create<Store>()((set, get) => {
       const msg = withRng(game, (rng) => answerBidEngine(game, rng, itemId, action));
       commit();
       return msg;
+    },
+
+    setAllInterested: (on) => {
+      const { game } = get();
+      if (!game) return;
+      game.settings = { ...game.settings, assistantTactics: !!game.settings?.assistantTactics, allInterested: on };
+      commit();
     },
 
     setUnlimitedMoney: (on) => {

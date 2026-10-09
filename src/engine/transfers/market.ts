@@ -111,6 +111,8 @@ function levelOf(game: GameState, clubId: string) {
 
 /** How willing a player is to join `buyer`. */
 export function interestIn(game: GameState, buyer: Club, p: Player): Interest {
+  // Testing aid: everyone wants to come to the user's club.
+  if (buyer.isUser && game.settings?.allInterested) return 'keen';
   const score = interestScore(game, buyer, p);
   return score >= 1 ? 'keen' : score >= 0 ? 'open' : score >= -1.5 ? 'reluctant' : 'no';
 }
@@ -280,7 +282,9 @@ export function renewalDemand(game: GameState, p: Player): { wage: number; refus
   const base = Math.max(Math.min(p.wage * 1.1, fairWage(game, club, p) * 1.5), fairWage(game, club, p));
   const moraleMult = p.morale < 40 ? 1.25 : 1;
   const ageMult = p.age >= 31 ? 0.9 : 1;
-  const refuses = p.transferRequest
+  const refuses = game.settings?.allInterested
+    ? null
+    : p.transferRequest
     ? `${p.lastName} has asked to leave and won't talk about a new deal.`
     : p.overall > quality + 8 && p.ambition >= 14
       ? `${p.lastName} wants to play at a higher level and won't sign a new deal.`
