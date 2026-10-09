@@ -614,3 +614,10 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .stat-totals > div { display: grid; grid-template-columns: 92px repeat(3, 1fr); align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 10px; background: var(--panel-2); font-size: 13px; color: var(--muted); }
 .stat-totals small { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
 .stat-totals b { font-family: var(--display); font-size: 18px; color: var(--text); margin-right: 3px; font-variant-numeric: tabular-nums; }
+
+/* Version on the home screen */
+.version { margin-top: auto; padding-top: 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; color: var(--muted); font-size: 13px; }
+.version span { display: flex; flex-direction: column; }
+.version small { font-size: 12px; opacity: 0.8; }
+.version .link-btn { font-size: 13px; padding: 8px 0; align-self: center; }
+.version .hint { flex-basis: 100%; text-align: left; }

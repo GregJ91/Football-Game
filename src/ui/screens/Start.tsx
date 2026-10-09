@@ -2,12 +2,39 @@ import { useEffect, useState } from 'react';
 import { listSaves, type SaveMeta } from '../../state/persistence';
 import { useGame } from '../../state/store';
 import { seasonLabel } from '../format';
+import { formatDate } from '../../engine/calendar';
+import { APP_BUILD, APP_BUILT_AT, APP_VERSION } from '../../version';
 
 export function Start() {
   const go = useGame((s) => s.go);
   const continueGame = useGame((s) => s.continueGame);
   const setChallengeDraft = useGame((s) => s.setChallengeDraft);
   const [save, setSave] = useState<SaveMeta | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [updateNote, setUpdateNote] = useState<string | null>(null);
+
+  // Ask for the latest version now rather than waiting for the next launch.
+  const checkForUpdates = async () => {
+    setChecking(true);
+    setUpdateNote(null);
+    try {
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
+      if (!reg) {
+        setUpdateNote("You're on the latest version.");
+        return;
+      }
+      await reg.update();
+      if (reg.installing || reg.waiting) {
+        setUpdateNote('A new version is downloading. The game will restart in a moment.');
+        // The new version takes over and reloads by itself; this is a fallback.
+        window.setTimeout(() => window.location.reload(), 5000);
+      } else setUpdateNote("You're on the latest version.");
+    } catch {
+      setUpdateNote("Couldn't check: are you online?");
+    } finally {
+      setChecking(false);
+    }
+  };
 
   useEffect(() => {
     listSaves()
@@ -48,6 +75,17 @@ export function Start() {
         </button>
         {save && <p className="hint">Starting a new game replaces your current save.</p>}
       </div>
+
+      <footer className="version">
+        <span>
+          Version {APP_VERSION} · build {APP_BUILD}
+          <small>Updated {formatDate(APP_BUILT_AT, true)}</small>
+        </span>
+        <button type="button" className="link-btn" disabled={checking} onClick={() => void checkForUpdates()}>
+          {checking ? 'Checking…' : 'Check for updates'}
+        </button>
+        {updateNote && <p className="hint">{updateNote}</p>}
+      </footer>
     </main>
   );
 }
