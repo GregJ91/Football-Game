@@ -15,6 +15,8 @@ import { Match } from './ui/screens/Match';
 import { PreMatch } from './ui/screens/PreMatch';
 import { SeasonEnd } from './ui/screens/SeasonEnd';
 import { Unemployed } from './ui/screens/Unemployed';
+import { Challenges } from './ui/screens/Challenges';
+import { ChallengeResult } from './ui/screens/ChallengeResult';
 import { Squad } from './ui/screens/Squad';
 import { Start } from './ui/screens/Start';
 import { Tactics } from './ui/screens/Tactics';
@@ -24,11 +26,18 @@ export function App() {
   const screen = useGame((s) => s.screen);
   const hasGame = useGame((s) => s.game !== null);
   const unemployed = useGame((s) => !!s.game?.unemployed);
+  // A challenge won (and not carried on) or lost.
+  const challengeOver = useGame((s) => {
+    const c = s.game?.challenge;
+    return !!c && (c.status === 'lost' || (c.status === 'won' && !c.continued));
+  });
 
+  if (screen === 'challenges') return <Challenges />;
   if (screen === 'start' || !hasGame) return screen === 'create' ? <CreateClub /> : <Start />;
   if (screen === 'create') return <CreateClub />;
   // Sacked: out of work until you take a job (or start again).
   if (unemployed) return <Unemployed />;
+  if (challengeOver && screen !== 'match') return <ChallengeResult />;
   if (screen === 'seasonEnd') return <SeasonEnd />;
   if (screen === 'match') return <Match />;
   if (screen === 'prematch') return <PreMatch />;

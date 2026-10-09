@@ -5,7 +5,7 @@ import { pickTeam } from '../../engine/match/selection';
 import { aiTactics, userSelection } from '../../engine/season/season';
 import { competitionLabel } from '../../engine/calendar';
 import { isCupTie } from '../../engine/season/cups';
-import { buildTable } from '../../engine/season/table';
+import { divisionTable } from '../../engine/season/table';
 import type { Tactics } from '../../engine/types';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
 import { nextUserFixture, useGame } from '../../state/store';
@@ -41,7 +41,7 @@ export function PreMatch() {
     const preview = isHome ? previewMatch(ourSheet, oppSheet, 'home', neutral) : previewMatch(oppSheet, ourSheet, 'away', neutral);
     const advice = recommendTactics(squad, oppSheet, isHome ? 'home' : 'away', neutral, (f) => userSelection(game, f).selection);
     const div = divisionOf(game, club.id);
-    const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
+    const table = divisionTable(game, div.def.id);
     const started = table.some((r) => r.played > 0);
     const posOf = (id: string) => {
       if (game.clubs[id].foreign) return game.clubs[id].foreign!.nationName;

@@ -90,6 +90,13 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Bench:** choose your seven substitutes, or leave it to the best of the rest.
   - **Squad roles:** Key player, First team, Rotation, Backup and Prospect, set automatically each summer or by you in the player's profile. Each role expects a share of the games. Players short of football lose morale and say so, and after three months ask to leave, which draws bids and stops them renewing. Promotion pleases them; dropping a key player hurts.
 - **Stars:** clubs have stand-out players from the start (90+ at the very top), and potential above 85 is rare, so ratings no longer inflate over the seasons.
+- **Challenge mode** (from the start screen). Losing a challenge ends the run.
+  - **Avoid the Sack:** hard mode all the time and no second job; your score is seasons survived.
+  - **You Can't Win Anything With Kids:** start with under-22s and only sign players aged 21 or under. Anyone 22+ still at the club when a window closes costs 3 points.
+  - **Transfer Embargo:** no fees, only free agents and loans, and every bid for your players is accepted.
+  - **Old But Gold:** only sign players aged 30 or over.
+  - **Relegation Battlers:** take over the side second from bottom with 10 games left (within about six points of safety). Stay up to win; go down and it's game over.
+- **Loans:** borrow a fringe or young player from another club until the end of the season (you pay his wages, up to 4 at once), and send him back early if you like.
 - **Testing aids:** unlimited money (Club → Finances), and a "Start as a top-flight giant" option when creating a club. It puts you in the Premier League (or Scottish Premiership) with a title-challenging squad, a 52,000 all-seater ground, top facilities and a Champions League place.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 

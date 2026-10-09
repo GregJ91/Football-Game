@@ -1,4 +1,6 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
+import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/challenge';
+import { returnLoans } from '../transfers/loans';
 import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
 import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
@@ -21,7 +23,7 @@ import type {
 } from '../types';
 import { divisionOf, newId, squadOf, withRng } from '../world';
 import { matchdayCount, roundRobin, weekForMatchday } from './fixtures';
-import { buildTable } from './table';
+import { divisionTable } from './table';
 
 export function scheduleSeason(game: GameState) {
   game.totalWeeks = Math.max(...game.divisions.map((d) => matchdayCount(d.clubIds.length, d.def.rounds)));
@@ -267,8 +269,14 @@ export function playWeek(game: GameState): Fixture[] {
   game.half = 'pm';
   if (game.week >= game.totalWeeks) endSeason(game);
   const now = transferWindow(game);
-  if (!wasOpen && now.open) addInbox(game, 'info', `The ${now.name} transfer window is open for ${now.weeksLeft} weeks.`, { category: 'transfers', subject: 'Window open' });
-  if (wasOpen && !now.open && game.phase === 'season') addInbox(game, 'info', 'The transfer window has closed. Free agents can still be signed.', { category: 'transfers', subject: 'Window closed' });
+  if (!wasOpen && now.open) {
+    addInbox(game, 'info', `The ${now.name} transfer window is open for ${now.weeksLeft} weeks.`, { category: 'transfers', subject: 'Window open' });
+    kidsWindowOpened(game);
+  }
+  if (wasOpen && !now.open && game.phase === 'season') {
+    addInbox(game, 'info', 'The transfer window has closed. Free agents can still be signed.', { category: 'transfers', subject: 'Window closed' });
+    kidsWindowClosed(game);
+  }
   if (game.phase === 'season' && game.week === Math.floor(game.totalWeeks * 0.6)) {
     const expiring = expiringUserContracts(game);
     if (expiring.length) {
@@ -288,7 +296,7 @@ function userMatchMood(game: GameState, fixtures: Fixture[]) {
   }
   if (game.week >= game.totalWeeks * 0.5) {
     const div = divisionOf(game, game.userClubId);
-    const table = buildTable(div.clubIds, game.fixtures.filter((x) => x.divisionId === div.def.id));
+    const table = divisionTable(game, div.def.id);
     gradingWarning(game, table.findIndex((r) => r.clubId === game.userClubId) + 1);
   }
 }
@@ -318,7 +326,7 @@ export function endSeason(game: GameState) {
   withRng(game, (rng) => {
     for (const div of game.divisions) {
       const id = div.def.id;
-      const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === id));
+      const table = divisionTable(game, id);
       summary.finalTables[id] = table;
       summary.champions[id] = table[0].clubId;
       const promo = div.def.promotion;
@@ -356,6 +364,7 @@ export function endSeason(game: GameState) {
 
   awardLeagueTitles(game, summary.champions);
   europeSeasonEnd(game, summary);
+  challengeSeasonEnd(game, summary);
   seasonPayouts(game, summary);
   seasonReview(game, summary);
   game.lastSummary = summary;
@@ -431,6 +440,9 @@ export function applyMovements(game: GameState, summary: SeasonSummary) {
 export function startNextSeason(game: GameState) {
   if (game.phase !== 'seasonEnd' || !game.lastSummary) return;
   deliverScoutReports(game, true);
+  // Loans end with the season; deductions don't carry over.
+  returnLoans(game);
+  game.deductions = {};
   const userLevel = divisionOf(game, game.userClubId).def.level;
   const moves = applyMovements(game, game.lastSummary);
   // A new level has a different going rate for tickets.
@@ -462,6 +474,7 @@ export function startOfSeasonBusiness(game: GameState) {
   withRng(game, (rng) => makeSponsorOffers(game, rng));
   announceBudgets(game);
   addInbox(game, 'info', `The summer transfer window is open for ${transferWindow(game).weeksLeft} weeks.`, { category: 'transfers', subject: 'Window open' });
+  kidsWindowOpened(game);
 }
 
 /** The board sets the user's budgets for the new season and says so. */

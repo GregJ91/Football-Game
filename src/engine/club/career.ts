@@ -2,11 +2,12 @@ import { setBoardBudgets } from '../economy/finance';
 import { assignRoles } from '../players/squad';
 import type { Rng } from '../rng';
 import { startNextSeason, playWeek } from '../season/season';
-import { buildTable } from '../season/table';
+import { divisionTable } from '../season/table';
 import type { CareerSpell, Club, GameState, JobOffer } from '../types';
 import { addInbox } from '../transfers/market';
 import { divisionOf, withRng } from '../world';
 import { boardOf, difficultyOf, makeSponsorOffers, setSeasonTarget } from './chairman';
+import { loseChallenge } from './challenge';
 import { MAX_FACILITY } from './facilities';
 import { MAX_STAND, STAND_NAMES, groundRule, syncCapacity } from './stadium';
 
@@ -33,6 +34,11 @@ export function spellTrophies(game: GameState, spell: CareerSpell) {
  * a couple of clubs get in touch straight away.
  */
 export function sack(game: GameState, reason: string) {
+  // In challenge mode there's no second job: the challenge is over.
+  if (game.challenge?.status === 'active') {
+    loseChallenge(game, `Sacked. ${reason}`);
+    return;
+  }
   const club = game.clubs[game.userClubId];
   const level = divisionOf(game, club.id).def.level;
   const spell = careerOf(game).at(-1)!;
@@ -67,7 +73,7 @@ function addOffer(game: GameState, rng: Rng) {
   for (const d of game.divisions) {
     const level = d.def.level;
     if (level < lo || level > hi) continue;
-    const table = buildTable(d.clubIds, game.fixtures.filter((f) => f.divisionId === d.def.id));
+    const table = divisionTable(game, d.def.id);
     const started = table.some((r) => r.played > 0);
     // Clubs in the bottom half are the ones looking for a new manager.
     const struggling = started ? table.slice(Math.floor(table.length / 2)).map((r) => r.clubId) : d.clubIds;
@@ -106,17 +112,23 @@ export function takeJob(game: GameState, clubId: string): string | null {
   if (!u?.offers.some((o) => o.clubId === clubId)) return 'That offer is no longer open.';
   const club = game.clubs[clubId];
   game.unemployed = undefined;
-  game.userClubId = clubId;
-  // A new manager gets a full season before the board can sack him.
-  game.startSeason = game.season;
-  club.isUser = true;
-  takeOver(game, club);
-  careerOf(game).push({ clubId, clubName: club.name, from: game.season });
+  handOver(game, club);
   addInbox(game, 'info', `Welcome to ${club.name}. The board have handed you the job: the squad, the ground and the finances are yours. Press Continue to get going.`, {
     category: 'club',
     subject: 'New job',
   });
   return null;
+}
+
+/** Make an AI club the user's club (a new job, or a challenge's starting club). */
+export function handOver(game: GameState, club: Club) {
+  const career = careerOf(game);
+  game.userClubId = club.id;
+  // A new manager gets a full season before the board can sack him.
+  game.startSeason = game.season;
+  club.isUser = true;
+  takeOver(game, club);
+  career.push({ clubId: club.id, clubName: club.name, from: game.season });
 }
 
 /**

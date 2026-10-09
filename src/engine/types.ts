@@ -53,6 +53,8 @@ export interface Player {
   unhappy?: number;
   /** Has asked to leave. */
   transferRequest?: boolean;
+  /** On loan at his current club from this one; he goes back at the end of the season. */
+  loanFrom?: string;
 }
 
 export type SquadRole = 'key' | 'first' | 'rotation' | 'backup' | 'prospect';
@@ -421,6 +423,8 @@ export interface TableRow {
   goalsFor: number;
   goalsAgainst: number;
   points: number;
+  /** Points taken off for breaking the rules (already removed from `points`). */
+  deducted?: number;
 }
 
 export interface PlayoffTie {
@@ -472,6 +476,10 @@ export interface GameState {
   unemployed?: Unemployed;
   /** The clubs you've managed, in order. */
   career?: CareerSpell[];
+  /** Points deductions this season, by club. */
+  deductions?: Record<string, number>;
+  /** Challenge mode: the challenge being played and how it's going. */
+  challenge?: ChallengeState;
   nextId: number;
   settings?: GameSettings;
   inbox?: InboxItem[];
@@ -489,6 +497,18 @@ export interface GameState {
   cups?: CupState[];
   /** European competitions and the foreign clubs in them. */
   europe?: EuropeState;
+}
+
+export type ChallengeId = 'sack' | 'kids' | 'embargo' | 'old' | 'relegation';
+
+export interface ChallengeState {
+  id: ChallengeId;
+  status: 'active' | 'won' | 'lost';
+  /** How it ended. */
+  result?: string;
+  startSeason: number;
+  /** After winning, the player chose to carry on as a normal career. */
+  continued?: boolean;
 }
 
 export interface JobOffer {

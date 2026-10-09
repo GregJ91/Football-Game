@@ -6,6 +6,7 @@ import { seasonLabel } from '../format';
 export function Start() {
   const go = useGame((s) => s.go);
   const continueGame = useGame((s) => s.continueGame);
+  const setChallengeDraft = useGame((s) => s.setChallengeDraft);
   const [save, setSave] = useState<SaveMeta | null>(null);
 
   useEffect(() => {
@@ -33,8 +34,14 @@ export function Start() {
             </small>
           </button>
         )}
-        <button type="button" className={`btn big ${save ? 'secondary' : 'primary'}`} onClick={() => go('create')}>
+        <button type="button" className={`btn big ${save ? 'secondary' : 'primary'}`} onClick={() => {
+          setChallengeDraft(null);
+          go('create');
+        }}>
           New game
+        </button>
+        <button type="button" className="btn big secondary" onClick={() => go('challenges')}>
+          Challenge mode
         </button>
         {save && <p className="hint">Starting a new game replaces your current save.</p>}
       </div>

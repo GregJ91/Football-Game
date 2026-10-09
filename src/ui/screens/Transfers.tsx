@@ -7,6 +7,7 @@ import {
 import type { Player, Position } from '../../engine/types';
 import { divisionOf, squadOf } from '../../engine/world';
 import { useGame } from '../../state/store';
+import { activeChallenge, challengeSigningRule } from '../../engine/club/challenge';
 import { BidCard } from '../components/BidCard';
 import { PlayerSheet } from '../components/PlayerSheet';
 import { money } from '../format';
@@ -71,6 +72,8 @@ export function Transfers() {
       if (maxValue && p.value > maxValue) continue;
       if (listedOnly && !p.listed && !p.transferRequest) continue;
       if (q && !`${p.firstName} ${p.lastName}`.toLowerCase().includes(q)) continue;
+      // Challenge age rules: only show players you're allowed to sign.
+      if (challengeSigningRule(game, p)) continue;
       const needFee = sort.key === 'price' || affordable;
       const fee = needFee && p.clubId ? askingPrice(game, p) : 0;
       if (affordable) {
@@ -182,6 +185,9 @@ export function Transfers() {
               <button type="button" className="pill" aria-pressed={affordable} onClick={() => filter(setAffordable)(!affordable)}>Realistic targets</button>
             </div>
           </div>
+          {activeChallenge(game) === 'kids' && <p className="note neutral"><span aria-hidden="true">•</span>Challenge: only players aged 21 or under are shown.</p>}
+          {activeChallenge(game) === 'old' && <p className="note neutral"><span aria-hidden="true">•</span>Challenge: only players aged 30 or over are shown.</p>}
+          {activeChallenge(game) === 'embargo' && <p className="note bad"><span aria-hidden="true">▼</span>Transfer embargo: no fees. Sign free agents, or open a player to ask about a loan.</p>}
           {!window.open && <p className="hint left">The window is closed, so only free agents can join right now.</p>}
 
           <div className="sort-bar" role="group" aria-label="Sort by">

@@ -1,5 +1,5 @@
 import { careerOf, spellTrophies } from '../../engine/club/career';
-import { buildTable } from '../../engine/season/table';
+import { divisionTable } from '../../engine/season/table';
 import { divisionOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { ClubDot } from '../components/ClubArt';
@@ -20,7 +20,7 @@ export function Unemployed() {
 
   const standing = (clubId: string) => {
     const d = divisionOf(game, clubId);
-    const table = buildTable(d.clubIds, game.fixtures.filter((f) => f.divisionId === d.def.id));
+    const table = divisionTable(game, d.def.id);
     const pos = table.findIndex((r) => r.clubId === clubId) + 1;
     return { name: d.def.name, pos: table.some((r) => r.played > 0) ? ordinal(pos) : null };
   };

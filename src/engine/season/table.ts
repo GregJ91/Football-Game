@@ -1,4 +1,4 @@
-import type { Fixture, TableRow } from '../types';
+import type { Fixture, GameState, TableRow } from '../types';
 
 export function emptyRow(clubId: string): TableRow {
   return { clubId, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
@@ -14,7 +14,13 @@ export function compareRows(a: TableRow, b: TableRow): number {
   );
 }
 
-export function buildTable(clubIds: string[], fixtures: Fixture[]): TableRow[] {
+/** A division's league table, with any points deductions applied. */
+export function divisionTable(game: GameState, divisionId: string): TableRow[] {
+  const div = game.divisions.find((d) => d.def.id === divisionId)!;
+  return buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === divisionId), game.deductions);
+}
+
+export function buildTable(clubIds: string[], fixtures: Fixture[], deductions?: Record<string, number>): TableRow[] {
   const rows = new Map(clubIds.map((id) => [id, emptyRow(id)]));
   for (const f of fixtures) {
     if (!f.result) continue;
@@ -42,6 +48,12 @@ export function buildTable(clubIds: string[], fixtures: Fixture[]): TableRow[] {
       h.points++;
       a.points++;
     }
+  }
+  for (const [id, pts] of Object.entries(deductions ?? {})) {
+    const row = rows.get(id);
+    if (!row || !pts) continue;
+    row.points -= pts;
+    row.deducted = pts;
   }
   return [...rows.values()].sort(compareRows);
 }

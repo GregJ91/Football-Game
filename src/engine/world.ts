@@ -11,7 +11,7 @@ import { foreignSquad } from './season/foreign';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
 import type {
-  Club, ClubColours, CountryId, Difficulty, Division, DivisionDef, GameState, Player, Region,
+  ChallengeId, Club, ClubColours, CountryId, Difficulty, Division, DivisionDef, GameState, Player, Region,
 } from './types';
 
 export const START_SEASON = 2026;
@@ -40,6 +40,8 @@ export interface NewGameConfig {
   topFlight?: boolean;
   /** Starting money and the board's patience; on hard the board can sack you. */
   difficulty?: Difficulty;
+  /** Challenge mode (Relegation Battlers is set up separately). */
+  challenge?: ChallengeId;
 }
 
 /** Club-level economics by pyramid level (rough; refined in the chairman phase). */
@@ -102,12 +104,13 @@ export function createSquad(
   club: Club,
   quality: number,
   stars = 0,
+  maxAge = 99,
 ): Player[] {
   const players: Player[] = [];
   const starSlots = new Set(rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i)).slice(0, stars));
   SQUAD_TEMPLATE.forEach((position, i) => {
     const star = starSlots.has(i);
-    const age = star ? rng.int(23, 29) : randomAge(rng);
+    const age = maxAge < 99 ? rng.int(17, maxAge) : star ? rng.int(23, 29) : randomAge(rng);
     const p = generatePlayer(rng, {
       id: newId(game, 'p'),
       position,
@@ -198,7 +201,9 @@ export function createGame(config: NewGameConfig): GameState {
     nextId: 1,
     day: 1,
     half: 'am',
-    settings: { assistantTactics: false, difficulty: config.difficulty ?? 'normal' },
+    // Avoid the Sack is hard mode, always.
+    settings: { assistantTactics: false, difficulty: config.challenge === 'sack' ? 'hard' : config.difficulty ?? 'normal' },
+    challenge: config.challenge ? { id: config.challenge, status: 'active', startSeason: START_SEASON } : undefined,
   };
   const names = new NameFactory(rng, config.country);
   names.reserve(config.clubName);
@@ -242,6 +247,8 @@ export function createGame(config: NewGameConfig): GameState {
       game.clubs[user.id] = user;
       game.userClubId = user.id;
       if (config.topFlight) makeGiant(game, rng, user, def);
+      // Kids: a squad of under-22s, a little stronger than their age suggests.
+      else if (config.challenge === 'kids') createSquad(game, rng, user, def.quality + 4, 0, 21);
       // An average side for the level; climbing is down to the manager.
       else createSquad(game, rng, user, def.quality);
       division.clubIds.push(user.id);
@@ -254,7 +261,7 @@ export function createGame(config: NewGameConfig): GameState {
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   const user = game.clubs[game.userClubId];
   // Difficulty: more or less money to start with, and a more or less patient board.
-  const difficulty = config.difficulty ?? 'normal';
+  const difficulty = game.settings!.difficulty!;
   user.balance = Math.round(user.balance * { easy: 2.5, normal: 1, hard: 0.5 }[difficulty]);
   user.board = { confidence: { easy: 70, normal: 60, hard: 50 }[difficulty], fans: 60 };
   user.stadium ??= createStadium();

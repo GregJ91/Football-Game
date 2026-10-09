@@ -1,4 +1,5 @@
 import { SALE_REINVEST, budgetsOf, ledgerOf, wageBill, weeklyIncomeEstimate } from '../economy/finance';
+import { activeChallenge, challengeFeeRule, challengeSigningRule } from '../club/challenge';
 import { roleOnArrival } from '../players/squad';
 import { pickTeam } from '../match/selection';
 import { generatePlayer, playerName } from '../players/generate';
@@ -176,7 +177,7 @@ export function cannotBuy(game: GameState, p: Player): string | null {
   if (p.clubId === club.id) return 'Already at your club.';
   if (p.clubId && !transferWindow(game).open) return 'The transfer window is closed. You can still sign free agents.';
   if (club.playerIds.length >= SQUAD_MAX) return `Your squad is full (${SQUAD_MAX}). Sell or release someone first.`;
-  return null;
+  return challengeSigningRule(game, p) ?? challengeFeeRule(game, p);
 }
 
 /** Why the user can't offer this fee, or null if the budget covers it. */
@@ -251,6 +252,7 @@ export function releaseCost(game: GameState, p: Player): number {
 
 export function cannotRelease(game: GameState, p: Player): string | null {
   const club = game.clubs[game.userClubId];
+  if (p.loanFrom) return "He's on loan: send him back instead.";
   if (club.playerIds.length <= SQUAD_MIN) return `You need at least ${SQUAD_MIN} players.`;
   const keepers = squadOf(game, club.id).filter((x) => x.position === 'GK');
   if (p.position === 'GK' && keepers.length <= 1) return "He's your only goalkeeper.";
@@ -272,6 +274,7 @@ export function releasePlayer(game: GameState, p: Player) {
 
 export function renewalDemand(game: GameState, p: Player): { wage: number; refuses: string | null } {
   const club = game.clubs[p.clubId!];
+  if (p.loanFrom) return { wage: p.wage, refuses: `${p.lastName} is on loan from ${game.clubs[p.loanFrom].name}.` };
   const quality = divisionOf(game, club.id).def.quality;
   const base = Math.max(Math.min(p.wage * 1.1, fairWage(game, club, p) * 1.5), fairWage(game, club, p));
   const moraleMult = p.morale < 40 ? 1.25 : 1;
@@ -341,7 +344,7 @@ function aiBuy(game: GameState, rng: Rng, buyer: Club) {
   const wageRoom = weeklyIncomeEstimate(game, buyer) * 0.9 - wageBill(game, buyer) + weakest.wage;
   const candidates: { p: Player; fee: number }[] = [];
   for (const p of Object.values(game.players)) {
-    if (p.clubId === buyer.id || p.clubId === game.userClubId || p.position !== weakest.position) continue;
+    if (p.clubId === buyer.id || p.clubId === game.userClubId || p.loanFrom || p.position !== weakest.position) continue;
     if (p.overall < weakest.overall + 3 || p.overall > quality + 8 || p.age > 32) continue;
     const fee = askingPrice(game, p);
     if (fee > budget) continue;
@@ -385,10 +388,12 @@ function aiBidForUser(game: GameState, rng: Rng) {
   const user = game.clubs[game.userClubId];
   const userQuality = divisionOf(game, user.id).def.quality;
   const pending = new Set(openInboxItems(game).map((i) => i.bid!.playerId));
-  const squad = squadOf(game, user.id).filter((p) => !pending.has(p.id));
+  const squad = squadOf(game, user.id).filter((p) => !pending.has(p.id) && !p.loanFrom);
+  const embargo = activeChallenge(game) === 'embargo';
   // Listed players, and those who've asked to leave, attract bids.
   const listed = squad.filter((p) => (p.listed || p.transferRequest) && rng.chance(0.45));
-  const standout = squad.filter((p) => !p.listed && p.overall > userQuality + 2 && rng.chance(0.06));
+  // Under a transfer embargo the vultures circle.
+  const standout = squad.filter((p) => !p.listed && p.overall > userQuality + 2 && rng.chance(embargo ? 0.15 : 0.06));
   for (const p of [...listed, ...standout].slice(0, 2)) {
     const fee = roundMoney(p.value * (p.listed ? 0.75 + rng.next() * 0.3 : 0.95 + rng.next() * 0.35));
     const userLevel = divisionOf(game, user.id).def.level;
@@ -399,6 +404,15 @@ function aiBidForUser(game: GameState, rng: Rng) {
       .filter((c) => !c.isUser && c.balance >= fee * 1.2);
     if (!bidders.length) continue;
     const from = rng.pick(bidders);
+    if (embargo && user.playerIds.length > SQUAD_MIN) {
+      // Every bid must be accepted.
+      completeTransfer(game, p, from.id, fee, fairWage(game, from, p), rng.int(2, 4));
+      addInbox(game, 'info', `Transfer embargo: we had to accept ${from.name}'s ${formatFee(fee)} bid for ${playerName(p)}. He's gone.`, {
+        category: 'transfers',
+        subject: `${p.lastName} sold`,
+      });
+      continue;
+    }
     addInbox(game, 'bid', `${from.name} bid ${formatFee(fee)} for ${playerName(p)} (${p.position}, ${p.overall}).`, {
       subject: `Bid for ${p.lastName}`,
       bid: { playerId: p.id, fromClubId: from.id, fee },

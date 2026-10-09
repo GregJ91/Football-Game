@@ -10,6 +10,7 @@ import {
 import { GOALKEEPING, MENTAL, PHYSICAL, TECHNICAL, type AttributeKey, type Player } from '../../engine/types';
 import { divisionOf } from '../../engine/world';
 import { ROLES, ROLE_LABEL, ROLE_SHARE, happinessText, moodOf, roleOf } from '../../engine/players/squad';
+import { cannotLoan } from '../../engine/transfers/loans';
 import { useGame } from '../../state/store';
 import { money } from '../format';
 
@@ -66,6 +67,8 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const showToast = useGame((s) => s.showToast);
   const adjustBudgets = useGame((s) => s.adjustBudgets);
   const setPlayerRole = useGame((s) => s.setPlayerRole);
+  const loanPlayer = useGame((s) => s.loanPlayer);
+  const sendBackLoan = useGame((s) => s.sendBackLoan);
 
   const p = player;
   const club = game.clubs[game.userClubId];
@@ -141,6 +144,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
           {own && <span>Morale {Math.round(p.morale)}</span>}
           {own && <span>Form {p.form.toFixed(1)}</span>}
           {own && p.listed && <span className="warn">Transfer listed</span>}
+          {own && p.loanFrom && <span className="warn">On loan from {game.clubs[p.loanFrom].name}</span>}
           {interest && <span className={`interest interest-${interest}`}>{INTEREST_LABEL[interest]}</span>}
           {known && !own && <span>Potential {'★'.repeat(potentialStars(p))}{'☆'.repeat(5 - potentialStars(p))}</span>}
         </div>
@@ -214,10 +218,42 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
                 ) : (
                   <button type="button" className="btn primary" onClick={() => setStep({ kind: 'terms', fee: 0 })}>Offer a contract</button>
                 )}
+                {p.clubId && !talksOff && (() => {
+                  const why = cannotLoan(game, p);
+                  return why ? (
+                    <p className="muted small">Loan: {why}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn tile"
+                      onClick={() => {
+                        const err = loanPlayer(p.id);
+                        setStep({ kind: 'done', message: err ?? `${playerName(p)} joins on loan until the end of the season. You pay his ${moneyPw(p.wage)}.` });
+                      }}
+                    >
+                      Take on loan ({moneyPw(p.wage)}, until the summer)
+                    </button>
+                  );
+                })()}
               </div>
             )}
 
-            {own && (
+            {own && p.loanFrom && (
+              <div className="stack">
+                <button
+                  type="button"
+                  className="btn tile"
+                  onClick={() => {
+                    sendBackLoan(p.id);
+                    onClose();
+                  }}
+                >
+                  Send him back to {game.clubs[p.loanFrom].name}
+                </button>
+              </div>
+            )}
+
+            {own && !p.loanFrom && (
               <div className="stack">
                 <div className="grid-2">
                   <button type="button" className="btn tile" onClick={() => toggleListed(p.id)}>

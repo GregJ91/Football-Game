@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { buildTable } from '../../engine/season/table';
+import { divisionTable } from '../../engine/season/table';
 import { divisionOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { LeagueTable, TableKey } from '../components/LeagueTable';
@@ -10,7 +10,7 @@ export function League() {
   useGame((s) => s.rev);
   const [divId, setDivId] = useState(() => divisionOf(game, game.userClubId).def.id);
   const division = game.divisions.find((d) => d.def.id === divId) ?? game.divisions[0];
-  const rows = buildTable(division.clubIds, game.fixtures.filter((f) => f.divisionId === division.def.id));
+  const rows = divisionTable(game, division.def.id);
 
   return (
     <main className="screen league">

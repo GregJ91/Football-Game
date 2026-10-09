@@ -59,7 +59,7 @@ export function Squad() {
                   </small>
                 </span>
                 <span className="role">
-                  {st ? <em className="warn">{st}</em> : p.transferRequest ? <em className="warn">Wants away</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
+                  {st ? <em className="warn">{st}</em> : p.loanFrom ? <em>On loan</em> : p.transferRequest ? <em className="warn">Wants away</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
                   <small>{moneyPw(p.wage)}</small>
                   {p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
                 </span>

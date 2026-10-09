@@ -3,7 +3,7 @@ import { guideTicketPrice, ledgerOf, topUpUnlimited, weeklyIncomeEstimate, weekl
 import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Board, Club, Difficulty, GameState, SeasonSummary } from '../types';
-import { buildTable } from '../season/table';
+import { divisionTable } from '../season/table';
 import { sack } from './career';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, squadOf } from '../world';
@@ -46,7 +46,7 @@ export function boardCheck(game: GameState): boolean {
   const club = game.clubs[game.userClubId];
   const b = boardOf(club);
   const div = divisionOf(game, club.id);
-  const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
+  const table = divisionTable(game, div.def.id);
   const row = table.find((r) => r.clubId === club.id);
   if (b.target && row && row.played >= 6) {
     const behind = table.indexOf(row) + 1 - b.target.position;
@@ -65,7 +65,8 @@ export function boardCheck(game: GameState): boolean {
  * (or by the end of the season) is the sack, and so is falling to 8.
  */
 export function judge(game: GameState, seasonEnd: boolean): boolean {
-  if (game.unemployed) return false;
+  // Relegation Battlers is decided by the final table alone.
+  if (game.unemployed || game.challenge?.status === 'active' && game.challenge.id === 'relegation') return false;
   const difficulty = difficultyOf(game);
   const b = boardOf(game.clubs[game.userClubId]);
   const c = b.confidence;

@@ -69,7 +69,7 @@ export function LeagueTable({ game, def, rows, around, tag }: Props) {
                 </>
               )}
               <td className="num">{r.goalsFor - r.goalsAgainst > 0 ? '+' : ''}{r.goalsFor - r.goalsAgainst}</td>
-              <td className="num strong">{r.points}</td>
+              <td className="num strong" title={r.deducted ? `${r.deducted} points deducted` : undefined}>{r.points}{r.deducted ? <sup className="warn">−{r.deducted}</sup> : null}</td>
             </tr>
           );
         })}

@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 import { assignToBench, restTired, setRole } from '../engine/players/squad';
 import { takeJob, waitAWeek, waitForOffer } from '../engine/club/career';
+import { createRelegationBattle } from '../engine/club/challenge';
+import { endLoan, loanIn } from '../engine/transfers/loans';
 import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
 import {
   advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch, userSelection,
 } from '../engine/season/season';
-import type { FacilityKind, Fixture, GameState, SquadRole, Tactics } from '../engine/types';
+import type { ChallengeId, CountryId, FacilityKind, Fixture, GameState, SquadRole, Tactics } from '../engine/types';
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
@@ -24,7 +26,7 @@ import {
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges';
 
 export interface LiveNote {
   minute: number;
@@ -44,6 +46,15 @@ interface Store {
   resultPopup: Fixture | null;
   /** A short message shown briefly at the bottom of the screen. */
   toast: string | null;
+  /** Challenge picked on the challenge screen, waiting for the club to be created. */
+  challengeDraft: ChallengeId | null;
+  setChallengeDraft: (id: ChallengeId | null) => void;
+  /** Relegation Battlers: no club to create, straight into the run-in. */
+  startRelegationBattle: (country: CountryId, divisionId: string) => Promise<void>;
+  /** After winning a challenge, carry on as a normal career. */
+  continueAfterChallenge: () => void;
+  loanPlayer: (playerId: string) => string | null;
+  sendBackLoan: (playerId: string) => void;
   showToast: (text: string | null) => void;
 
   go: (screen: Screen) => void;
@@ -152,6 +163,7 @@ export const useGame = create<Store>()((set, get) => {
     game: null,
     rev: 0,
     screen: 'start',
+    challengeDraft: null,
     busy: false,
     live: null,
     liveFixture: null,
@@ -162,9 +174,44 @@ export const useGame = create<Store>()((set, get) => {
 
     go: (screen) => set({ screen }),
 
+    setChallengeDraft: (id) => set({ challengeDraft: id }),
+
+    startRelegationBattle: async (country, divisionId) => {
+      set({ busy: true });
+      await new Promise((r) => setTimeout(r, 0));
+      const game = createRelegationBattle(Math.floor(Math.random() * 2 ** 32), country, divisionId);
+      set({ game, busy: false, screen: 'hub', live: null, liveFixture: null, resultPopup: null, challengeDraft: null });
+      commit();
+    },
+
+    continueAfterChallenge: () => {
+      const { game } = get();
+      if (!game?.challenge) return;
+      game.challenge.continued = true;
+      set({ screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub' });
+      commit();
+    },
+
+    loanPlayer: (playerId) => {
+      const { game } = get();
+      const p = game?.players[playerId];
+      if (!game || !p) return 'No such player.';
+      const err = loanIn(game, p);
+      if (!err) commit();
+      return err;
+    },
+
+    sendBackLoan: (playerId) => {
+      const { game } = get();
+      const p = game?.players[playerId];
+      if (!game || !p) return;
+      endLoan(game, p);
+      commit();
+    },
+
     newGame: (config) => {
       const game = createGame({ ...config, seed: Math.floor(Math.random() * 2 ** 32) });
-      set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null });
+      set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null, challengeDraft: null });
       commit();
     },
 

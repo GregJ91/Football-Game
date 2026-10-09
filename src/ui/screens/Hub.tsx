@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { buildTable } from '../../engine/season/table';
-import { divisionOf, userClub } from '../../engine/world';
+import { divisionTable } from '../../engine/season/table';
+import { divisionOf, squadOf, userClub } from '../../engine/world';
 import { lastUserFixture, nextUserFixture, useGame } from '../../state/store';
 import { ClubDot, Crest } from '../components/ClubArt';
 import { LeagueTable } from '../components/LeagueTable';
@@ -10,6 +10,7 @@ import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { boardOf } from '../../engine/club/chairman';
 import { competitionLabel, formatDate, matchDate } from '../../engine/calendar';
 import { isCupTie } from '../../engine/season/cups';
+import { challengeDef, seasonsSurvived } from '../../engine/club/challenge';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -24,7 +25,7 @@ export function Hub() {
   const club = userClub(game);
   const division = divisionOf(game, club.id);
   // The engine mutates `game` in place, so `rev` is what signals a change.
-  const table = useMemo(() => buildTable(division.clubIds, game.fixtures.filter((f) => f.divisionId === division.def.id)), [rev, division]);
+  const table = useMemo(() => divisionTable(game, division.def.id), [rev, division]);
   const started = table.some((r) => r.played > 0);
   const pos = started ? table.findIndex((r) => r.clubId === club.id) + 1 : 0;
   const next = nextUserFixture(game);
@@ -78,6 +79,30 @@ export function Hub() {
           <span className="target-chip danger">Final warning</span>
         ) : board.target && <span className="target-chip">Target: {board.target.label}</span>}
       </button>
+
+      {game.challenge?.status === 'active' && (() => {
+        const def = challengeDef(game.challenge.id);
+        let line = def.tagline;
+        if (game.challenge.id === 'sack') line = `Seasons survived: ${seasonsSurvived(game)}. Hard mode, no second chances.`;
+        if (game.challenge.id === 'kids') {
+          const over = squadOf(game, club.id).filter((p) => p.age > 21).length;
+          line = over ? `${over} over-age player${over === 1 ? '' : 's'}: 3 points each if they're here when the window shuts.` : 'Every player is 21 or under.';
+        }
+        if (game.challenge.id === 'relegation' && started) {
+          const n = table.length;
+          const safe = table[n - division.def.relegation - 1];
+          const gap = safe.points - table[pos - 1].points;
+          const left = game.fixtures.filter((f) => !f.result && f.divisionId === division.def.id && (f.homeId === club.id || f.awayId === club.id)).length;
+          line = `${left} games left · ${pos > n - division.def.relegation ? `${gap} point${gap === 1 ? '' : 's'} from safety` : 'out of the drop zone'}`;
+        }
+        return (
+          <section className="card challenge-chip">
+            <span className="eyebrow">Challenge</span>
+            <strong>{def.name}</strong>
+            <small>{line}</small>
+          </section>
+        );
+      })()}
 
       {next && opponent ? (
         <section className="card fixture">

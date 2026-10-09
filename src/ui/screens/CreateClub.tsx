@@ -3,6 +3,7 @@ import { COUNTRIES, bottomDivisions } from '../../data/pyramids';
 import type { ClubColours, CountryId, Difficulty, KitPattern, Region } from '../../engine/types';
 import { useGame } from '../../state/store';
 import { Crest, Kit } from '../components/ClubArt';
+import { challengeDef } from '../../engine/club/challenge';
 
 const PRIMARIES = [
   ['Red', '#B3202A'], ['Royal blue', '#1F4FB8'], ['Claret', '#6B1832'], ['Green', '#1E7A43'],
@@ -23,6 +24,8 @@ const DIFFICULTIES: { d: Difficulty; label: string; note: string }[] = [
 export function CreateClub() {
   const newGame = useGame((s) => s.newGame);
   const go = useGame((s) => s.go);
+  const challenge = useGame((s) => s.challengeDraft);
+  const setChallengeDraft = useGame((s) => s.setChallengeDraft);
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [ground, setGround] = useState('');
@@ -45,20 +48,38 @@ export function CreateClub() {
       colours,
       country,
       region,
-      topFlight,
+      topFlight: challenge ? false : topFlight,
       difficulty,
+      challenge: challenge ?? undefined,
     });
   };
 
   return (
     <main className="screen create">
       <header className="screen-head">
-        <button type="button" className="link-btn" onClick={() => go('start')}>
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => {
+            if (challenge) {
+              setChallengeDraft(null);
+              go('challenges');
+            } else go('start');
+          }}
+        >
           ← Back
         </button>
-        <div className="eyebrow">New game</div>
+        <div className="eyebrow">{challenge ? `Challenge: ${challengeDef(challenge).name}` : 'New game'}</div>
         <h1>Create your club</h1>
       </header>
+
+      {challenge && (
+        <section className="card challenge-banner">
+          <ul className="plain-list">
+            {challengeDef(challenge).rules.map((r) => <li key={r}>{r}</li>)}
+          </ul>
+        </section>
+      )}
 
       <section className="card preview">
         <Crest colours={colours} size={72} />
@@ -154,6 +175,7 @@ export function CreateClub() {
           </div>
         </fieldset>
         )}
+        {challenge !== 'sack' && (
         <fieldset className="field">
           <legend>Difficulty</legend>
           <div className="grid-3">
@@ -165,6 +187,8 @@ export function CreateClub() {
             ))}
           </div>
         </fieldset>
+        )}
+        {!challenge && (
         <fieldset className="field">
           <legend>Testing</legend>
           <label className="toggle no-rule" htmlFor="top-flight">
@@ -177,6 +201,7 @@ export function CreateClub() {
             </span>
           </label>
         </fieldset>
+        )}
       </div>
 
       <div className="sticky-cta">

@@ -5,7 +5,7 @@ import {
   floodlightOption, nextLevelGrading, stadiumBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
 } from '../../engine/club/stadium';
 import { crowdFill, guideTicketPrice, ledgerOf, moneyPw, ticketPrice, wageBill, weeklyTv } from '../../engine/economy/finance';
-import { buildTable } from '../../engine/season/table';
+import { divisionTable } from '../../engine/season/table';
 import type { Build, FacilityKind, Stand } from '../../engine/types';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -77,7 +77,7 @@ export function Club() {
     );
   };
 
-  const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
+  const table = divisionTable(game, div.def.id);
   const started = table.some((r) => r.played > 0);
   const pos = table.findIndex((r) => r.clubId === club.id) + 1;
 
