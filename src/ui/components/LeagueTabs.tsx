@@ -10,6 +10,7 @@ export function LeagueTabs() {
       <button type="button" role="tab" aria-selected={screen === 'fixtures'} onClick={() => go('fixtures')}>Fixtures</button>
       <button type="button" role="tab" aria-selected={screen === 'cups'} onClick={() => go('cups')}>Cups</button>
       <button type="button" role="tab" aria-selected={screen === 'europe'} onClick={() => go('europe')}>Europe</button>
+      <button type="button" role="tab" aria-selected={screen === 'awards'} onClick={() => go('awards')}>Awards</button>
     </div>
   );
 }

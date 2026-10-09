@@ -99,6 +99,8 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
 - **Loans:** borrow a fringe or young player from another club until the end of the season (you pay his wages, up to 4 at once), and send him back early if you like.
 - **Crest and kits:** build a crest (shape, icon, optional initials) and design home and away kits when you found the club, and change them any time from the Club screen. When the colours clash, the away side wears its away kit.
 - **Backroom staff:** an assistant manager, coach, chief scout and physio, each rated 1–20, hired from a monthly shortlist under Club → Staff.
+- **Monthly awards:** Player, Young Player and Manager of the Month in every division (Manager of the Month lifts your board and fans).
+- **The year's big awards:** the Ballon d'Or (the best of the top flight against the stars of the leading foreign clubs, with a top-10 podium), the Players' Player and Young Players' Player of the Year, and the Golden Boot. All under League → Awards, with past winners.
 - **Awards and records:** Player and Young Player of the Season, the Golden Boot, most assists and a Team of the Season for every division; live top scorers on the League screen; club records and a Hall of Fame under Club → Honours.
 - **Testing aids:** unlimited money (Club → Finances), and a "Start as a top-flight giant" option when creating a club. It puts you in the Premier League (or Scottish Premiership) with a title-challenging squad, a 52,000 all-seater ground, top facilities and a Champions League place.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.

@@ -1,5 +1,5 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
-import { recordLegends, seasonAwards, updateClubRecords } from './awards';
+import { monthEnds, monthlyAwards, recordLegends, seasonAwards, updateClubRecords } from './awards';
 import { assistantMorale, scoutReportsPerWeek } from '../club/staff';
 import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/challenge';
 import { returnLoans } from '../transfers/loans';
@@ -204,6 +204,9 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
       const rating = result.ratings[id] ?? 6;
       p.seasonStats.apps++;
       p.seasonStats.ratingSum += rating;
+      const m = (p.monthStats ??= { apps: 0, goals: 0, assists: 0, ratingSum: 0 });
+      m.apps++;
+      m.ratingSum += rating;
       p.form = Math.round((p.form * 0.7 + rating * 0.3) * 10) / 10;
       p.fitness = Math.max(40, p.fitness - (24 - attr100(p, 'stamina') / 10));
       p.morale = Math.max(0, Math.min(100, p.morale + moraleShift + (rating >= 7.5 ? 2 : rating < 5.5 ? -2 : 0)));
@@ -214,7 +217,12 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
     if (!p) continue;
     if (e.type === 'goal') {
       p.seasonStats.goals++;
-      if (e.assistId && game.players[e.assistId]) game.players[e.assistId].seasonStats.assists++;
+      if (p.monthStats) p.monthStats.goals++;
+      const assister = e.assistId ? game.players[e.assistId] : undefined;
+      if (assister) {
+        assister.seasonStats.assists++;
+        if (assister.monthStats) assister.monthStats.assists++;
+      }
     } else if (e.type === 'red') p.suspendedMatches = 1;
     else if (e.type === 'injury') {
       const club = p.clubId ? game.clubs[p.clubId] : null;
@@ -268,6 +276,7 @@ export function playWeek(game: GameState): Fixture[] {
     for (const p of squadOf(game, user.id)) p.morale = Math.max(0, Math.min(100, p.morale + lift));
   }
   if (!game.unemployed && game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
+  if (monthEnds(game)) monthlyAwards(game);
   // Once a month the board takes stock; on hard it may sack you.
   if (game.week >= 8 && game.week % 4 === 2) boardCheck(game);
   const wasOpen = transferWindow(game).open;
@@ -371,6 +380,8 @@ export function endSeason(game: GameState) {
     });
   }
 
+  // Play-off games come after the last monthly awards.
+  for (const id in game.players) game.players[id].monthStats = undefined;
   awardLeagueTitles(game, summary.champions);
   if (!game.unemployed) {
     recordLegends(game);

@@ -43,6 +43,8 @@ export interface Player {
   ambition: number; // 1–20
   loyalty: number; // 1–20
   seasonStats: { apps: number; goals: number; assists: number; ratingSum: number };
+  /** This calendar month's games, for the monthly awards. */
+  monthStats?: { apps: number; goals: number; assists: number; ratingSum: number };
   /** Placed on the transfer list by their club. */
   listed?: boolean;
   /** Where he stands in the squad, and so how much football he expects. */
@@ -492,6 +494,36 @@ export interface AwardWinner {
   position?: Position;
 }
 
+export interface MonthlyAwards {
+  season: number;
+  /** e.g. "September 2026". */
+  month: string;
+  divisionId: string;
+  player?: AwardWinner;
+  young?: AwardWinner;
+  /** The club with the best league results that month. */
+  manager?: { clubId: string; clubName: string; points: number; played: number };
+}
+
+/** One entry on the Ballon d'Or podium. */
+export interface BallonDorPlace {
+  playerId: string;
+  name: string;
+  clubId: string;
+  clubName: string;
+  nation: string;
+  score: number;
+}
+
+/** The headline awards of a season, kept for the record. */
+export interface YearAwards {
+  season: number;
+  ballonDor: BallonDorPlace[];
+  playerOfYear?: AwardWinner;
+  youngPlayerOfYear?: AwardWinner;
+  goldenBoot?: AwardWinner;
+}
+
 export interface DivisionAwards {
   player?: AwardWinner;
   young?: AwardWinner;
@@ -546,6 +578,8 @@ export interface GameState {
   career?: CareerSpell[];
   /** Points deductions this season, by club. */
   deductions?: Record<string, number>;
+  /** Monthly awards this season, and the headline awards of past seasons. */
+  awards?: { monthly: MonthlyAwards[]; history: YearAwards[] };
   /** Challenge mode: the challenge being played and how it's going. */
   challenge?: ChallengeState;
   nextId: number;

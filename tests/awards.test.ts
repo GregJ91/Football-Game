@@ -48,3 +48,37 @@ describe('season awards', () => {
     expect(after).toBeGreaterThan(apps);
   });
 });
+
+describe('monthly and yearly awards', () => {
+  const game = testGame('eng', 142);
+  playToSeasonEnd(game);
+  const awards = game.awards!;
+
+  it('every division has a Player, Young Player and Manager of the Month, each month', () => {
+    const months = new Set(awards.monthly.map((m) => m.month));
+    expect(months.size).toBeGreaterThanOrEqual(9);
+    for (const div of game.divisions) {
+      const mine = awards.monthly.filter((m) => m.divisionId === div.def.id);
+      // A league with no games (or only one) in a month has no award that month.
+      expect(mine.length).toBeGreaterThanOrEqual(months.size - 2);
+      for (const m of mine) {
+        expect(div.clubIds).toContain(m.manager!.clubId);
+        expect(m.manager!.played).toBeGreaterThan(0);
+        expect(m.player).toBeDefined();
+      }
+    }
+    // Monthly stats start again after each award.
+    expect(Object.values(game.players).every((p) => !p.monthStats)).toBe(true);
+  });
+
+  it('a Ballon d’Or podium and the Player of the Year from the top flight', () => {
+    const year = awards.history.at(-1)!;
+    expect(year.season).toBe(game.season);
+    expect(year.ballonDor).toHaveLength(10);
+    expect(year.ballonDor[0].score).toBeGreaterThanOrEqual(year.ballonDor[1].score);
+    const top = game.divisions.find((d) => d.def.level === 1)!;
+    expect(top.clubIds).toContain(year.playerOfYear!.clubId);
+    expect(year.goldenBoot!.value).toBeGreaterThan(5);
+    expect(game.inbox!.some((i) => i.subject === "Ballon d'Or")).toBe(true);
+  });
+});
