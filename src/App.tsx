@@ -10,6 +10,7 @@ import { PreMatch } from './ui/screens/PreMatch';
 import { SeasonEnd } from './ui/screens/SeasonEnd';
 import { Squad } from './ui/screens/Squad';
 import { Start } from './ui/screens/Start';
+import { Tactics } from './ui/screens/Tactics';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -26,6 +27,7 @@ export function App() {
       <div className="app-body">
         {screen === 'hub' && <Hub />}
         {screen === 'squad' && <Squad />}
+        {screen === 'tactics' && <Tactics />}
         {screen === 'league' && <League />}
         {screen === 'fixtures' && <Fixtures />}
       </div>

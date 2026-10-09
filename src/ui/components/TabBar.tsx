@@ -14,6 +14,17 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
       </>
     ),
   },
+  {
+    screen: 'tactics',
+    label: 'Tactics',
+    icon: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 12 H21" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+  },
   { screen: 'league', label: 'League', icon: <path d="M4 6 H20 M4 12 H20 M4 18 H20" /> },
   {
     screen: 'fixtures',

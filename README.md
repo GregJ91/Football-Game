@@ -27,7 +27,8 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
 - **Two ways to play a match:**
   - **Play match:** live CM-style text commentary at Normal or Fast speed. You can pause, change tactics, make substitutions (players tire as the game goes on) and give a half-time team talk, or skip to full time.
   - **Sim match:** an instant result that pops up.
-- **Playable UI:** Hub, Squad, League tables, Fixtures, Pre-match, Live match and a season-review screen.
+- **Pick your starting XI:** the Tactics tab shows your formation on a pitch. Tap a position to choose who plays there; each player's rating is shown for that position, colour-coded by how well it suits them. Your picks stay between matches and carry over when you change formation. If a pick is injured or suspended, the best available player covers and the pre-match screen tells you.
+- **Playable UI:** Hub, Squad, Tactics, League tables, Fixtures, Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.

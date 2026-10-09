@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { pickTeam } from '../../engine/match/selection';
+import { userSelection } from '../../engine/season/season';
 import { playerName } from '../../engine/players/generate';
 import { POSITION_ORDER } from '../../engine/players/ratings';
 import type { AttributeKey, Player } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
-import { TacticsPicker } from '../components/TacticsPicker';
 import { money } from '../format';
 
 const ATTR_GROUPS: { title: string; keys: AttributeKey[] }[] = [
@@ -26,14 +25,13 @@ function status(p: Player): string | null {
 export function Squad() {
   const game = useGame((s) => s.game)!;
   useGame((s) => s.rev);
-  const setTactics = useGame((s) => s.setTactics);
-  const setAssistantTactics = useGame((s) => s.setAssistantTactics);
+  const go = useGame((s) => s.go);
   const [selected, setSelected] = useState<Player | null>(null);
   const club = userClub(game);
   const squad = squadOf(game, club.id).sort(
     (a, b) => POSITION_ORDER.indexOf(a.position) - POSITION_ORDER.indexOf(b.position) || b.overall - a.overall,
   );
-  const selection = pickTeam(squad, club.tactics.formation);
+  const { selection } = userSelection(game);
   const starters = new Set(selection.xi.map((p) => p.id));
   const bench = new Set(selection.bench.map((p) => p.id));
 
@@ -43,24 +41,13 @@ export function Squad() {
         <h1>Squad</h1>
       </header>
 
-      <section className="card">
-        <div className="card-label">
-          <span>Tactics</span>
-          <span>Best XI picked automatically</span>
-        </div>
-        <TacticsPicker tactics={club.tactics} onChange={setTactics} />
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={!!game.settings?.assistantTactics}
-            onChange={(e) => setAssistantTactics(e.target.checked)}
-          />
-          <span>
-            Let my assistant set tactics for simmed matches
-            <small>He'll counter each opponent. Matches you play live use your own tactics.</small>
-          </span>
-        </label>
-      </section>
+      <button type="button" className="card link-card" onClick={() => go('tactics')}>
+        <span>
+          <strong>Starting XI and tactics</strong>
+          <small>{club.tactics.formation} · {club.lineup ? 'your chosen XI' : 'best XI picked automatically'}</small>
+        </span>
+        <span aria-hidden="true">→</span>
+      </button>
 
       <ul className="player-list">
         {squad.map((p) => {

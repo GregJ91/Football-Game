@@ -6,10 +6,11 @@ import {
   advanceToUserMatch, completeUserMatch, playWeek, startNextSeason, startUserMatch, userFixtureNext,
 } from '../engine/season/season';
 import type { Fixture, GameState, Tactics } from '../engine/types';
-import { createGame, type NewGameConfig } from '../engine/world';
+import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
+import { createGame, squadOf, type NewGameConfig } from '../engine/world';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;
@@ -32,6 +33,10 @@ interface Store {
   newGame: (config: Omit<NewGameConfig, 'seed'>) => void;
   continueGame: () => Promise<boolean>;
   setTactics: (tactics: Tactics) => void;
+  /** Put a player into a starting slot (swapping if already in the XI). */
+  setLineupSlot: (slotIndex: number, playerId: string) => void;
+  /** Go back to the automatically picked best XI. */
+  resetLineup: () => void;
   setAssistantTactics: (on: boolean) => void;
 
   openPreMatch: () => void;
@@ -111,7 +116,27 @@ export const useGame = create<Store>()((set, get) => {
     setTactics: (tactics) => {
       const { game } = get();
       if (!game) return;
-      game.clubs[game.userClubId].tactics = { ...tactics };
+      const club = game.clubs[game.userClubId];
+      if (club.lineup && tactics.formation !== club.tactics.formation) {
+        club.lineup = remapLineup(squadOf(game, club.id), club.lineup, tactics.formation);
+      }
+      club.tactics = { ...tactics };
+      commit();
+    },
+
+    setLineupSlot: (slotIndex, playerId) => {
+      const { game } = get();
+      if (!game) return;
+      const club = game.clubs[game.userClubId];
+      const base = club.lineup ?? autoLineup(squadOf(game, club.id), club.tactics.formation);
+      club.lineup = assignToSlot(base, slotIndex, playerId);
+      commit();
+    },
+
+    resetLineup: () => {
+      const { game } = get();
+      if (!game) return;
+      delete game.clubs[game.userClubId].lineup;
       commit();
     },
 
@@ -214,7 +239,11 @@ export const useGame = create<Store>()((set, get) => {
       const side = liveSideName();
       if (!live || !side || !game) return;
       changeTactics(live, side, tactics);
-      game.clubs[game.userClubId].tactics = { ...tactics };
+      const club = game.clubs[game.userClubId];
+      if (club.lineup && tactics.formation !== club.tactics.formation) {
+        club.lineup = remapLineup(squadOf(game, club.id), club.lineup, tactics.formation);
+      }
+      club.tactics = { ...tactics };
       set((s) => ({
         liveNotes: [...s.liveNotes, { minute: live.minute, text: `Tactics changed: ${tactics.formation}, ${tactics.mentality}, ${tactics.pressing} press.` }],
       }));

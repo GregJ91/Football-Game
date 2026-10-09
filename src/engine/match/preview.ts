@@ -2,7 +2,7 @@ import { positionFit } from '../players/ratings';
 import { Rng } from '../rng';
 import type { Formation, Mentality, Player, Pressing, Tactics } from '../types';
 import { ENGINE, chanceRatio, createLiveMatch, refreshZones, type LiveMatch, type SideName, type TeamSheet } from './engine';
-import { FORMATIONS, pickTeam } from './selection';
+import { FORMATIONS, pickTeam, type Selection } from './selection';
 import { netEdge, type TacticalNote } from './tactics';
 
 export interface MatchupPreview {
@@ -66,10 +66,12 @@ export function recommendTactics(
   opponent: TeamSheet,
   us: SideName,
   neutral = false,
+  /** How we'd line up in a given formation; defaults to the best XI. */
+  selectFor: (formation: Formation) => Selection = (f) => pickTeam(squad, f),
 ): { tactics: Tactics; xgDiff: number } {
   let best: { tactics: Tactics; xgDiff: number } | null = null;
   for (const formation of Object.keys(FORMATIONS) as Formation[]) {
-    const selection = pickTeam(squad, formation);
+    const selection = selectFor(formation);
     for (const mentality of MENTALITIES) {
       for (const pressing of PRESSING) {
         const ours: TeamSheet = { selection, tactics: { formation, mentality, pressing } };

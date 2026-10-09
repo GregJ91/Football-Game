@@ -71,6 +71,8 @@ export interface Club {
   isUser: boolean;
   playerIds: string[];
   tactics: Tactics;
+  /** The user's chosen XI (player ids per formation slot); unset = auto-pick. */
+  lineup?: (string | null)[];
   history: SeasonRecord[];
 }
 

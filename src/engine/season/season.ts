@@ -1,10 +1,10 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
 import { recommendTactics } from '../match/preview';
-import { isAvailable, pickTeam } from '../match/selection';
+import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
 import { rolloverPlayers } from '../players/development';
 import { Rng } from '../rng';
 import type {
-  Club, Division, Fixture, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
+  Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
 } from '../types';
 import { newId, squadOf, withRng } from '../world';
 import { matchdayCount, roundRobin, weekForMatchday } from './fixtures';
@@ -43,20 +43,29 @@ export function aiTactics(game: GameState, club: Club, opponent: Club): Tactics 
   return { formation: club.tactics.formation, pressing: club.tactics.pressing ?? 'medium', mentality };
 }
 
+/** The user's XI for a formation: their saved lineup if they have one, else the best XI. */
+export function userSelection(game: GameState, formation = game.clubs[game.userClubId].tactics.formation): LineupSelection {
+  const club = game.clubs[game.userClubId];
+  const squad = squadOf(game, club.id);
+  if (!club.lineup) return { selection: pickTeam(squad, formation), covers: [] };
+  const lineup = formation === club.tactics.formation ? club.lineup : remapLineup(squad, club.lineup, formation);
+  return selectionFromLineup(squad, formation, lineup);
+}
+
 export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { live?: boolean; home?: boolean } = {}): TeamSheet {
   if (!club.isUser) {
     const tactics = aiTactics(game, club, opponent);
     return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics };
   }
-  const squad = squadOf(game, club.id);
   // Optionally delegate simmed matches to the assistant manager.
   if (!opts.live && game.settings?.assistantTactics) {
     const oppSheet = teamSheet(game, opponent, club);
-    const { tactics } = recommendTactics(squad, oppSheet, opts.home ? 'home' : 'away');
-    return { selection: pickTeam(squad, tactics.formation), tactics };
+    const select = (f: Formation) => userSelection(game, f).selection;
+    const { tactics } = recommendTactics(squadOf(game, club.id), oppSheet, opts.home ? 'home' : 'away', false, select);
+    return { selection: select(tactics.formation), tactics };
   }
   const tactics = { ...club.tactics, pressing: club.tactics.pressing ?? 'medium' };
-  return { selection: pickTeam(squad, tactics.formation), tactics };
+  return { selection: userSelection(game).selection, tactics };
 }
 
 function crowdFill(club: Club): number {

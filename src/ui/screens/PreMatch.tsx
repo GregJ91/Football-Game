@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { previewMatch, recommendTactics } from '../../engine/match/preview';
 import { pickTeam } from '../../engine/match/selection';
-import { aiTactics } from '../../engine/season/season';
+import { aiTactics, userSelection } from '../../engine/season/season';
 import { buildTable } from '../../engine/season/table';
 import type { Tactics } from '../../engine/types';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
@@ -30,14 +30,15 @@ export function PreMatch() {
     const squad = squadOf(game, club.id);
     const oppTactics = aiTactics(game, opponent, club);
     const oppSheet = { selection: pickTeam(squadOf(game, opponent.id), oppTactics.formation), tactics: oppTactics };
-    const ourSheet = { selection: pickTeam(squad, club.tactics.formation), tactics: club.tactics };
+    const ours = userSelection(game);
+    const ourSheet = { selection: ours.selection, tactics: club.tactics };
     const preview = isHome ? previewMatch(ourSheet, oppSheet, 'home') : previewMatch(oppSheet, ourSheet, 'away');
-    const advice = recommendTactics(squad, oppSheet, isHome ? 'home' : 'away');
+    const advice = recommendTactics(squad, oppSheet, isHome ? 'home' : 'away', false, (f) => userSelection(game, f).selection);
     const div = divisionOf(game, club.id);
     const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
     const started = table.some((r) => r.played > 0);
     const posOf = (id: string) => (started ? ordinal(table.findIndex((r) => r.clubId === id) + 1) : '–');
-    return { oppTactics, preview, advice, posOf };
+    return { oppTactics, preview, advice, posOf, covers: ours.covers };
   }, [rev, fixture?.id]);
 
   if (!fixture || !opponent || !analysis) {
@@ -49,7 +50,7 @@ export function PreMatch() {
     );
   }
 
-  const { preview, advice, oppTactics, posOf } = analysis;
+  const { preview, advice, oppTactics, posOf, covers } = analysis;
   const ourXg = isHome ? preview.xgHome : preview.xgAway;
   const theirXg = isHome ? preview.xgAway : preview.xgHome;
   const ourStrength = isHome ? preview.strengthHome : preview.strengthAway;
@@ -90,6 +91,23 @@ export function PreMatch() {
       <section className="card">
         <div className="card-label"><span>Your tactics</span><span>Squad fit {Math.round(preview.squadFit * 100)}%</span></div>
         <TacticsPicker tactics={club.tactics} onChange={setTactics} />
+        {covers.length > 0 && (
+          <ul className="notes">
+            {covers.map((c) => {
+              const out = game.players[c.outId];
+              const inn = c.inId ? game.players[c.inId] : null;
+              return (
+                <li key={c.slotIndex} className="note bad">
+                  <span aria-hidden="true">▼</span>
+                  {out ? out.lastName : 'A chosen player'} {c.reason === 'left' ? 'has left the club' : `is ${c.reason}`}{inn ? `, so ${inn.lastName} plays ${c.slot}` : ''}.
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <button type="button" className="link-btn" onClick={() => go('tactics')}>
+          Change starting XI ({club.lineup ? 'your picks' : 'auto-picked'}) →
+        </button>
       </section>
 
       <section className="card assistant">
