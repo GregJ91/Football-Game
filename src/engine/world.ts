@@ -145,6 +145,8 @@ export function createGame(config: NewGameConfig): GameState {
     lastSummary: null,
     phase: 'season',
     nextId: 1,
+    day: 1,
+    half: 'am',
   };
   const names = new NameFactory(rng, config.country);
   names.reserve(config.clubName);
@@ -196,7 +198,7 @@ export function createGame(config: NewGameConfig): GameState {
   user.stadium = createStadium();
   syncCapacity(user);
   scheduleSeason(game);
-  addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb.`);
+  addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays.`, { subject: 'Welcome' });
   startOfSeasonBusiness(game);
   return game;
 }

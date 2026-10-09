@@ -2,7 +2,9 @@ import { useGame } from './state/store';
 import { ResultPopup } from './ui/components/ResultPopup';
 import { TabBar } from './ui/components/TabBar';
 import { Toast } from './ui/components/Toast';
+import { TopBar } from './ui/components/TopBar';
 import { Club } from './ui/screens/Club';
+import { Inbox } from './ui/screens/Inbox';
 import { CreateClub } from './ui/screens/CreateClub';
 import { Fixtures } from './ui/screens/Fixtures';
 import { Hub } from './ui/screens/Hub';
@@ -27,7 +29,9 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <TopBar />
       <div className="app-body">
+        {screen === 'inbox' && <Inbox />}
         {screen === 'hub' && <Hub />}
         {screen === 'squad' && <Squad />}
         {screen === 'tactics' && <Tactics />}

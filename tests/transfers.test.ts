@@ -3,9 +3,10 @@ import { adjustBudgets, budgetsOf, wageBill, wageBudgetProblem, WAGE_TO_TRANSFER
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
 import {
   SCOUT_REPORTS_PER_WEEK, answerBid, askingPrice, bidFor, cannotBuy, completeTransfer, feeProblem, interestIn, isKnown,
-  openInboxItems, releaseCost, releasePlayer, renewContract, scoutPlayer, transferWindow,
+  openInboxItems, releaseCost, releasePlayer, renewContract, transferWindow,
 } from '../src/engine/transfers/market';
 import { Rng } from '../src/engine/rng';
+import { advanceHalfDay, assignScout } from '../src/engine/calendar';
 import { divisionOf, squadOf, userClub } from '../src/engine/world';
 import { testGame } from './helpers';
 
@@ -126,14 +127,17 @@ describe('contracts and selling', () => {
 });
 
 describe('scouting', () => {
-  it('reveals players outside your league, a limited number per week', () => {
+  it('sends scouts to players outside your league; reports arrive days later, limited per week', () => {
     const game = testGame('eng', 11);
     const club = userClub(game);
     const outsiders = playersAtLevel(game, 5).slice(0, SCOUT_REPORTS_PER_WEEK + 1);
     expect(isKnown(game, club, outsiders[0])).toBe(false);
-    for (let i = 0; i < SCOUT_REPORTS_PER_WEEK; i++) expect(scoutPlayer(game, outsiders[i].id)).toBe(true);
-    expect(scoutPlayer(game, outsiders[SCOUT_REPORTS_PER_WEEK].id)).toBe(false);
+    for (let i = 0; i < SCOUT_REPORTS_PER_WEEK; i++) expect(assignScout(game, outsiders[i].id, false)).toBe('assigned');
+    expect(assignScout(game, outsiders[SCOUT_REPORTS_PER_WEEK].id, false)).toBe('none-left');
+    expect(isKnown(game, club, outsiders[0])).toBe(false);
+    for (let i = 0; i < 8; i++) advanceHalfDay(game);
     expect(isKnown(game, club, outsiders[0])).toBe(true);
+    expect((game.inbox ?? []).some((m) => m.category === 'scouting')).toBe(true);
     const sameLeague = squadOf(game, divisionOf(game, club.id).clubIds.find((id) => id !== club.id)!)[0];
     expect(isKnown(game, club, sameLeague)).toBe(true);
   });

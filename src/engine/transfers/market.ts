@@ -16,10 +16,19 @@ const FREE_AGENT_CAP = 250;
 // ---------------------------------------------------------------- inbox
 
 export function addInbox(game: GameState, kind: InboxKind, text: string, extra: Partial<InboxItem> = {}): InboxItem {
-  const item: InboxItem = { id: newId(game, 'm'), season: game.season, week: game.week, kind, text, ...extra };
+  const item: InboxItem = {
+    id: newId(game, 'm'),
+    season: game.season,
+    week: game.week,
+    day: game.day ?? 1,
+    kind,
+    category: kind === 'bid' ? 'transfers' : 'club',
+    text,
+    ...extra,
+  };
   game.inbox ??= [];
   game.inbox.unshift(item);
-  if (game.inbox.length > 80) game.inbox.length = 80;
+  if (game.inbox.length > 150) game.inbox.length = 150;
   return item;
 }
 
@@ -85,16 +94,6 @@ export function ratingRange(p: Player): [number, number] {
 export function potentialStars(p: Player): number {
   const gap = p.potential - p.overall;
   return Math.max(1, Math.min(5, Math.round(1 + gap / 4)));
-}
-
-export function scoutPlayer(game: GameState, playerId: string): boolean {
-  const club = game.clubs[game.userClubId];
-  if (club.scouted?.[playerId]) return true;
-  const left = game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK;
-  if (left <= 0) return false;
-  club.scouted = { ...club.scouted, [playerId]: true };
-  game.scoutReportsLeft = left - 1;
-  return true;
 }
 
 // ---------------------------------------------------------------- valuation
@@ -283,7 +282,7 @@ export function handleContractExpiries(game: GameState, rng: Rng) {
       p.wage = fairWage(game, club, p);
     }
   }
-  if (leaving.length) addInbox(game, 'info', `Out of contract and gone: ${leaving.join(', ')}.`);
+  if (leaving.length) addInbox(game, 'info', `Out of contract and gone: ${leaving.join(', ')}.`, { category: 'transfers', subject: 'Contracts expired' });
 }
 
 export function expiringUserContracts(game: GameState): Player[] {
@@ -376,6 +375,7 @@ function aiBidForUser(game: GameState, rng: Rng) {
     if (!bidders.length) continue;
     const from = rng.pick(bidders);
     addInbox(game, 'bid', `${from.name} bid ${formatFee(fee)} for ${playerName(p)} (${p.position}, ${p.overall}).`, {
+      subject: `Bid for ${p.lastName}`,
       bid: { playerId: p.id, fromClubId: from.id, fee },
       expiresWeek: game.week + 2,
     });
@@ -410,7 +410,7 @@ export function expireBids(game: GameState) {
     const gone = !p || p.clubId !== game.userClubId;
     if (gone || !open || (item.expiresWeek !== undefined && game.week > item.expiresWeek)) {
       item.resolved = true;
-      if (!gone) addInbox(game, 'info', `${game.clubs[item.bid!.fromClubId].name} withdrew their offer for ${playerName(p)}.`);
+      if (!gone) addInbox(game, 'info', `${game.clubs[item.bid!.fromClubId].name} withdrew their offer for ${playerName(p)}.`, { category: 'transfers', subject: 'Offer withdrawn' });
     }
   }
 }

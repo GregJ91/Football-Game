@@ -62,6 +62,9 @@ export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
   if (!record) return null;
   // Saves from before pressing existed.
   for (const c of Object.values(record.game.clubs)) c.tactics.pressing ??= 'medium';
+  // Saves from before the day-by-day calendar.
+  record.game.day ??= -1;
+  record.game.half ??= 'pm';
   return record.game;
 }
 

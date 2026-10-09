@@ -6,6 +6,7 @@ import {
   advanceToUserMatch, completeUserMatch, playWeek, startNextSeason, startUserMatch, userFixtureNext,
 } from '../engine/season/season';
 import type { FacilityKind, Fixture, GameState, Tactics } from '../engine/types';
+import { advanceHalfDay, assignScout, type ScoutResult } from '../engine/calendar';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
 import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
 import { adjustBudgets as adjustBudgetsEngine, moneyPw, wageBudgetProblem } from '../engine/economy/finance';
@@ -14,11 +15,11 @@ import { startFacilityUpgrade } from '../engine/club/facilities';
 import { startStadiumWork, type WorkOption } from '../engine/club/stadium';
 import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
-  releasePlayer, renewContract, scoutPlayer, type BidAction, type BidResponse,
+  isKnown, releasePlayer, renewContract, type BidAction, type BidResponse,
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;
@@ -49,7 +50,12 @@ interface Store {
   /** Go back to the automatically picked best XI. */
   resetLineup: () => void;
 
-  scout: (playerId: string) => boolean;
+  /** Send a scout; the report lands in the inbox a few days later. */
+  scout: (playerId: string) => ScoutResult;
+  /** CM-style Continue: move on half a day. */
+  continueDay: () => void;
+  markRead: (id: string) => void;
+  markAllRead: () => void;
   /** Submit a fee; the selling club answers straight away. */
   bid: (playerId: string, fee: number) => BidResponse | { error: string };
   /** Agree terms and complete a signing. Returns a problem, or null on success. */
@@ -169,10 +175,34 @@ export const useGame = create<Store>()((set, get) => {
 
     scout: (playerId) => {
       const { game } = get();
-      if (!game) return false;
-      const ok = scoutPlayer(game, playerId);
+      if (!game) return 'none-left';
+      const club = game.clubs[game.userClubId];
+      const result = assignScout(game, playerId, isKnown(game, club, game.players[playerId]));
       commit();
-      return ok;
+      return result;
+    },
+
+    continueDay: () => {
+      const { game } = get();
+      if (!game || get().busy) return;
+      const r = advanceHalfDay(game);
+      if (r === 'matchday') set({ screen: 'prematch' });
+      commit();
+    },
+
+    markRead: (id) => {
+      const { game } = get();
+      const item = game?.inbox?.find((i) => i.id === id);
+      if (!item || item.read) return;
+      item.read = true;
+      bump();
+    },
+
+    markAllRead: () => {
+      const { game } = get();
+      if (!game) return;
+      for (const i of game.inbox ?? []) i.read = true;
+      commit();
     },
 
     bid: (playerId, fee) => {
@@ -193,7 +223,7 @@ export const useGame = create<Store>()((set, get) => {
       if (problem) return problem;
       const from = p.clubId ? game.clubs[p.clubId].name : null;
       completeTransfer(game, p, club.id, fee, wage, years);
-      addInbox(game, 'info', `${p.firstName} ${p.lastName} signs ${from ? `from ${from} for ${fee ? `£${fee.toLocaleString('en-GB')}` : 'a nominal fee'}` : 'on a free'}, on ${moneyPw(wage)} until ${p.contractEnd + 1}.`);
+      addInbox(game, 'info', `${p.firstName} ${p.lastName} signs ${from ? `from ${from} for ${fee ? `£${fee.toLocaleString('en-GB')}` : 'a nominal fee'}` : 'on a free'}, on ${moneyPw(wage)} until ${p.contractEnd + 1}.`, { category: 'transfers', subject: `${p.lastName} signs` });
       commit();
       return null;
     },
@@ -254,7 +284,7 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return 'No game loaded.';
       const err = startStadiumWork(game.clubs[game.userClubId], opt);
-      if (!err) addInbox(game, 'info', `Work has started: ${opt.label.toLowerCase()} (${opt.weeks} weeks).`);
+      if (!err) addInbox(game, 'info', `Work has started: ${opt.label.toLowerCase()} (${opt.weeks} weeks).`, { subject: 'Building work' });
       commit();
       return err;
     },
@@ -327,11 +357,9 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game || get().busy) return;
       set({ busy: true });
-      const target = nextUserFixture(game);
-      while (game.phase === 'season' && (!target || !target.result)) {
-        playWeek(game);
-        await yieldToUi();
-      }
+      await yieldToUi();
+      const target = advanceToUserMatch(game);
+      if (target) playWeek(game);
       const popup = target?.result ? target : null;
       set({ busy: false, resultPopup: popup, screen: popup || game.phase === 'season' ? 'hub' : 'seasonEnd' });
       commit();

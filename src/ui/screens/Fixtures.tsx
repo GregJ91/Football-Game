@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fixtureDate, formatDate } from '../../engine/calendar';
 import type { Fixture } from '../../engine/types';
 import { userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -35,7 +36,7 @@ export function Fixtures() {
           return (
             <li key={f.id}>
               <button type="button" className="fixture-row" disabled={!r} onClick={() => setOpen(f)}>
-                <span className="wk">Wk {f.week + 1}</span>
+                <span className="wk">{formatDate(fixtureDate(game, f.week)).replace(/^\w+ /, '')}</span>
                 <span className="ha">{home ? 'H' : 'A'}</span>
                 <ClubDot colours={opp.colours} size={12} />
                 <span className="opp">{opp.name}</span>
@@ -55,7 +56,7 @@ export function Fixtures() {
         <div className="sheet-backdrop" onClick={() => setOpen(null)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Match report" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-head">
-              <strong className="grow">Week {open.week + 1}</strong>
+              <strong className="grow">{formatDate(fixtureDate(game, open.week), true)}</strong>
               <button type="button" className="link-btn" onClick={() => setOpen(null)}>
                 Close
               </button>

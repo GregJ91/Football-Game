@@ -8,6 +8,7 @@ import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
 import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { boardOf } from '../../engine/club/chairman';
+import { fixtureDate, formatDate } from '../../engine/calendar';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -34,7 +35,9 @@ export function Hub() {
   const matchday = Math.min(ourFixtures.filter((f) => f.result).length + 1, ourFixtures.length);
 
   const bids = openInboxItems(game);
-  const news = (game.inbox ?? []).filter((i) => i.kind !== 'bid').slice(0, 3);
+  const unreadItems = (game.inbox ?? []).filter((i) => !i.read && i.kind !== 'bid');
+  const unread = unreadItems.length;
+  const latest = unreadItems[0];
   const board = boardOf(club);
   const window = transferWindow(game);
 
@@ -76,7 +79,7 @@ export function Hub() {
       {next && opponent ? (
         <section className="card fixture">
           <div className="card-label">
-            <span>Next match · League</span>
+            <span>{formatDate(fixtureDate(game, next.week))} · League</span>
             <span>{isHome ? 'Home' : 'Away'}</span>
           </div>
           <div className="versus">
@@ -113,16 +116,18 @@ export function Hub() {
         </section>
       )}
 
-      {(bids.length > 0 || news.length > 0) && (
+      {(bids.length > 0 || unread > 0) && (
         <section className="inbox">
           <div className="card-label inbox-label">
-            <span>Inbox</span>
+            <span>Needs your attention</span>
             <button type="button" className="link-btn" onClick={() => go('transfers')}>{window.label} →</button>
           </div>
           {bids.slice(0, 3).map((item) => <BidCard key={item.id} item={item} />)}
-          {news.map((item) => (
-            <p key={item.id} className={`news news-${item.kind}`}>{item.text}</p>
-          ))}
+          {unread > 0 && (
+            <button type="button" className="news unread-link" onClick={() => go('inbox')}>
+              {unread} unread message{unread === 1 ? '' : 's'}: {latest?.subject ?? 'open your inbox'} →
+            </button>
+          )}
         </section>
       )}
 

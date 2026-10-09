@@ -44,7 +44,7 @@ export function setSeasonTarget(game: GameState) {
     : { label: 'Finish clear of the bottom three', position: n - 3 };
   boardOf(club).target = target;
   boardOf(club).gradingWarned = false;
-  addInbox(game, 'info', `The board's target for the season: ${target.label.toLowerCase()} (finish ${ordinal(target.position)} or better).`);
+  addInbox(game, 'info', `The board's target for the season: ${target.label.toLowerCase()} (finish ${ordinal(target.position)} or better).`, { subject: 'Season target' });
 }
 
 function ordinal(n: number) {
@@ -83,7 +83,7 @@ export function seasonReview(game: GameState, summary: SeasonSummary) {
     : diff >= 0
       ? `The board is pleased: the target was to ${target.label.toLowerCase()} and you finished ${ordinal(pos)}.`
       : `The board is disappointed: the target was to ${target.label.toLowerCase()} but you finished ${ordinal(pos)}.`;
-  addInbox(game, 'info', verdict);
+  addInbox(game, 'info', verdict, { subject: 'Board verdict' });
 }
 
 // ---------------------------------------------------------------- sponsors
@@ -101,7 +101,7 @@ export function makeSponsorOffers(game: GameState, rng: Rng) {
     { name: name(), style: 'upfront', weekly: 0, upfront: roundMoney(base * weeks * 0.85), promotionBonus: 0, endsSeason: game.season },
     { name: name(), style: 'bonus', weekly: roundMoney(base * 0.6), upfront: 0, promotionBonus: roundMoney(base * weeks * 1.2), endsSeason: game.season },
   ];
-  addInbox(game, 'info', 'Three companies want to be your shirt sponsor. Choose one on the Club screen before the window shuts.');
+  addInbox(game, 'info', 'Three companies want to be your shirt sponsor. Choose one on the Club screen before the window shuts.', { subject: 'Sponsorship offers' });
 }
 
 export function chooseSponsor(game: GameState, index: number) {
@@ -115,7 +115,7 @@ export function chooseSponsor(game: GameState, index: number) {
     const l = ledgerOf(club);
     l.sponsor = (l.sponsor ?? 0) + offer.upfront;
   }
-  addInbox(game, 'info', `${offer.name} are your new shirt sponsor.`);
+  addInbox(game, 'info', `${offer.name} are your new shirt sponsor.`, { subject: 'New sponsor' });
 }
 
 // ---------------------------------------------------------------- loans
@@ -179,7 +179,7 @@ export function chairmanWeek(game: GameState, rng: Rng) {
     club.loan.remaining -= pay;
     if (club.loan.remaining <= 0) {
       club.loan = undefined;
-      addInbox(game, 'info', 'The bank loan is paid off.');
+      addInbox(game, 'info', 'The bank loan is paid off.', { subject: 'Loan repaid' });
     }
   }
   // Sponsor not chosen by the end of the summer window: the board picks the steady deal.
@@ -193,9 +193,9 @@ export function chairmanWeek(game: GameState, rng: Rng) {
     if (b.kind === 'facility') {
       const f = facilitiesOf(club);
       f[b.facility!]++;
-      addInbox(game, 'info', `The ${FACILITY_INFO[b.facility!].name.toLowerCase()} upgrade is complete (level ${f[b.facility!]}).`);
+      addInbox(game, 'info', `The ${FACILITY_INFO[b.facility!].name.toLowerCase()} upgrade is complete (level ${f[b.facility!]}).`, { subject: 'Facility upgraded' });
     } else {
-      addInbox(game, 'info', completeStadiumWork(club, b));
+      addInbox(game, 'info', completeStadiumWork(club, b), { subject: 'Building work finished' });
       boardOf(club).fans = clamp(boardOf(club).fans + 3);
     }
     syncCapacity(club);
@@ -215,7 +215,7 @@ export function gradingWarning(game: GameState, position: number) {
   if (!check || check.ok) return;
   b.gradingWarned = true;
   const missing = check.items.filter((i) => !i.ok).map((i) => `${i.label.toLowerCase()} (${i.have} of ${i.need})`);
-  addInbox(game, 'contract', `Ground warning: you're in the promotion race, but the ground doesn't meet the rules for the next level. Missing: ${missing.join(', ')}. Without it you can't go up.`);
+  addInbox(game, 'contract', `Ground warning: you're in the promotion race, but the ground doesn't meet the rules for the next level. Missing: ${missing.join(', ')}. Without it you can't go up.`, { subject: 'Ground warning' });
 }
 
 /** Prize money for every club, parachutes for the relegated, sponsor bonuses. */
@@ -244,6 +244,6 @@ export function seasonPayouts(game: GameState, summary: SeasonSummary) {
     user.balance += user.sponsor.promotionBonus;
     const l = ledgerOf(user);
     l.sponsor = (l.sponsor ?? 0) + user.sponsor.promotionBonus;
-    addInbox(game, 'info', `${user.sponsor.name} pay their promotion bonus.`);
+    addInbox(game, 'info', `${user.sponsor.name} pay their promotion bonus.`, { subject: 'Sponsor bonus' });
   }
 }

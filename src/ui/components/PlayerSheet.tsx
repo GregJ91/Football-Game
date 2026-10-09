@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
+import { formatDate, scoutDueDate } from '../../engine/calendar';
 import { playerName } from '../../engine/players/generate';
 import { roundMoney } from '../../engine/players/ratings';
 import {
@@ -51,6 +52,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const toggleListed = useGame((s) => s.toggleListed);
   const release = useGame((s) => s.release);
   const renew = useGame((s) => s.renew);
+  const showToast = useGame((s) => s.showToast);
   const adjustBudgets = useGame((s) => s.adjustBudgets);
 
   const p = player;
@@ -145,10 +147,27 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               </div>
             ) : (
               <div className="card inset">
-                <p className="muted">Your scouts haven't watched him yet. A report reveals his exact rating, attributes and potential.</p>
-                <button type="button" className="btn secondary" disabled={(game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK) <= 0} onClick={() => scout(p.id)}>
-                  Scout him ({game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK} reports left this week)
-                </button>
+                {(() => {
+                  const due = scoutDueDate(game, p.id);
+                  if (due) return <p className="muted">A scout is watching him. Report due {formatDate(due)}.</p>;
+                  return (
+                    <>
+                      <p className="muted">Your scouts haven't watched him yet. A report takes a few days and reveals his ability, potential and whether he'd suit you.</p>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        disabled={(game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK) <= 0}
+                        onClick={() => {
+                          const r = scout(p.id);
+                          if (r === 'none-left') showToast('No scouts free this week.');
+                          else if (r === 'assigned') showToast(`Scout sent to watch ${p.lastName}.`);
+                        }}
+                      >
+                        Send a scout ({game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK} free this week)
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             )}
 

@@ -179,13 +179,20 @@ export interface Loan {
 }
 
 export type InboxKind = 'bid' | 'info' | 'contract';
+export type InboxCategory = 'transfers' | 'training' | 'medical' | 'scouting' | 'club' | 'match';
 
 export interface InboxItem {
   id: string;
   season: number;
   week: number;
+  /** Day of the week it arrived (0 = Sunday … 6 = Saturday). */
+  day?: number;
   kind: InboxKind;
+  category?: InboxCategory;
+  /** Short heading shown in the inbox list. */
+  subject?: string;
   text: string;
+  read?: boolean;
   /** For bids: the offer on the table. */
   bid?: { playerId: string; fromClubId: string; fee: number; countered?: boolean };
   /** Week (in this season) after which an unanswered bid lapses. */
@@ -342,6 +349,11 @@ export interface GameState {
   transfers?: TransferRecord[];
   /** Scout reports the user can still request this week. */
   scoutReportsLeft?: number;
+  /** Day of the current week, 0 = Sunday … 6 = Saturday (matchday); -1 = the Saturday evening just gone. */
+  day?: number;
+  half?: 'am' | 'pm';
+  /** Scouts out watching players; reports arrive on `dueDay` (week * 7 + day). */
+  scoutAssignments?: { playerId: string; dueDay: number }[];
 }
 
 export interface GameSettings {

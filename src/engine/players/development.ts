@@ -97,7 +97,7 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
         p.contractEnd = game.season + 3;
         names.push(`${p.firstName} ${p.lastName} (${p.position})`);
       }
-      addInbox(game, 'info', `Youth intake: ${names.join(', ')} join from the academy.`);
+      addInbox(game, 'info', `Youth intake: ${names.join(', ')} join from the academy.`, { category: 'training', subject: 'Youth intake' });
     }
 
     // AI clubs that changed division reshape their squad; the user uses the transfer market.

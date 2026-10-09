@@ -46,7 +46,9 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Shirt sponsor:** pick one of three offers each summer (steady, cash up front, or promotion bonus).
   - **Bank loans:** repaid weekly over two seasons.
   - **Season money:** prize money for every club, parachute payments after relegation, and a season ledger.
-- **Playable UI:** Hub (inbox, board and fan meters), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
+- **Day by day, CM 01/02 style:** Continue moves on half a day (AM, then PM, then the next morning), with the date top right. Matches are on Saturdays; Continue on matchday morning takes you to the match. Play match and Sim match on the Hub skip straight to the next game.
+- **Inbox** (top left, with an unread count), filtered by Transfers, Training, Medical, Scouting and Club. It includes Friday training reports, training knocks, match injuries, bids you can answer in place, and scout reports that arrive a few days after you send a scout, with a verdict on the player.
+- **Playable UI:** Hub (board and fan meters, things needing attention), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.
