@@ -1,4 +1,5 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
+import { matchPrepBoost, weeklyTraining } from '../players/training';
 import { monthEnds, monthlyAwards, recordLegends, seasonAwards, updateClubRecords } from './awards';
 import { assistantMorale, scoutReportsPerWeek } from '../club/staff';
 import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/challenge';
@@ -91,10 +92,10 @@ export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { l
     const oppSheet = teamSheet(game, opponent, club);
     const select = (f: Formation) => userSelection(game, f, rotate).selection;
     const { tactics } = recommendTactics(squadOf(game, club.id), oppSheet, opts.home ? 'home' : 'away', false, select);
-    return { selection: select(tactics.formation), tactics };
+    return { selection: select(tactics.formation), tactics, boost: matchPrepBoost(club) };
   }
   const tactics = { ...club.tactics, pressing: club.tactics.pressing ?? 'medium' };
-  return { selection: userSelection(game, undefined, rotate).selection, tactics };
+  return { selection: userSelection(game, undefined, rotate).selection, tactics, boost: matchPrepBoost(club) };
 }
 
 
@@ -267,6 +268,7 @@ export function playWeek(game: GameState): Fixture[] {
   withRng(game, (rng) => {
     for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId);
   });
+  if (!game.unemployed) withRng(game, (rng) => weeklyTraining(game, rng));
   weeklyRecovery(game);
   weeklyFinances(game);
   withRng(game, (rng) => {

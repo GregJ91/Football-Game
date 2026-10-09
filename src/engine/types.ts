@@ -59,9 +59,32 @@ export interface Player {
   transferRequest?: boolean;
   /** On loan at his current club from this one; he goes back at the end of the season. */
   loanFrom?: string;
+  /** Individual training: unset = follow the team's focus. */
+  trainingFocus?: IndividualFocus;
+  /** Learning a new position: progress 0–100. */
+  retrain?: { position: Position; progress: number };
 }
 
 export type SquadRole = 'key' | 'first' | 'rotation' | 'backup' | 'prospect';
+
+export type TeamFocus = 'balanced' | 'attacking' | 'defending' | 'physical' | 'tactical' | 'matchPrep';
+export type IndividualFocus = 'technical' | 'mental' | 'physical' | 'goalkeeping';
+export type TrainingIntensity = 'light' | 'normal' | 'intense';
+
+export interface TrainingSettings {
+  focus: TeamFocus;
+  intensity: TrainingIntensity;
+}
+
+export interface TrainingGain {
+  season: number;
+  week: number;
+  playerId: string;
+  name: string;
+  attribute: AttributeKey | 'position';
+  /** New attribute value, or the position learnt. */
+  value: number | string;
+}
 
 export type KitPattern = 'plain' | 'stripes' | 'hoops' | 'halves' | 'sash';
 
@@ -122,6 +145,10 @@ export interface Club {
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
+  /** The user's training schedule. */
+  training?: TrainingSettings;
+  /** Recent improvements from training, newest first. */
+  trainingLog?: TrainingGain[];
   /** This season's injuries at the user's club, newest first. */
   injuryLog?: InjuryRecord[];
   /** All-time appearances and goals for the club (user's club). */

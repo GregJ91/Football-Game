@@ -1,5 +1,6 @@
 import { injuryFactor } from './club/facilities';
 import { physioFactor, scoutDays } from './club/staff';
+import { trainingKnocks } from './players/training';
 import { injuryName, logInjury, recoverTo } from './players/squad';
 import { playerName } from './players/generate';
 import type { Rng } from './rng';
@@ -131,7 +132,7 @@ function dailyEvents(game: GameState) {
 
 function trainingKnock(game: GameState, rng: Rng) {
   const club = game.clubs[game.userClubId];
-  if (!rng.chance(0.025 * physioFactor(club))) return;
+  if (!rng.chance(0.025 * physioFactor(club) * trainingKnocks(club))) return;
   const fit = squadOf(game, club.id).filter((p) => p.injuryWeeks === 0);
   if (!fit.length) return;
   const p = rng.pick(fit);

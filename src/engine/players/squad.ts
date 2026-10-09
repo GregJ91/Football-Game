@@ -1,4 +1,5 @@
 import { FORMATIONS, isAvailable, type Lineup, type Selection } from '../match/selection';
+import { trainingRecovery } from './training';
 import { grievanceFactor } from '../club/staff';
 import { addInbox } from '../transfers/market';
 import type { Club, Formation, GameState, Player, SquadRole } from '../types';
@@ -25,9 +26,11 @@ export function recoverTo(game: GameState, day: number) {
   }
   const days = day - game.recoveredTo;
   if (days <= 0) return;
+  const user = game.clubs[game.userClubId];
+  const userRate = user ? trainingRecovery(user) : 1;
   for (const id in game.players) {
     const p = game.players[id];
-    if (p.fitness < 100) p.fitness = Math.min(100, p.fitness + days * dailyRecovery(p));
+    if (p.fitness < 100) p.fitness = Math.min(100, p.fitness + days * dailyRecovery(p) * (p.clubId === game.userClubId ? userRate : 1));
   }
   game.recoveredTo = day;
 }

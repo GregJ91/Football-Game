@@ -4,13 +4,14 @@ import { takeJob, waitAWeek, waitForOffer } from '../engine/club/career';
 import { createRelegationBattle } from '../engine/club/challenge';
 import { endLoan, loanIn } from '../engine/transfers/loans';
 import { hireStaff } from '../engine/club/staff';
+import { startRetraining } from '../engine/players/training';
 import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
 import {
   advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch, userSelection,
 } from '../engine/season/season';
-import type { ChallengeId, ClubColours, CountryId, CrestDesign, FacilityKind, Fixture, GameState, SquadRole, StaffRole, Tactics } from '../engine/types';
+import type { ChallengeId, ClubColours, CountryId, CrestDesign, FacilityKind, IndividualFocus, Position, TrainingSettings, Fixture, GameState, SquadRole, StaffRole, Tactics } from '../engine/types';
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
@@ -56,6 +57,9 @@ interface Store {
   continueAfterChallenge: () => void;
   loanPlayer: (playerId: string) => string | null;
   hireStaff: (role: StaffRole, index: number) => string | null;
+  setTraining: (settings: TrainingSettings) => void;
+  setPlayerTraining: (playerId: string, focus: IndividualFocus | null) => void;
+  setRetrain: (playerId: string, position: Position | null) => void;
   /** Your club's crest and home and away kits. */
   setIdentity: (identity: { colours: ClubColours; awayKit: ClubColours; crest: CrestDesign }) => void;
   sendBackLoan: (playerId: string) => void;
@@ -204,6 +208,29 @@ export const useGame = create<Store>()((set, get) => {
       club.colours = colours;
       club.awayKit = awayKit;
       club.crest = crest;
+      commit();
+    },
+
+    setTraining: (settings) => {
+      const { game } = get();
+      if (!game) return;
+      game.clubs[game.userClubId].training = settings;
+      commit();
+    },
+
+    setPlayerTraining: (playerId, focus) => {
+      const { game } = get();
+      const p = game?.players[playerId];
+      if (!game || !p) return;
+      p.trainingFocus = focus ?? undefined;
+      commit();
+    },
+
+    setRetrain: (playerId, position) => {
+      const { game } = get();
+      const p = game?.players[playerId];
+      if (!game || !p) return;
+      startRetraining(p, position);
       commit();
     },
 

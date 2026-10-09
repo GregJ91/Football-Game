@@ -49,6 +49,8 @@ const DEFENDERS: Position[] = ['DC', 'DR', 'DL'];
 export interface TeamSheet {
   selection: Selection;
   tactics: Tactics;
+  /** Extra sharpness on the day (match preparation in training): 1 = none. */
+  boost?: number;
 }
 
 export type TeamTalk = 'praise' | 'calm' | 'rally';
@@ -206,8 +208,8 @@ export function createLiveMatch(rng: Rng, home: TeamSheet, away: TeamSheet, opts
     endMinute: 90,
     finished: false,
     halfTimePending: false,
-    home: makeSide('home', home, opts.neutral ? 1 : ENGINE.homeBoost, !opts.manual?.home),
-    away: makeSide('away', away, 1, !opts.manual?.away),
+    home: makeSide('home', home, (opts.neutral ? 1 : ENGINE.homeBoost) * (home.boost ?? 1), !opts.manual?.home),
+    away: makeSide('away', away, away.boost ?? 1, !opts.manual?.away),
     events: [],
     homeGoals: 0,
     awayGoals: 0,
