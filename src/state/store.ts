@@ -9,7 +9,9 @@ import type { FacilityKind, Fixture, GameState, Tactics } from '../engine/types'
 import { advanceHalfDay, assignScout, type ScoutResult } from '../engine/calendar';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
 import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
-import { adjustBudgets as adjustBudgetsEngine, moneyPw, wageBudgetProblem } from '../engine/economy/finance';
+import {
+  adjustBudgets as adjustBudgetsEngine, moneyPw, setUnlimitedMoney as setUnlimitedMoneyEngine, topUpUnlimited, wageBudgetProblem,
+} from '../engine/economy/finance';
 import { chooseSponsor, repayLoan, takeLoan } from '../engine/club/chairman';
 import { startFacilityUpgrade } from '../engine/club/facilities';
 import { startStadiumWork, type WorkOption } from '../engine/club/stadium';
@@ -67,6 +69,7 @@ interface Store {
   renew: (playerId: string, wage: number, years: number) => string | null;
   answerBid: (itemId: string, action: BidAction) => string;
   adjustBudgets: (wageDelta: number) => void;
+  setUnlimitedMoney: (on: boolean) => void;
 
   // Chairman decisions; each returns a problem, or null when done.
   buildStadium: (opt: WorkOption) => string | null;
@@ -117,6 +120,7 @@ export const useGame = create<Store>()((set, get) => {
   const bump = () => set((s) => ({ rev: s.rev + 1 }));
   const commit = () => {
     const { game } = get();
+    if (game) topUpUnlimited(game);
     // A pending result popup is shown on the hub first; dismissing it moves on.
     set((s) => ({ rev: s.rev + 1, screen: game?.phase === 'seasonEnd' && !s.resultPopup ? 'seasonEnd' : s.screen }));
     if (game) void saveGame(game);
@@ -271,6 +275,13 @@ export const useGame = create<Store>()((set, get) => {
       const msg = withRng(game, (rng) => answerBidEngine(game, rng, itemId, action));
       commit();
       return msg;
+    },
+
+    setUnlimitedMoney: (on) => {
+      const { game } = get();
+      if (!game) return;
+      setUnlimitedMoneyEngine(game, on);
+      commit();
     },
 
     adjustBudgets: (wageDelta) => {

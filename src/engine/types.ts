@@ -359,4 +359,8 @@ export interface GameState {
 export interface GameSettings {
   /** Let the assistant manager pick tactics for simulated matches. */
   assistantTactics: boolean;
+  /** Testing aid: the user's club never runs out of money. */
+  unlimitedMoney?: boolean;
+  /** Bank balance before unlimited money was switched on, restored when it's switched off. */
+  balanceBeforeUnlimited?: number;
 }

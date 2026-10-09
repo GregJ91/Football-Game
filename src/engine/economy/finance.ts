@@ -99,7 +99,36 @@ export const SALE_REINVEST = 0.75;
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 
 /** The board sets the season's budgets from income and the bank balance. */
+/** Topped up to this while unlimited money is on. */
+export const UNLIMITED_BANK = 1_000_000_000;
+
+/** Testing aid: keep the user's bank and budgets full while unlimited money is on. */
+export function topUpUnlimited(game: GameState) {
+  if (!game.settings?.unlimitedMoney) return;
+  const club = game.clubs[game.userClubId];
+  club.balance = Math.max(club.balance, UNLIMITED_BANK);
+  club.budgets = { transfer: UNLIMITED_BANK, wage: UNLIMITED_BANK / 10 };
+}
+
+export function setUnlimitedMoney(game: GameState, on: boolean) {
+  const club = game.clubs[game.userClubId];
+  const settings = { assistantTactics: false, ...game.settings };
+  if (on && !settings.unlimitedMoney) settings.balanceBeforeUnlimited = club.balance;
+  if (!on && settings.unlimitedMoney) {
+    club.balance = settings.balanceBeforeUnlimited ?? 0;
+    settings.balanceBeforeUnlimited = undefined;
+  }
+  settings.unlimitedMoney = on;
+  game.settings = settings;
+  if (on) topUpUnlimited(game);
+  else setBoardBudgets(game, club);
+}
+
 export function setBoardBudgets(game: GameState, club: Club): Budgets {
+  if (club.isUser && game.settings?.unlimitedMoney) {
+    topUpUnlimited(game);
+    return club.budgets!;
+  }
   const bill = wageBill(game, club);
   const income = weeklyIncomeEstimate(game, club);
   const step = income > 100_000 ? 1000 : income > 10_000 ? 100 : 10;

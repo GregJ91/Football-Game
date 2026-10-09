@@ -1,5 +1,5 @@
 import { LAST_NAMES } from '../../data/names';
-import { guideTicketPrice, ledgerOf, weeklyIncomeEstimate, weeklyTv } from '../economy/finance';
+import { guideTicketPrice, ledgerOf, topUpUnlimited, weeklyIncomeEstimate, weeklyTv } from '../economy/finance';
 import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Board, Club, GameState, SeasonSummary } from '../types';
@@ -156,6 +156,7 @@ export function repayLoan(game: GameState): string | null {
 
 /** Weekly chairman business: sponsor, upkeep, loan, building progress. */
 export function chairmanWeek(game: GameState, rng: Rng) {
+  topUpUnlimited(game);
   for (const club of Object.values(game.clubs)) {
     if (club.parachute && club.parachute.season === game.season) {
       club.balance += club.parachute.weekly;

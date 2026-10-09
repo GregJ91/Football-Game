@@ -40,6 +40,7 @@ export function Club() {
   const borrow = useGame((s) => s.borrow);
   const repay = useGame((s) => s.repay);
   const showToast = useGame((s) => s.showToast);
+  const setUnlimited = useGame((s) => s.setUnlimitedMoney);
   const [tab, setTab] = useState<Tab>('ground');
   const [standSheet, setStandSheet] = useState<number | null>(null);
 
@@ -263,6 +264,21 @@ export function Club() {
                 ))}
               </div>
             )}
+          </section>
+
+          <section className="card">
+            <label className="toggle no-rule" htmlFor="unlimited-money">
+              <input
+                id="unlimited-money"
+                type="checkbox"
+                checked={!!game.settings?.unlimitedMoney}
+                onChange={(e) => setUnlimited(e.target.checked)}
+              />
+              <span>
+                Unlimited money (testing)
+                <small>Bank and budgets stay topped up at £1bn. Switch off to go back to your real balance.</small>
+              </span>
+            </label>
           </section>
 
           <section className="card">

@@ -135,3 +135,29 @@ describe('season payouts and the board', () => {
     expect((game.inbox ?? []).some((i) => /board is (pleased|disappointed)/.test(i.text))).toBe(true);
   });
 });
+
+describe('unlimited money (testing aid)', () => {
+  it('keeps the bank and budgets full while on, and restores the real balance when off', async () => {
+    const { setUnlimitedMoney, budgetsOf, UNLIMITED_BANK } = await import('../src/engine/economy/finance');
+    const { feeProblem } = await import('../src/engine/transfers/market');
+    const game = testGame('eng', 31);
+    const club = userClub(game);
+    const real = club.balance;
+    setUnlimitedMoney(game, true);
+    expect(club.balance).toBe(UNLIMITED_BANK);
+    expect(feeProblem(game, 50_000_000)).toBeNull();
+    club.balance -= 400_000_000;
+    playWeek(game);
+    expect(club.balance).toBeGreaterThanOrEqual(UNLIMITED_BANK);
+    startNextSeasonSafe(game);
+    expect(budgetsOf(game, club).transfer).toBe(UNLIMITED_BANK);
+    setUnlimitedMoney(game, false);
+    expect(club.balance).toBe(real);
+    expect(budgetsOf(game, club).transfer).toBeLessThan(UNLIMITED_BANK);
+  });
+});
+
+function startNextSeasonSafe(game: ReturnType<typeof testGame>) {
+  playToSeasonEnd(game);
+  startNextSeason(game);
+}

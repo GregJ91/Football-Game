@@ -415,3 +415,4 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 .mail-body { margin: 0; padding: 4px 14px 14px; font-size: 15px; line-height: 1.45; }
 .mail .bid-card { margin: 4px 10px 10px; }
 .unread-link { text-align: left; border: 1px solid var(--line); color: var(--text); width: 100%; }
+.toggle.no-rule { border-top: none; padding-top: 0; }
