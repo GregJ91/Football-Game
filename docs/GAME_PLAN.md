@@ -1,4 +1,4 @@
-# Pyramid FC — Game Design Plan
+# The Journey of a Football Manager: Game Design Plan
 
 ## Context
 The goal is a new mobile football game that mixes **Championship Manager 01/02** (squad depth, scouting, tactics, match ticker) with **Football Chairman Pro 2** (quick seasons, club finances, stadium growth, one-tap decisions). You create your own club (name, colours, crest), start at the **bottom of the English or Scottish pyramid**, and climb through promotions to win leagues and play in Europe. Every decision must be **fast**: a full season should take about 20–30 minutes.

@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Pyramid FC',
-        short_name: 'Pyramid FC',
+        name: 'The Journey of a Football Manager',
+        short_name: 'FM Journey',
         description: 'Build a club from the bottom of the pyramid to the top of Europe.',
         theme_color: '#0E1A14',
         background_color: '#0E1A14',

@@ -1,4 +1,4 @@
-# Pyramid FC
+# The Journey of a Football Manager
 
 A fast mobile football management game, a mix of Championship Manager 01/02 and Football Chairman Pro 2. You found your own club at the bottom of the English or Scottish pyramid and take it to the top. You can install it to your phone's home screen as a PWA.
 

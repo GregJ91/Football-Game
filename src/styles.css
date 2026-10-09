@@ -64,7 +64,8 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
 /* Start */
 .start { min-height: 100dvh; justify-content: center; gap: 40px; padding: 32px 24px; }
 .start-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
-.start-hero h1 { font-size: 52px; letter-spacing: 1px; }
+.start-hero h1 { font-size: 44px; letter-spacing: 1px; line-height: 1; }
+.start-hero h1 small { display: block; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
 .start-hero p { color: var(--muted); margin: 0; max-width: 280px; line-height: 1.4; }
 
 /* Create */
