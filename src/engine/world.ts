@@ -76,25 +76,47 @@ function makeShortName(name: string): string {
   return name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
 }
 
+/** Squad ages, 17 to 34 (as generatePlayer picks them). */
+export function randomAge(rng: Rng): number {
+  return Math.max(16, Math.min(37, Math.round(rng.int(17, 34) + rng.normal() * 2)));
+}
+
+/**
+ * Young players haven't reached their level yet: they start below the squad's
+ * quality and grow into it, so the pyramid doesn't fill up with stars.
+ */
+export function stillToGrow(age: number): number {
+  return age <= 19 ? 9 : age <= 22 ? 5 : age <= 26 ? 2 : 0;
+}
+
+/**
+ * A 22-man squad around `quality`. `stars` players are a class above the
+ * rest, in their prime: the ones the club is built around.
+ */
 export function createSquad(
   game: GameState,
   rng: Rng,
   club: Club,
   quality: number,
+  stars = 0,
 ): Player[] {
   const players: Player[] = [];
-  for (const position of SQUAD_TEMPLATE) {
+  const starSlots = new Set(rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i)).slice(0, stars));
+  SQUAD_TEMPLATE.forEach((position, i) => {
+    const star = starSlots.has(i);
+    const age = star ? rng.int(23, 29) : randomAge(rng);
     const p = generatePlayer(rng, {
       id: newId(game, 'p'),
       position,
-      quality: quality + rng.normal() * 3,
+      quality: star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3,
+      age,
       clubId: club.id,
       season: game.season,
     });
     players.push(p);
     game.players[p.id] = p;
     club.playerIds.push(p.id);
-  }
+  });
   return players;
 }
 
@@ -139,7 +161,7 @@ function createClub(
  */
 function makeGiant(game: GameState, rng: Rng, user: Club, def: DivisionDef) {
   const eng = game.country === 'eng';
-  createSquad(game, rng, user, def.quality + 6);
+  createSquad(game, rng, user, def.quality + 6, 4);
   const stands = eng ? [16000, 12000, 12000, 12000] : [14000, 10000, 10000, 10000];
   user.stadium = {
     stands: STAND_NAMES.map((name, i) => ({ name, capacity: stands[i], seats: stands[i], roof: true })),
@@ -190,7 +212,10 @@ export function createGame(config: NewGameConfig): GameState {
       // A spread of strength within each division so tables separate.
       const strength = def.quality + rng.normal() * 3.5;
       club.reputation = Math.round(club.reputation + (strength - def.quality));
-      createSquad(game, rng, club, strength);
+      // Top-flight clubs have stars, more at the bigger clubs; elsewhere the odd standout.
+      const edge = strength - def.quality;
+      const stars = def.level === 1 ? (edge > 3 ? 3 : edge > 0 ? 2 : 1) : rng.chance(0.4) ? 1 : 0;
+      createSquad(game, rng, club, strength, stars);
       division.clubIds.push(club.id);
     }
     if (def.id === userDivision.id) {

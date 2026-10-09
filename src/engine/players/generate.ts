@@ -73,7 +73,9 @@ export function generatePlayer(rng: Rng, opts: GenerateOptions): Player {
   const attributes = generateAttributes(rng, opts.position, opts.quality, positions.slice(1));
   const overall = computeOverall({ attributes, position: opts.position });
   const headroom = age <= 19 ? rng.int(5, 25) : age <= 22 ? rng.int(2, 15) : age <= 26 ? rng.int(0, 7) : rng.int(0, 2);
-  const potential = clamp(overall + headroom);
+  // Potential above 85 is rare: the higher it would reach, the harder it gets.
+  const raw = clamp(overall + headroom);
+  const potential = Math.max(overall, raw > 85 ? Math.round(85 + (raw - 85) * 0.45) : raw);
   return {
     id: opts.id,
     firstName: rng.pick(FIRST_NAMES),

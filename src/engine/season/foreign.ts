@@ -2,6 +2,7 @@ import { CLUB_NAMES, NATIONS, PLAYER_NAMES, type Nation } from '../../data/europ
 import { KIT_COLOURS, clubSuffixes, townNameParts } from '../../data/names';
 import { SQUAD_TEMPLATE, generatePlayer } from '../players/generate';
 import { Rng } from '../rng';
+import { randomAge, stillToGrow } from '../world';
 import type { Club, GameState, Player } from '../types';
 
 /** A made-up club name in the nation's style, plus the town it's named after. */
@@ -90,10 +91,22 @@ export function foreignSquad(game: GameState, clubId: string): Player[] {
   if (!ids) {
     const rng = new Rng(hash(`${game.seed}:${clubId}:${game.season}`));
     const names = club.foreign.style === 'british' ? null : PLAYER_NAMES[club.foreign.style as keyof typeof PLAYER_NAMES];
-    // The best eleven come out about 1.5 above the quality target.
-    const quality = club.foreign.strength - 1.5;
+    // Stronger clubs have more stars; the best eleven come out close to the club's strength.
+    const strength = club.foreign.strength;
+    const stars = strength >= 76 ? 3 : strength >= 70 ? 2 : 1;
+    const quality = strength - 1.5 - stars * 0.5;
+    const starSlots = new Set(rng.shuffle(SQUAD_TEMPLATE.map((_, i) => i)).slice(0, stars));
     ids = SQUAD_TEMPLATE.map((position, i) => {
-      const p = generatePlayer(rng, { id: `${clubId}p${i}`, position, quality: quality + rng.normal() * 3, clubId, season: game.season });
+      const star = starSlots.has(i);
+      const age = star ? rng.int(23, 29) : randomAge(rng);
+      const p = generatePlayer(rng, {
+        id: `${clubId}p${i}`,
+        position,
+        quality: star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3,
+        age,
+        clubId,
+        season: game.season,
+      });
       if (names) {
         p.firstName = rng.pick(names.first);
         p.lastName = rng.pick(names.last);
