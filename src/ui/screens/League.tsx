@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { divisionTable } from '../../engine/season/table';
 import { divisionOf } from '../../engine/world';
 import { useGame } from '../../state/store';
+import { topScorers } from '../../engine/season/awards';
 import { LeagueTable, TableKey } from '../components/LeagueTable';
 import { LeagueTabs } from '../components/LeagueTabs';
 
@@ -32,6 +33,27 @@ export function League() {
         <LeagueTable game={game} def={division.def} rows={rows} />
       </section>
       <TableKey def={division.def} />
+      {(() => {
+        const scorers = topScorers(game, division.clubIds);
+        return (
+          <section className="card">
+            <div className="card-label"><span>Top scorers</span></div>
+            {scorers.length === 0 ? (
+              <p className="muted small">No goals yet this season.</p>
+            ) : (
+              <ol className="scorers-list">
+                {scorers.map(({ p, clubId }) => (
+                  <li key={p.id} className={clubId === game.userClubId ? 'is-user' : ''}>
+                    <span className="grow">{p.firstName} {p.lastName}<small className="block muted">{game.clubs[clubId].name}</small></span>
+                    <span className="muted small">{p.seasonStats.apps} apps</span>
+                    <b>{p.seasonStats.goals}</b>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        );
+      })()}
     </main>
   );
 }

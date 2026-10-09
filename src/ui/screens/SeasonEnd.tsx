@@ -62,6 +62,40 @@ export function SeasonEnd() {
       </section>
       <TableKey def={division.def} />
 
+      {summary.awards?.[division.def.id] && (() => {
+        const a = summary.awards[division.def.id];
+        const line = (label: string, w: typeof a.player, unit: string) => w && (
+          <div className={`po-row${w.clubId === club.id ? ' is-user' : ''}`}>
+            <span className="grow">{label}<small className="block muted">{game.clubs[w.clubId]?.name}</small></span>
+            <strong>{w.name}</strong>
+            <span className="muted small">{unit === 'rating' ? w.value.toFixed(2) : `${w.value} ${unit}`}</span>
+          </div>
+        );
+        return (
+          <section className="card">
+            <div className="card-label"><span>{division.def.name} awards</span></div>
+            {line('Player of the Season', a.player, 'rating')}
+            {line('Young Player of the Season', a.young, 'rating')}
+            {line('Golden Boot', a.topScorer, 'goals')}
+            {line('Most assists', a.topAssists, 'assists')}
+            {a.team.length > 0 && (
+              <>
+                <div className="card-label"><span>Team of the Season</span></div>
+                <ul className="tots">
+                  {a.team.map((t) => (
+                    <li key={t.playerId} className={t.clubId === club.id ? 'is-user' : ''}>
+                      <span className="pos">{t.position}</span>
+                      <span className="grow">{t.name}<small className="block muted">{game.clubs[t.clubId]?.name}</small></span>
+                      <b>{t.value.toFixed(2)}</b>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        );
+      })()}
+
       {(game.cups ?? []).length > 0 && (
         <section className="card">
           <div className="card-label"><span>Cup winners</span></div>
@@ -108,9 +142,10 @@ export function SeasonEnd() {
         </div>
         {game.divisions.map((d) => {
           const champ = game.clubs[summary.champions[d.def.id]];
+          const boot = summary.awards?.[d.def.id]?.topScorer;
           return (
             <div key={d.def.id} className="po-row">
-              <span className="grow">{d.def.name}</span>
+              <span className="grow">{d.def.name}{boot && <small className="block muted">Golden Boot: {boot.name} ({boot.value})</small>}</span>
               <ClubDot colours={champ.colours} size={12} />
               <strong>{champ.name}</strong>
             </div>

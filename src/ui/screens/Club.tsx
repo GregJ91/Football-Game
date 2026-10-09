@@ -437,6 +437,57 @@ export function Club() {
                 </ul>
               )}
             </section>
+            {(() => {
+              const legends = Object.values(club.legends ?? {});
+              const r = club.records ?? {};
+              const byApps = [...legends].sort((a, b) => b.apps - a.apps).slice(0, 8);
+              const byGoals = [...legends].filter((l) => l.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 8);
+              const span = (l: { from: number; to: number }) => (l.from === l.to ? seasonLabel(l.from) : `${seasonLabel(l.from)} to ${seasonLabel(l.to)}`);
+              return (
+                <>
+                  <section className="card">
+                    <div className="card-label"><span>Club records</span></div>
+                    {!r.biggestWin && !r.recordAttendance ? (
+                      <p className="muted small">Records are set as you play.</p>
+                    ) : (
+                      <>
+                        {r.biggestWin && <div className="po-row"><span className="grow">Biggest win<small className="block muted">v {r.biggestWin.opponent}, {seasonLabel(r.biggestWin.season)}</small></span><strong>{r.biggestWin.score}</strong></div>}
+                        {r.heaviestDefeat && <div className="po-row"><span className="grow">Heaviest defeat<small className="block muted">v {r.heaviestDefeat.opponent}, {seasonLabel(r.heaviestDefeat.season)}</small></span><strong>{r.heaviestDefeat.score}</strong></div>}
+                        {r.recordAttendance && <div className="po-row"><span className="grow">Record attendance<small className="block muted">v {r.recordAttendance.opponent}, {seasonLabel(r.recordAttendance.season)}</small></span><strong>{r.recordAttendance.attendance.toLocaleString('en-GB')}</strong></div>}
+                      </>
+                    )}
+                  </section>
+                  <section className="card">
+                    <div className="card-label"><span>Hall of Fame</span><span>Most appearances</span></div>
+                    {byApps.length === 0 ? (
+                      <p className="muted small">Filled in at the end of each season.</p>
+                    ) : (
+                      <ol className="scorers-list">
+                        {byApps.map((l, i) => (
+                          <li key={i}>
+                            <span className="grow">{l.name}<small className="block muted">{l.position} · {span(l)}{l.awards?.length ? ` · ${l.awards.join(', ')}` : ''}</small></span>
+                            <b>{l.apps}</b>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {byGoals.length > 0 && (
+                      <>
+                        <div className="card-label"><span>Top scorers</span></div>
+                        <ol className="scorers-list">
+                          {byGoals.map((l, i) => (
+                            <li key={i}>
+                              <span className="grow">{l.name}<small className="block muted">{l.apps} apps · {span(l)}</small></span>
+                              <b>{l.goals}</b>
+                            </li>
+                          ))}
+                        </ol>
+                      </>
+                    )}
+                  </section>
+                </>
+              );
+            })()}
             <section className="card">
               <div className="card-label"><span>Club history</span></div>
               {club.history.length === 0 ? (

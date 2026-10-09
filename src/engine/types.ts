@@ -104,6 +104,9 @@ export interface Club {
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
+  /** All-time appearances and goals for the club (user's club). */
+  legends?: Record<string, Legend>;
+  records?: ClubRecords;
   /** The user's backroom staff. */
   staff?: Partial<Record<StaffRole, StaffMember>>;
   /** Weekly parachute payment after relegation, and the season it covers. */
@@ -459,8 +462,45 @@ export interface SeasonSummary {
   finalTables: Record<string, TableRow[]>;
   /** The user won promotion but their ground didn't meet the rules. */
   deniedPromotion?: { clubId: string; replacementId: string };
+  /** Player awards and the Team of the Season, by division. */
+  awards?: Record<string, DivisionAwards>;
   /** European winners this season and the places earned for next season. */
   europe?: { winners: { compId: string; clubId: string }[]; qualified: EuroEntry[] };
+}
+
+export interface AwardWinner {
+  playerId: string;
+  name: string;
+  clubId: string;
+  /** Goals, assists or average rating, depending on the award. */
+  value: number;
+  /** Team of the Season: the position he's picked in. */
+  position?: Position;
+}
+
+export interface DivisionAwards {
+  player?: AwardWinner;
+  young?: AwardWinner;
+  topScorer?: AwardWinner;
+  topAssists?: AwardWinner;
+  team: AwardWinner[];
+}
+
+/** A player in the user's club's all-time records. */
+export interface Legend {
+  name: string;
+  position: Position;
+  apps: number;
+  goals: number;
+  from: number;
+  to: number;
+  awards?: string[];
+}
+
+export interface ClubRecords {
+  biggestWin?: { season: number; opponent: string; score: string; margin: number };
+  heaviestDefeat?: { season: number; opponent: string; score: string; margin: number };
+  recordAttendance?: { season: number; opponent: string; attendance: number };
 }
 
 export interface Division {

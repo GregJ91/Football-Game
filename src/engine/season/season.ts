@@ -1,4 +1,5 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
+import { recordLegends, seasonAwards, updateClubRecords } from './awards';
 import { assistantMorale, scoutReportsPerWeek } from '../club/staff';
 import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/challenge';
 import { returnLoans } from '../transfers/loans';
@@ -188,6 +189,7 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
     { club: home, used: result.homeXI, scored: result.homeGoals, conceded: result.awayGoals },
     { club: away, used: result.awayXI, scored: result.awayGoals, conceded: result.homeGoals },
   ];
+  if (!game.unemployed) updateClubRecords(game, home.id, away.id, result);
   for (const { club, used, scored, conceded } of sides) {
     club.seasonGames = (club.seasonGames ?? 0) + 1;
     const usedSet = new Set(used);
@@ -370,6 +372,10 @@ export function endSeason(game: GameState) {
   }
 
   awardLeagueTitles(game, summary.champions);
+  if (!game.unemployed) {
+    recordLegends(game);
+  }
+  seasonAwards(game, summary);
   europeSeasonEnd(game, summary);
   challengeSeasonEnd(game, summary);
   seasonPayouts(game, summary);
