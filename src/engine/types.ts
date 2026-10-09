@@ -90,6 +90,20 @@ export interface Club {
   loan?: Loan;
   /** Weekly parachute payment after relegation, and the season it covers. */
   parachute?: { weekly: number; season: number };
+  /** A club from abroad, met only in Europe. It has no division and its squad is made when needed. */
+  foreign?: ForeignInfo;
+}
+
+export interface ForeignInfo {
+  nation: string;
+  nationName: string;
+  style: string;
+  /** Best-XI average this season. */
+  strength: number;
+  /** Long-run level, on a scale where an average Premier League side is 76. */
+  base: number;
+  /** This season's swing above or below that level. */
+  form?: number;
 }
 
 export interface Budgets {
@@ -288,6 +302,9 @@ export interface CupTie extends Fixture {
   round: number;
   neutral: boolean;
   winnerId?: string;
+  /** Two-legged European ties: which leg, and (on the second leg) the first leg's id. */
+  leg?: 1 | 2;
+  firstLegId?: string;
 }
 
 export interface CupRound {
@@ -299,6 +316,9 @@ export interface CupRound {
   byes: string[];
   drawn: boolean;
   played: boolean;
+  /** European rounds: the stage and leg. */
+  stage?: EuroStage;
+  leg?: 1 | 2;
 }
 
 export interface CupState {
@@ -306,6 +326,36 @@ export interface CupState {
   season: number;
   rounds: CupRound[];
   winnerId?: string;
+  /** European competitions: the 36 clubs in the league phase, once drawn. */
+  league?: string[];
+}
+
+export type EuroStage = 'playoff' | 'league' | 'koPlayoff' | 'r16' | 'qf' | 'sf' | 'final';
+
+/** A domestic club's place in Europe. */
+export interface EuroEntry {
+  clubId: string;
+  compId: string;
+  /** Starts in the play-off round. */
+  playoff: boolean;
+  /** How the place was earned, e.g. "4th in the Premier League". */
+  reason: string;
+}
+
+export interface EuropeState {
+  /** Foreign clubs (also in `clubs`). */
+  foreignIds: string[];
+  /** This season's domestic entrants. */
+  entries: EuroEntry[];
+  /** Places earned for next season (set at the end of the season). */
+  next?: EuroEntry[];
+  comps: CupState[];
+  /** Squads of foreign clubs the user has met this season (kept apart from `players`). */
+  players: Record<string, Player>;
+  squads: Record<string, string[]>;
+  winners: { season: number; compId: string; clubId: string }[];
+  /** How far the domestic game's ratings have moved from the reference scale; foreign clubs move with it. */
+  shift?: number;
 }
 
 export interface Trophy {
@@ -370,6 +420,8 @@ export interface SeasonSummary {
   finalTables: Record<string, TableRow[]>;
   /** The user won promotion but their ground didn't meet the rules. */
   deniedPromotion?: { clubId: string; replacementId: string };
+  /** European winners this season and the places earned for next season. */
+  europe?: { winners: { compId: string; clubId: string }[]; qualified: EuroEntry[] };
 }
 
 export interface Division {
@@ -406,6 +458,8 @@ export interface GameState {
   scoutAssignments?: { playerId: string; dueDay: number }[];
   /** This season's cup competitions. */
   cups?: CupState[];
+  /** European competitions and the foreign clubs in them. */
+  europe?: EuropeState;
 }
 
 export interface GameSettings {

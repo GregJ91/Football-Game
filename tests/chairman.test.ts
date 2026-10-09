@@ -6,7 +6,7 @@ import { crowdFill, guideTicketPrice } from '../src/engine/economy/finance';
 import { computeOverall } from '../src/engine/players/ratings';
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
 import { ATTRIBUTE_KEYS } from '../src/engine/types';
-import { divisionOf, squadOf, userClub } from '../src/engine/world';
+import { divisionOf, domesticClubs, squadOf, userClub } from '../src/engine/world';
 import { testGame } from './helpers';
 
 function makeUserDominant(game: ReturnType<typeof testGame>) {
@@ -130,7 +130,7 @@ describe('season payouts and the board', () => {
     const game = testGame('eng', 29);
     const before = boardOf(userClub(game)).confidence;
     playToSeasonEnd(game);
-    for (const c of Object.values(game.clubs)) expect(c.ledger?.prize ?? 0).toBeGreaterThan(0);
+    for (const c of domesticClubs(game)) expect(c.ledger?.prize ?? 0).toBeGreaterThan(0);
     expect(boardOf(userClub(game)).confidence).not.toBe(before);
     expect((game.inbox ?? []).some((i) => /board is (pleased|disappointed)/.test(i.text))).toBe(true);
   });

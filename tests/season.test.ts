@@ -4,7 +4,7 @@ import { matchdayCount, roundRobin } from '../src/engine/season/fixtures';
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
 import { buildTable } from '../src/engine/season/table';
 import type { Fixture } from '../src/engine/types';
-import { divisionOf } from '../src/engine/world';
+import { divisionOf, domesticClubs } from '../src/engine/world';
 import { testGame } from './helpers';
 
 describe('fixtures', () => {
@@ -83,7 +83,7 @@ describe('season flow', () => {
   it('records the season in every club history', () => {
     const game = testGame('sco', 3);
     playToSeasonEnd(game);
-    for (const c of Object.values(game.clubs)) expect(c.history).toHaveLength(1);
+    for (const c of domesticClubs(game)) expect(c.history).toHaveLength(1);
   });
 });
 
@@ -99,7 +99,7 @@ describe('multi-season stability', () => {
       playToSeasonEnd(game);
       startNextSeason(game);
       for (const div of game.divisions) expect(div.clubIds).toHaveLength(div.def.size);
-      for (const c of Object.values(game.clubs)) {
+      for (const c of domesticClubs(game)) {
         expect(c.playerIds.length).toBeGreaterThanOrEqual(18);
         expect(c.playerIds.every((id) => game.players[id]?.clubId === c.id)).toBe(true);
       }

@@ -68,6 +68,14 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **How ties work:** midweek, single-match knockouts with extra time and penalties, and neutral semi-finals and finals where real. The next round is drawn as soon as one is played.
   - **Rewards:** prize money doubles each round, and fans get a boost for wins (more for giant-killings).
   - **Honours:** a trophy cabinet and club history under Club → Honours.
+- **Europe:** the Champions League, Europa League and Conference League, in the current 36-club format.
+  - **Qualifying:**
+    - **England:** the Premier League top four go into the Champions League. 5th and the FA Cup winners go into the Europa League, and the League Cup winners into the Conference League play-off round. A cup winner who has already qualified passes the place down the league.
+    - **Scotland:** the champions go straight in. The rest (2nd to 5th and the Scottish Cup winners) start in a two-legged play-off round, and losers drop into the next competition down.
+  - **Format:** a league phase of 8 games (6 in the Conference League). The top 8 go to the round of 16, and 9th to 24th play a knockout play-off. Knockout ties are two legs on aggregate, with extra time and penalties in the second leg, and a single-match final at a neutral ground.
+  - **Calendar:** Champions League nights are Wednesdays, the other two Thursdays. Domestic cup rounds move to another midweek day if they would clash.
+  - **Foreign clubs:** about 120 fictional clubs from 35 nations, rated by strength. Their ratings move with the domestic game so Europe stays competitive. Your matches use the full engine against a generated squad with local names; other games use a quick model calibrated against the engine.
+  - **Money:** entry, results and each knockout round pay prize money, and home gates sell at a premium. Winning adds the trophy to the cabinet.
 - **Playable UI:** Hub (board and fan meters, things needing attention), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 

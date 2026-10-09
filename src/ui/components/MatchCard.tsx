@@ -1,5 +1,8 @@
 import { shortName } from '../../engine/players/generate';
+import { isCupTie } from '../../engine/season/cups';
+import { aggregate } from '../../engine/season/europe';
 import type { Fixture, GameState } from '../../engine/types';
+import { playerById } from '../../engine/world';
 import { ClubDot } from './ClubArt';
 
 export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture }) {
@@ -11,10 +14,11 @@ export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture
     r.events
       .filter((e) => e.type === 'goal' && e.side === side)
       .map((e) => {
-        const p = game.players[e.playerId];
+        const p = playerById(game, e.playerId);
         return `${p ? shortName(p) : 'Unknown'} ${e.minute}'`;
       });
   const reds = r.events.filter((e) => e.type === 'red');
+  const agg = isCupTie(fixture) && fixture.leg === 2 ? aggregate(game, fixture) : null;
   return (
     <div className="match-card">
       <div className="score-row">
@@ -30,6 +34,11 @@ export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture
           <span>{away.name}</span>
         </div>
       </div>
+      {agg && (
+        <div className="pens">
+          {agg.home} – {agg.away} on aggregate
+        </div>
+      )}
       {r.penalties && (
         <div className="pens">
           {r.penalties.home} – {r.penalties.away} on penalties
@@ -46,7 +55,7 @@ export function MatchCard({ game, fixture }: { game: GameState; fixture: Fixture
       </div>
       {reds.length > 0 && (
         <div className="reds">
-          Sent off: {reds.map((e) => (game.players[e.playerId] ? shortName(game.players[e.playerId]) : '?')).join(', ')}
+          Sent off: {reds.map((e) => { const p = playerById(game, e.playerId); return p ? shortName(p) : '?'; }).join(', ')}
         </div>
       )}
     </div>

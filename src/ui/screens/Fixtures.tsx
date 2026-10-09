@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { competitionLabel, formatDate, matchDate, matchDay } from '../../engine/calendar';
-import { cupDef } from '../../data/cups';
-import { isCupTie, userCupTies } from '../../engine/season/cups';
+import { cupShort, isCupTie, userCupTies } from '../../engine/season/cups';
 import type { Fixture } from '../../engine/types';
 import { userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -43,7 +42,7 @@ export function Fixtures() {
             <li key={f.id}>
               <button type="button" className="fixture-row" disabled={!r} onClick={() => setOpen(f)}>
                 <span className="wk">{formatDate(matchDate(game, f)).replace(/^\w+ /, '')}</span>
-                <span className={`comp ${isCupTie(f) ? 'cup' : ''}`}>{isCupTie(f) ? cupDef(game.country, f.cupId).short : 'L'}</span>
+                <span className={`comp ${isCupTie(f) ? 'cup' : ''}`}>{isCupTie(f) ? cupShort(game, f.cupId) : 'L'}</span>
                 <span className="ha">{isCupTie(f) && f.neutral ? 'N' : home ? 'H' : 'A'}</span>
                 <ClubDot colours={opp.colours} size={12} />
                 <span className="opp">{opp.name}</span>

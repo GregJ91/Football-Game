@@ -40,7 +40,11 @@ export function PreMatch() {
     const div = divisionOf(game, club.id);
     const table = buildTable(div.clubIds, game.fixtures.filter((f) => f.divisionId === div.def.id));
     const started = table.some((r) => r.played > 0);
-    const posOf = (id: string) => (started ? ordinal(table.findIndex((r) => r.clubId === id) + 1) : '–');
+    const posOf = (id: string) => {
+      if (game.clubs[id].foreign) return game.clubs[id].foreign!.nationName;
+      const i = table.findIndex((r) => r.clubId === id);
+      return started && i >= 0 ? ordinal(i + 1) : '–';
+    };
     return { oppTactics, preview, advice, posOf, covers: ours.covers };
   }, [rev, fixture?.id]);
 

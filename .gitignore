@@ -4,3 +4,10 @@ dev-dist
 *.log
 .DS_Store
 dist-single
+
+# TypeScript output (typecheck with tsc --noEmit)
+*.tsbuildinfo
+src/**/*.js
+tests/**/*.js
+scripts/**/*.js
+vite.config.js

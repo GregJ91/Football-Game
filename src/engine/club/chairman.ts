@@ -4,7 +4,7 @@ import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Board, Club, GameState, SeasonSummary } from '../types';
 import { addInbox } from '../transfers/market';
-import { divisionOf, squadOf } from '../world';
+import { divisionOf, domesticClubs, squadOf } from '../world';
 import { FACILITY_INFO, facilitiesOf, totalUpkeep } from './facilities';
 import { completeStadiumWork, nextLevelGrading, stadiumOf, syncCapacity } from './stadium';
 
@@ -157,7 +157,7 @@ export function repayLoan(game: GameState): string | null {
 /** Weekly chairman business: sponsor, upkeep, loan, building progress. */
 export function chairmanWeek(game: GameState, rng: Rng) {
   topUpUnlimited(game);
-  for (const club of Object.values(game.clubs)) {
+  for (const club of domesticClubs(game)) {
     if (club.parachute && club.parachute.season === game.season) {
       club.balance += club.parachute.weekly;
       const l = ledgerOf(club);

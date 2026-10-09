@@ -22,7 +22,7 @@ import {
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;

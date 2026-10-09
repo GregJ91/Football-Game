@@ -1,5 +1,5 @@
 import type { Budgets, Club, CountryId, GameState, Ledger } from '../types';
-import { divisionOf, squadOf } from '../world';
+import { divisionOf, domesticClubs, squadOf } from '../world';
 
 /** Typical ticket price by level (£). */
 const TICKET: Record<CountryId, number[]> = {
@@ -75,7 +75,7 @@ export function addGate(game: GameState, club: Club, attendance: number) {
 
 /** Pay wages and collect TV money for every club, once per week. */
 export function weeklyFinances(game: GameState) {
-  for (const club of Object.values(game.clubs)) {
+  for (const club of domesticClubs(game)) {
     const tv = weeklyTv(game, club);
     const wages = wageBill(game, club);
     club.balance += tv - wages;
@@ -86,7 +86,7 @@ export function weeklyFinances(game: GameState) {
 }
 
 export function resetLedgers(game: GameState) {
-  for (const club of Object.values(game.clubs)) club.ledger = emptyLedger();
+  for (const club of domesticClubs(game)) club.ledger = emptyLedger();
 }
 
 // ---------------------------------------------------------------- board budgets

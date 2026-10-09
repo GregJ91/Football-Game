@@ -4,6 +4,8 @@ import { SQUAD_TEMPLATE, generatePlayer } from './players/generate';
 import { Rng } from './rng';
 import { createStadium, syncCapacity } from './club/stadium';
 import { setupCups } from './season/cups';
+import { setupEurope } from './season/europe';
+import { foreignSquad } from './season/foreign';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
 import type {
@@ -199,6 +201,7 @@ export function createGame(config: NewGameConfig): GameState {
   user.stadium = createStadium();
   syncCapacity(user);
   scheduleSeason(game);
+  setupEurope(game);
   setupCups(game);
   addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays.`, { subject: 'Welcome' });
   startOfSeasonBusiness(game);
@@ -216,5 +219,17 @@ export function divisionOf(game: GameState, clubId: string): Division {
 }
 
 export function squadOf(game: GameState, clubId: string): Player[] {
-  return game.clubs[clubId].playerIds.map((id) => game.players[id]);
+  const club = game.clubs[clubId];
+  if (club.foreign) return foreignSquad(game, clubId);
+  return club.playerIds.map((id) => game.players[id]);
+}
+
+/** Clubs in the pyramid (foreign clubs met in Europe are left out). */
+export function domesticClubs(game: GameState): Club[] {
+  return Object.values(game.clubs).filter((c) => !c.foreign);
+}
+
+/** Any player, including those in foreign squads. */
+export function playerById(game: GameState, id: string): Player | undefined {
+  return game.players[id] ?? game.europe?.players[id];
 }

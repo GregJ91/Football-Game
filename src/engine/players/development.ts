@@ -2,7 +2,7 @@ import type { Rng } from '../rng';
 import type { GameState, Player } from '../types';
 import { trainingBonus, youthIntake } from '../club/facilities';
 import { addInbox } from '../transfers/market';
-import { divisionOf, newId } from '../world';
+import { divisionOf, domesticClubs, newId } from '../world';
 import { SQUAD_TEMPLATE, generatePlayer } from './generate';
 import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
 
@@ -60,8 +60,8 @@ function sign(game: GameState, rng: Rng, clubId: string, position: Player['posit
  * level (a stand-in for the transfer market, which arrives in a later phase).
  */
 export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<string>) {
-  for (const clubId in game.clubs) {
-    const club = game.clubs[clubId];
+  for (const club of domesticClubs(game)) {
+    const clubId = club.id;
     const quality = divisionOf(game, clubId).def.quality;
     const squad = club.playerIds.map((id) => game.players[id]);
 

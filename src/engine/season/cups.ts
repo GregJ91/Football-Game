@@ -1,11 +1,15 @@
 import { CUPS, cupDef } from '../../data/cups';
+import { euroDef, isEuroId } from '../../data/europe';
 import { dateIn, formatDate } from '../calendar';
+import { crowdFill } from '../economy/finance';
+import type { SimOptions } from '../match/engine';
 import { ledgerOf } from '../economy/finance';
 import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { CupDef, CupRound, CupState, CupTie, GameState } from '../types';
 import { addInbox } from '../transfers/market';
 import { divisionOf, newId, withRng } from '../world';
+import { completeUserEuroTie, euroMatchOptions, playEuroRound } from './europe';
 import { playMatch } from './season';
 
 function entrants(game: GameState, def: CupDef, round: number): string[] {
@@ -40,24 +44,50 @@ export function inRound(name: string): string {
 }
 
 export function cupName(game: GameState, cupId: string) {
-  return cupDef(game.country, cupId).name;
+  return isEuroId(cupId) ? euroDef(cupId).name : cupDef(game.country, cupId).name;
+}
+
+/** Short label for fixture lists, e.g. FAC or UCL. */
+export function cupShort(game: GameState, cupId: string) {
+  return isEuroId(cupId) ? euroDef(cupId).short : cupDef(game.country, cupId).short;
+}
+
+/** Domestic cups and European competitions together. */
+export function allCups(game: GameState): CupState[] {
+  return [...(game.cups ?? []), ...(game.europe?.comps ?? [])];
+}
+
+/** Match options for any cup tie: knockout rules, venue and crowd. */
+export function tieMatchOptions(game: GameState, tie: CupTie): SimOptions {
+  if (isEuroId(tie.cupId)) return euroMatchOptions(game, tie);
+  const home = game.clubs[tie.homeId];
+  const away = game.clubs[tie.awayId];
+  return {
+    knockout: true,
+    neutral: tie.neutral,
+    capacity: tie.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
+    crowdFill: crowdFill(game, home),
+  };
 }
 
 /** Create this season's cups with their round dates, and make the first draws. */
 export function setupCups(game: GameState) {
+  // European nights are fixed first; a domestic round that clashes moves to another midweek day.
+  const euro = new Set((game.europe?.comps ?? []).flatMap((c) => c.rounds.map((r) => `${r.week}:${r.day}`)));
+  const taken = new Set(euro);
+  const freeDay = (week: number, day: number) => {
+    if (!euro.has(`${week}:${day}`)) return day;
+    return [2, 3, 1, 4, 5].find((d) => !taken.has(`${week}:${d}`)) ?? day;
+  };
   game.cups = CUPS[game.country].map((def) => {
     const count = roundCount(game, def);
     const start = Math.round(game.totalWeeks * def.window[0]);
     const end = Math.round(game.totalWeeks * def.window[1]);
-    const rounds: CupRound[] = Array.from({ length: count }, (_, i) => ({
-      name: '',
-      week: count > 1 ? start + Math.round((i * (end - start)) / (count - 1)) : start,
-      day: def.day,
-      ties: [],
-      byes: [],
-      drawn: false,
-      played: false,
-    }));
+    const rounds: CupRound[] = Array.from({ length: count }, (_, i) => {
+      const week = count > 1 ? start + Math.round((i * (end - start)) / (count - 1)) : start;
+      return { name: '', week, day: freeDay(week, def.day), ties: [], byes: [], drawn: false, played: false };
+    });
+    for (const r of rounds) taken.add(`${r.week}:${r.day}`);
     return { id: def.id, season: game.season, rounds };
   });
   withRng(game, (rng) => {
@@ -177,6 +207,7 @@ function finishRound(game: GameState, rng: Rng, cup: CupState, r: number) {
 
 /** Play every unplayed tie in a round (the user's included), then move the cup on. */
 export function playCupRound(game: GameState, rng: Rng, cup: CupState, r: number) {
+  if (isEuroId(cup.id)) return playEuroRound(game, rng, cup, r);
   const round = cup.rounds[r];
   for (const tie of round.ties) {
     if (tie.result) continue;
@@ -189,7 +220,7 @@ export function playCupRound(game: GameState, rng: Rng, cup: CupState, r: number
 /** Rounds that are due on or before the given week and day, earliest first. */
 function dueRounds(game: GameState, week: number, day: number) {
   const due: { cup: CupState; r: number; round: CupRound }[] = [];
-  for (const cup of game.cups ?? []) {
+  for (const cup of allCups(game)) {
     cup.rounds.forEach((round, r) => {
       if (round.drawn && !round.played && (round.week < week || (round.week === week && round.day <= day))) due.push({ cup, r, round });
     });
@@ -223,7 +254,7 @@ export function userTieToday(game: GameState): CupTie | undefined {
 
 /** All of the user's cup ties this season, drawn so far. */
 export function userCupTies(game: GameState): CupTie[] {
-  return (game.cups ?? []).flatMap((c) => c.rounds.flatMap((r) => r.ties)).filter((t) => t.homeId === game.userClubId || t.awayId === game.userClubId);
+  return allCups(game).flatMap((c) => c.rounds.flatMap((r) => r.ties)).filter((t) => t.homeId === game.userClubId || t.awayId === game.userClubId);
 }
 
 export function isCupTie(f: { divisionId: string } | CupTie): f is CupTie {
@@ -232,13 +263,14 @@ export function isCupTie(f: { divisionId: string } | CupTie): f is CupTie {
 
 /** After the user's tie is played live: the rest of the round, then the next draw. */
 export function completeUserCupTie(game: GameState, tie: CupTie) {
+  if (isEuroId(tie.cupId)) return completeUserEuroTie(game, tie);
   const cup = game.cups!.find((c) => c.id === tie.cupId)!;
   settleTie(game, cup, tie);
   withRng(game, (rng) => playCupRound(game, rng, cup, tie.round));
 }
 
 export function roundOf(game: GameState, tie: CupTie): CupRound {
-  return game.cups!.find((c) => c.id === tie.cupId)!.rounds[tie.round];
+  return allCups(game).find((c) => c.id === tie.cupId)!.rounds[tie.round];
 }
 
 /** League champions add their title to the trophy cabinet. */

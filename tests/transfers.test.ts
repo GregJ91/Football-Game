@@ -7,7 +7,7 @@ import {
 } from '../src/engine/transfers/market';
 import { Rng } from '../src/engine/rng';
 import { advanceHalfDay, assignScout } from '../src/engine/calendar';
-import { divisionOf, squadOf, userClub } from '../src/engine/world';
+import { divisionOf, domesticClubs, squadOf, userClub } from '../src/engine/world';
 import { testGame } from './helpers';
 
 const playersAtLevel = (game: ReturnType<typeof testGame>, level: number) =>
@@ -156,9 +156,9 @@ describe('economy over several seasons', () => {
       expect(moves).toBeGreaterThan(50);
       startNextSeason(game);
     }
-    const inDebt = Object.values(game.clubs).filter((c) => c.balance < 0).length;
+    const inDebt = domesticClubs(game).filter((c) => c.balance < 0).length;
     expect(inDebt).toBeLessThan(Object.keys(game.clubs).length * 0.1);
-    for (const c of Object.values(game.clubs)) {
+    for (const c of domesticClubs(game)) {
       expect(c.playerIds.length).toBeGreaterThanOrEqual(16);
       expect(c.playerIds.length).toBeLessThanOrEqual(30);
     }

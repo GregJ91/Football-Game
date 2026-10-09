@@ -93,7 +93,7 @@ export function Hub() {
             <div className="side">
               <ClubDot colours={opponent.colours} size={34} />
               <strong>{opponent.name}</strong>
-              <span>{oppPos ? ordinal(oppPos) : '–'} · {form(opponent.id) || 'No games yet'}</span>
+              <span>{opponent.foreign ? opponent.foreign.nationName : `${oppPos ? ordinal(oppPos) : '–'} · ${form(opponent.id) || 'No games yet'}`}</span>
             </div>
           </div>
           <div className="grid-2">

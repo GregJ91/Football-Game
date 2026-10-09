@@ -4,7 +4,7 @@ import { generatePlayer, playerName } from '../players/generate';
 import { playerWage, roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Club, GameState, InboxItem, InboxKind, Player, Position } from '../types';
-import { divisionOf, newId, squadOf } from '../world';
+import { divisionOf, domesticClubs, newId, squadOf } from '../world';
 
 export const SQUAD_MAX = 30;
 export const SQUAD_MIN = 16;
@@ -363,7 +363,7 @@ function aiBalanceBooks(game: GameState, club: Club) {
 
 /** Season rollover: AI squads trimmed to a manageable size. */
 export function trimAiSquads(game: GameState) {
-  for (const club of Object.values(game.clubs)) {
+  for (const club of domesticClubs(game)) {
     if (club.isUser) continue;
     while (club.playerIds.length > 25) {
       const worst = squadOf(game, club.id).sort((a, b) => a.overall - b.overall || b.age - a.age)[0];
@@ -408,9 +408,9 @@ function formatFee(n: number) {
 export function marketWeek(game: GameState, rng: Rng) {
   expireBids(game);
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
-  for (const club of Object.values(game.clubs)) if (!club.isUser) aiBalanceBooks(game, club);
+  for (const club of domesticClubs(game)) if (!club.isUser) aiBalanceBooks(game, club);
   if (!transferWindow(game).open) return;
-  for (const club of Object.values(game.clubs)) {
+  for (const club of domesticClubs(game)) {
     if (club.isUser || club.balance <= 0) continue;
     if (club.playerIds.length < 18 || rng.chance(0.1)) aiBuy(game, rng, club);
   }

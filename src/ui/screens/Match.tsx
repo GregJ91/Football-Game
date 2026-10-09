@@ -70,6 +70,9 @@ export function Match() {
           <div className="score big">{live.homeGoals} – {live.awayGoals}</div>
           <div className="team right"><ClubDot colours={away.colours} size={20} /><span>{away.name}</span></div>
         </div>
+        {live.opts.firstLeg && (
+          <div className="agg">Aggregate {live.homeGoals + live.opts.firstLeg.home} – {live.awayGoals + live.opts.firstLeg.away}</div>
+        )}
         <div className="clock">
           <span className="minute">{live.finished ? 'FT' : live.halfTimePending ? 'HT' : `${live.minute}'`}</span>
           <span className="track"><i style={{ width: `${progress}%` }} /></span>

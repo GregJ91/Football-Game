@@ -3,7 +3,8 @@ import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
 import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
 import { MATCHDAY, SEASON_START_DAY, advanceHalfDay, deliverScoutReports, isMatchdayMorning, todaysUserMatch } from '../calendar';
-import { awardLeagueTitles, completeUserCupTie, isCupTie, playDueCupRounds, setupCups } from './cups';
+import { awardLeagueTitles, completeUserCupTie, isCupTie, playDueCupRounds, setupCups, tieMatchOptions } from './cups';
+import { europeSeasonEnd, setupEurope } from './europe';
 import { chairmanWeek, gradingWarning, makeSponsorOffers, moodAfterMatch, seasonPayouts, seasonReview, setSeasonTarget } from '../club/chairman';
 import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
@@ -13,6 +14,7 @@ import {
   SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
 import { Rng } from '../rng';
+import { isEuroId } from '../../data/europe';
 import type {
   Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
 } from '../types';
@@ -37,7 +39,7 @@ export function scheduleSeason(game: GameState) {
 }
 
 /** Quick strength estimate: the average of the best eleven available players. */
-function xiStrength(game: GameState, club: Club): number {
+export function xiStrength(game: GameState, club: Club): number {
   const best = squadOf(game, club.id)
     .filter(isAvailable)
     .map((p) => p.overall)
@@ -133,12 +135,9 @@ export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
   const home = game.clubs[fixture.homeId];
   const away = game.clubs[fixture.awayId];
   const seed = withRng(game, (rng) => rng.int(0, 2 ** 31));
-  const cup = isCupTie(fixture) ? fixture : null;
+  const opts = isCupTie(fixture) ? tieMatchOptions(game, fixture) : { capacity: home.capacity, crowdFill: crowdFill(game, home) };
   return createLiveMatch(new Rng(seed), teamSheet(game, home, away, { live: true }), teamSheet(game, away, home, { live: true }), {
-    knockout: !!cup,
-    neutral: cup?.neutral,
-    capacity: cup?.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
-    crowdFill: crowdFill(game, home),
+    ...opts,
     commentary: true,
     manual: { home: home.isUser, away: away.isUser },
   });
@@ -150,11 +149,15 @@ export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveM
   fixture.result = result;
   withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId]));
   if (isCupTie(fixture)) {
-    if (fixture.neutral) {
+    if (isEuroId(fixture.cupId)) {
+      // European gates (and foreign grounds) are handled with the tie.
+    } else if (fixture.neutral) {
       addGate(game, game.clubs[fixture.homeId], result.attendance / 2);
       addGate(game, game.clubs[fixture.awayId], result.attendance / 2);
     } else addGate(game, game.clubs[fixture.homeId], result.attendance);
     completeUserCupTie(game, fixture);
+    // Any other competition's games on the same day.
+    playDueCupRounds(game, game.week, game.day ?? MATCHDAY);
     game.half = 'pm';
     return result;
   }
@@ -333,6 +336,7 @@ export function endSeason(game: GameState) {
   }
 
   awardLeagueTitles(game, summary.champions);
+  europeSeasonEnd(game, summary);
   seasonPayouts(game, summary);
   seasonReview(game, summary);
   game.lastSummary = summary;
@@ -424,6 +428,7 @@ export function startNextSeason(game: GameState) {
   game.phase = 'season';
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   scheduleSeason(game);
+  setupEurope(game);
   setupCups(game);
   startOfSeasonBusiness(game);
 }

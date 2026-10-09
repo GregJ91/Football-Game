@@ -465,3 +465,9 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .outcome-champions, .outcome-promoted { color: var(--accent); }
 .outcome-relegated { color: var(--warn); }
 .club-screen .segmented button { font-size: 13px; padding: 0 2px; }
+
+/* Europe */
+.league-table .club-cell small.tag { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; flex: none; }
+.scoreboard .agg { text-align: center; font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin-top: -2px; }
+.europe .segmented button { font-size: 13px; }
+.po-row.is-user { color: var(--accent); font-weight: 600; }

@@ -1,4 +1,6 @@
 import { cupDef } from '../../data/cups';
+import { euroDef } from '../../data/europe';
+import { nationOf } from '../../engine/season/europe';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { ClubDot, Crest } from '../components/ClubArt';
@@ -73,6 +75,30 @@ export function SeasonEnd() {
               </div>
             );
           })}
+        </section>
+      )}
+
+      {summary.europe && (
+        <section className="card">
+          <div className="card-label"><span>Europe</span></div>
+          {summary.europe.winners.map((w) => {
+            const c = game.clubs[w.clubId];
+            return (
+              <div key={w.compId} className="po-row">
+                <span className="grow">{euroDef(w.compId).name}</span>
+                <ClubDot colours={c.colours} size={12} />
+                <strong>{c.name} <small className="muted">{nationOf(game, c.id)}</small></strong>
+              </div>
+            );
+          })}
+          <div className="card-label"><span>Into Europe next season</span></div>
+          {summary.europe.qualified.map((e) => (
+            <div key={e.clubId} className={`po-row${e.clubId === club.id ? ' is-user' : ''}`}>
+              <span>{euroDef(e.compId).short}</span>
+              <span className="grow">{game.clubs[e.clubId].name}</span>
+              <span className="muted small">{e.reason}{e.playoff ? ' · play-off' : ''}</span>
+            </div>
+          ))}
         </section>
       )}
 

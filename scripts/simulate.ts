@@ -6,7 +6,7 @@
 import { COUNTRIES } from '../src/data/pyramids';
 import { playToSeasonEnd, startNextSeason } from '../src/engine/season/season';
 import type { CountryId } from '../src/engine/types';
-import { createGame, divisionOf, userClub } from '../src/engine/world';
+import { createGame, divisionOf, domesticClubs, userClub } from '../src/engine/world';
 
 const seasons = Number(process.argv[2] ?? 10);
 const country = (process.argv[3] ?? 'eng') as CountryId;
@@ -56,7 +56,7 @@ for (let s = 0; s < seasons; s++) {
       .sort((x, y) => x - y);
     return `L${level} ${fmt(bal[Math.floor(bal.length / 2)])}`;
   });
-  const broke = Object.values(game.clubs).filter((c) => c.balance < 0).length;
+  const broke = domesticClubs(game).filter((c) => c.balance < 0).length;
   const moves = (game.transfers ?? []).filter((t) => t.season === game.season);
   const free = Object.values(game.players).filter((p) => !p.clubId).length;
   console.log(
@@ -67,7 +67,7 @@ for (let s = 0; s < seasons; s++) {
   for (const d of game.divisions) {
     if (d.clubIds.length !== d.def.size) throw new Error(`${d.def.name} has ${d.clubIds.length} clubs`);
   }
-  for (const c of Object.values(game.clubs)) {
+  for (const c of domesticClubs(game)) {
     if (c.playerIds.length < 18) throw new Error(`${c.name} squad down to ${c.playerIds.length}`);
   }
 }

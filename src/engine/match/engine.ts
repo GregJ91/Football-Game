@@ -107,6 +107,8 @@ export interface SimOptions {
   neutral?: boolean;
   /** Knockout tie: extra time and penalties if level. */
   knockout?: boolean;
+  /** Second leg of a two-legged tie: goals each side (this match's home and away) scored in the first leg. */
+  firstLeg?: { home: number; away: number };
   capacity: number;
   /** 0–1 how full the ground tends to be. */
   crowdFill: number;
@@ -424,12 +426,18 @@ export function stepMinute(m: LiveMatch) {
   }
 
   if (minute >= m.endMinute) {
-    if (m.opts.knockout && m.homeGoals === m.awayGoals && m.endMinute === 90) m.endMinute = 120;
+    if (m.opts.knockout && isLevel(m) && m.endMinute === 90) m.endMinute = 120;
     else {
-      if (m.opts.knockout && m.homeGoals === m.awayGoals) m.penalties = shootout(rng);
+      if (m.opts.knockout && isLevel(m)) m.penalties = shootout(rng);
       m.finished = true;
     }
   }
+}
+
+/** Level in the match, or on aggregate in a second leg. */
+export function isLevel(m: Pick<LiveMatch, 'homeGoals' | 'awayGoals' | 'opts'>): boolean {
+  const first = m.opts.firstLeg;
+  return m.homeGoals + (first?.home ?? 0) === m.awayGoals + (first?.away ?? 0);
 }
 
 export function runToEnd(m: LiveMatch) {

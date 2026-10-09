@@ -5,6 +5,7 @@ import { Toast } from './ui/components/Toast';
 import { TopBar } from './ui/components/TopBar';
 import { Club } from './ui/screens/Club';
 import { Cups } from './ui/screens/Cups';
+import { Europe } from './ui/screens/Europe';
 import { Inbox } from './ui/screens/Inbox';
 import { CreateClub } from './ui/screens/CreateClub';
 import { Fixtures } from './ui/screens/Fixtures';
@@ -41,6 +42,7 @@ export function App() {
         {screen === 'league' && <League />}
         {screen === 'fixtures' && <Fixtures />}
         {screen === 'cups' && <Cups />}
+        {screen === 'europe' && <Europe />}
       </div>
       <TabBar />
       <ResultPopup />

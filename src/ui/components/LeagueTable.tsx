@@ -19,9 +19,11 @@ interface Props {
   rows: TableRow[];
   /** Show only rows within this many places of the user's club. */
   around?: number;
+  /** A short tag after a club's name (e.g. its country). */
+  tag?: (clubId: string) => string;
 }
 
-export function LeagueTable({ game, def, rows, around }: Props) {
+export function LeagueTable({ game, def, rows, around, tag }: Props) {
   const userIdx = rows.findIndex((r) => r.clubId === game.userClubId);
   let shown = rows.map((r, i) => ({ r, pos: i + 1 }));
   if (around !== undefined && userIdx >= 0) {
@@ -56,6 +58,7 @@ export function LeagueTable({ game, def, rows, around }: Props) {
               <td className="club-cell">
                 <ClubDot colours={club.colours} size={12} />
                 <span>{club.name}</span>
+                {tag && <small className="tag">{tag(r.clubId)}</small>}
               </td>
               <td className="num">{r.played}</td>
               {around === undefined && (
