@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // `--mode single` builds one self-contained HTML file (no service worker)
 // for sharing a playable link; see scripts/inline.mjs.
 export default defineConfig(({ mode }) => ({
+  // Served from a sub-path (e.g. GitHub Pages /Football-Game/) when BASE_PATH is set.
+  base: process.env.BASE_PATH ?? '/',
   build: mode === 'single' ? { outDir: 'dist-single', assetsInlineLimit: 100_000_000, cssCodeSplit: false } : {},
   plugins: [
     react(),
@@ -12,6 +14,16 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
+      workbox: {
+        // Keep the fonts so the game looks right offline.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
+      },
       manifest: {
         name: 'The Journey of a Football Manager',
         short_name: 'FM Journey',

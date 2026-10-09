@@ -582,3 +582,7 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .verdict-star { background: #1f8a4c; color: #fff; }
 .verdict-starter { background: #2d6cdf; color: #fff; }
 .stars { color: #e0a800; letter-spacing: -1px; }
+
+/* Installed on a phone: keep full-screen pages clear of the status bar / notch. */
+#root > .screen { padding-top: calc(16px + env(safe-area-inset-top)); }
+#root > :not(.app-shell):not(.screen) { padding-top: env(safe-area-inset-top); }
