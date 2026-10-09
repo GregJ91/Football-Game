@@ -1,3 +1,4 @@
+import { INTEREST_TEXT, VERDICT_TEXT, isShortlisted } from '../../engine/transfers/scouting';
 import { useState } from 'react';
 import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
 import { formatDate, scoutDueDate } from '../../engine/calendar';
@@ -69,11 +70,14 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const setPlayerRole = useGame((s) => s.setPlayerRole);
   const loanPlayer = useGame((s) => s.loanPlayer);
   const sendBackLoan = useGame((s) => s.sendBackLoan);
+  const toggleShortlist = useGame((s) => s.toggleShortlist);
 
   const p = player;
   const club = game.clubs[game.userClubId];
   const own = p.clubId === club.id;
   const known = isKnown(game, club, p);
+  const shortlisted = isShortlisted(game, p.id);
+  const report = own ? undefined : club.scoutReports?.[p.id];
   const [lo, hi] = ratingRange(p);
   const currentClub = p.clubId ? game.clubs[p.clubId] : null;
   const interest = own ? null : interestIn(game, club, p);
@@ -132,6 +136,17 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               {positionsLabel(p)} · {p.age} yrs · {currentClub ? `${currentClub.name} (${leagueNameOf(game, currentClub.id)})` : 'Free agent'}
             </small>
           </div>
+          {!own && (
+            <button
+              type="button"
+              className="star-btn"
+              aria-pressed={shortlisted}
+              aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+              onClick={() => toggleShortlist(p.id)}
+            >
+              {shortlisted ? '★' : '☆'}
+            </button>
+          )}
           <button type="button" className="link-btn" onClick={onClose}>Close</button>
         </div>
 
@@ -150,6 +165,21 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
 
         {step.kind === 'view' && (
           <>
+            {report && (
+              <div className="card inset scout-report">
+                <div className="card-label">
+                  <span>Scout report</span>
+                  <span>{report.season === game.season ? `Week ${report.week + 1}` : `${report.season}/${String(report.season + 1).slice(2)}`}</span>
+                </div>
+                <p>
+                  <strong>{VERDICT_TEXT[report.verdict]}</strong> {INTEREST_TEXT[report.interest]}
+                </p>
+                <p className="muted small">
+                  Rated {report.ability} then, potential {'★'.repeat(report.potential)}{'☆'.repeat(5 - report.potential)}
+                  {report.price ? `, asking about ${money(report.price)}` : ''}.
+                </p>
+              </div>
+            )}
             {own && (
               <div className="role-box">
                 <div className="card-label">

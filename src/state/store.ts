@@ -1,3 +1,4 @@
+import { sendMission, toggleShortlist, type MissionBrief } from '../engine/transfers/scouting';
 import { create } from 'zustand';
 import { assignToBench, restTired, setRole } from '../engine/players/squad';
 import { takeJob, waitAWeek, waitForOffer } from '../engine/club/career';
@@ -89,6 +90,10 @@ interface Store {
 
   /** Send a scout; the report lands in the inbox a few days later. */
   scout: (playerId: string) => ScoutResult;
+  /** Send the scouts on a brief; returns a problem or null. */
+  sendScoutMission: (brief: MissionBrief) => string | null;
+  cancelScoutMission: (id: string) => void;
+  toggleShortlist: (playerId: string) => void;
   /** CM-style Continue: move on half a day. */
   continueDay: () => void;
   markRead: (id: string) => void;
@@ -299,6 +304,28 @@ export const useGame = create<Store>()((set, get) => {
       const result = assignScout(game, playerId, isKnown(game, club, playerById(game, playerId)!));
       commit();
       return result;
+    },
+
+    sendScoutMission: (brief) => {
+      const { game } = get();
+      if (!game) return null;
+      const problem = sendMission(game, brief);
+      if (!problem) commit();
+      return problem;
+    },
+
+    cancelScoutMission: (id) => {
+      const { game } = get();
+      if (!game) return;
+      game.scoutMissions = (game.scoutMissions ?? []).filter((m) => m.id !== id);
+      commit();
+    },
+
+    toggleShortlist: (playerId) => {
+      const { game } = get();
+      if (!game) return;
+      toggleShortlist(game, playerId);
+      commit();
     },
 
     continueDay: () => {

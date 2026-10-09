@@ -470,7 +470,7 @@ export function applyMovements(game: GameState, summary: SeasonSummary) {
 /** Promotion/relegation, player ageing and a fresh fixture list. */
 export function startNextSeason(game: GameState) {
   if (game.phase !== 'seasonEnd' || !game.lastSummary) return;
-  deliverScoutReports(game, true);
+  withRng(game, (rng) => deliverScoutReports(game, rng, true));
   // Loans end with the season; deductions don't carry over.
   returnLoans(game);
   game.deductions = {};

@@ -5,10 +5,11 @@ import { injuryName, logInjury, recoverTo } from './players/squad';
 import { playerName } from './players/generate';
 import type { Rng } from './rng';
 import { playWeek } from './season/season';
-import { addInbox, askingPrice, interestIn, potentialStars } from './transfers/market';
+import { addInbox } from './transfers/market';
+import { deliverMissions, recordReport, reportText } from './transfers/scouting';
 import { cupName, cupRoundsToday, isCupTie, playDueCupRounds, roundOf, userCupTies, userTieToday } from './season/cups';
 import type { Fixture, GameState, Player } from './types';
-import { leagueNameOf, playerById, squadOf, withRng } from './world';
+import { playerById, squadOf, withRng } from './world';
 
 /** Days run Sunday (0) to Saturday (6); league matches are on Saturdays. */
 export const MATCHDAY = 6;
@@ -122,7 +123,7 @@ export function advanceHalfDay(game: GameState): StepResult {
 
 function dailyEvents(game: GameState) {
   withRng(game, (rng) => {
-    deliverScoutReports(game);
+    deliverScoutReports(game, rng);
     const day = game.day ?? SEASON_START_DAY;
     const weekday = day >= 1 && day <= 5;
     if (weekday && game.half === 'am') trainingKnock(game, rng);
@@ -189,37 +190,15 @@ export function scoutDueDate(game: GameState, playerId: string): Date | null {
   return new Date(seasonStart(game.season) + a.dueDay * DAY_MS);
 }
 
-function verdict(game: GameState, p: Player): string {
-  const xiAvg = (() => {
-    const same = squadOf(game, game.userClubId).filter((x) => x.position === p.position).map((x) => x.overall).sort((a, b) => b - a);
-    return same.length ? same[0] : 0;
-  })();
-  const diff = p.overall - xiAvg;
-  if (diff >= 4) return 'Would walk into your first team.';
-  if (diff >= -1) return 'Would challenge for a starting place.';
-  if (diff >= -6) return 'A useful squad player.';
-  return 'Not good enough for us right now.';
-}
-
-const INTEREST_TEXT = { keen: 'He would be keen to join.', open: 'He is open to a move.', reluctant: 'He would be reluctant to join.', no: 'He would only drop to our level for a very big wage.' } as const;
-
-export function deliverScoutReports(game: GameState, all = false) {
-  const club = game.clubs[game.userClubId];
+export function deliverScoutReports(game: GameState, rng: Rng, all = false) {
   const now = today(game);
   const due = (game.scoutAssignments ?? []).filter((a) => all || a.dueDay <= now);
-  if (!due.length) return;
   game.scoutAssignments = (game.scoutAssignments ?? []).filter((a) => !due.includes(a));
   for (const a of due) {
     const p = playerById(game, a.playerId);
     if (!p) continue;
-    club.scouted = { ...club.scouted, [p.id]: true };
-    const where = p.clubId ? `${game.clubs[p.clubId].name} (${leagueNameOf(game, p.clubId)})` : 'a free agent';
-    const price = p.clubId ? ` Expect to pay around £${Math.round(askingPrice(game, p) / 1000)}k.` : '';
-    addInbox(
-      game,
-      'info',
-      `${playerName(p)}, ${p.age}, ${p.position} at ${where}. Ability ${p.overall}, potential ${'★'.repeat(potentialStars(p))}. ${verdict(game, p)} ${INTEREST_TEXT[interestIn(game, club, p)]}${price}`,
-      { category: 'scouting', subject: `Scout report: ${p.lastName}` },
-    );
+    const report = recordReport(game, p);
+    addInbox(game, 'info', reportText(game, p, report), { category: 'scouting', subject: `Scout report: ${p.lastName}` });
   }
+  deliverMissions(game, rng, all);
 }

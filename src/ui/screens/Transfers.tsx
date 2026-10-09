@@ -10,9 +10,10 @@ import { useGame } from '../../state/store';
 import { activeChallenge, challengeSigningRule } from '../../engine/club/challenge';
 import { BidCard } from '../components/BidCard';
 import { PlayerSheet } from '../components/PlayerSheet';
+import { ScoutingPanel } from '../components/ScoutingPanel';
 import { money } from '../format';
 
-type Tab = 'search' | 'yours' | 'recent';
+type Tab = 'search' | 'scouting' | 'yours' | 'recent';
 type Age = 'any' | 'u21' | 'u24' | 'prime' | 'vet';
 const AGES: { v: Age; label: string; test: (a: number) => boolean }[] = [
   { v: 'any', label: 'Any age', test: () => true },
@@ -139,9 +140,9 @@ export function Transfers() {
       </button>
 
       <div className="segmented" role="tablist">
-        {(['search', 'yours', 'recent'] as Tab[]).map((t) => (
+        {(['search', 'scouting', 'yours', 'recent'] as Tab[]).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-            {t === 'search' ? 'Search' : t === 'yours' ? `Offers${bids.length ? ` (${bids.length})` : ''}` : 'History'}
+            {t === 'search' ? 'Search' : t === 'scouting' ? 'Scouting' : t === 'yours' ? `Offers${bids.length ? ` (${bids.length})` : ''}` : 'History'}
           </button>
         ))}
       </div>
@@ -236,6 +237,8 @@ export function Transfers() {
           {results.length === 0 && <p className="hint">No players match. Try fewer filters.</p>}
         </>
       )}
+
+      {tab === 'scouting' && <ScoutingPanel onOpen={setOpen} />}
 
       {tab === 'yours' && (
         <>

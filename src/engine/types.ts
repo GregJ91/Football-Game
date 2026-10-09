@@ -134,6 +134,10 @@ export interface Club {
   ledger?: Ledger;
   /** Players this club has scouted (exact ratings known). */
   scouted?: Record<string, true>;
+  /** Saved scout reports on players (user club), by player id. */
+  scoutReports?: Record<string, ScoutReport>;
+  /** Players the manager is keeping an eye on (user club). */
+  shortlist?: string[];
   /** Board-set budgets for the season (user club). */
   budgets?: Budgets;
   // Chairman side (user club).
@@ -276,6 +280,33 @@ export interface Loan {
 }
 
 export type InboxKind = 'bid' | 'info' | 'contract';
+export type ScoutVerdict = 'star' | 'starter' | 'squad' | 'no';
+
+/** What a scout wrote about a player, as it was when he watched him. */
+export interface ScoutReport {
+  season: number;
+  week: number;
+  ability: number;
+  potential: number; // stars, 1–5
+  verdict: ScoutVerdict;
+  interest: 'keen' | 'open' | 'reluctant' | 'no';
+  price: number; // asking price then; 0 for a free agent
+  /** The mission that found him, if any. */
+  mission?: string;
+}
+
+export type ScoutRegion = 'any' | 'home' | 'abroad' | 'free';
+
+/** A brief for the scouts: find players who fit. */
+export interface ScoutMission {
+  id: string;
+  position: Position | 'ANY';
+  maxAge: number;
+  maxValue: number; // 0 = any
+  region: ScoutRegion;
+  dueDay: number;
+}
+
 export type InboxCategory = 'transfers' | 'training' | 'medical' | 'scouting' | 'club' | 'match';
 
 export interface InboxItem {
@@ -638,6 +669,8 @@ export interface GameState {
   recoveredTo?: number;
   /** Scouts out watching players; reports arrive on `dueDay` (week * 7 + day). */
   scoutAssignments?: { playerId: string; dueDay: number }[];
+  /** Scouts out on a brief to find players; they report back on `dueDay`. */
+  scoutMissions?: ScoutMission[];
   /** This season's cup competitions. */
   cups?: CupState[];
   /** European competitions and the foreign clubs in them. */
