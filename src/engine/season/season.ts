@@ -10,6 +10,7 @@ import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
 import { rolloverPlayers } from '../players/development';
 import { attr100 } from '../players/ratings';
+import { assignRoles, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
 import {
   SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
@@ -55,13 +56,24 @@ export function aiTactics(game: GameState, club: Club, opponent: Club): Tactics 
   return { formation: club.tactics.formation, pressing: club.tactics.pressing ?? 'medium', mentality };
 }
 
-/** The user's XI for a formation: their saved lineup if they have one, else the best XI. */
-export function userSelection(game: GameState, formation = game.clubs[game.userClubId].tactics.formation): LineupSelection {
+/**
+ * The user's XI and bench for a formation: their saved lineup if they have
+ * one, else the best XI (which already allows for tiredness). With `rotate`,
+ * tired picks in a saved lineup are rested for fresher players.
+ */
+export function userSelection(game: GameState, formation = game.clubs[game.userClubId].tactics.formation, rotate = false): LineupSelection {
   const club = game.clubs[game.userClubId];
   const squad = squadOf(game, club.id);
-  if (!club.lineup) return { selection: pickTeam(squad, formation), covers: [] };
-  const lineup = formation === club.tactics.formation ? club.lineup : remapLineup(squad, club.lineup, formation);
-  return selectionFromLineup(squad, formation, lineup);
+  if (!club.lineup) return { selection: withBench(pickTeam(squad, formation), squad, club.bench), covers: [] };
+  let lineup = formation === club.tactics.formation ? club.lineup : remapLineup(squad, club.lineup, formation);
+  if (rotate) lineup = restTired(squad, formation, lineup).lineup;
+  const picked = selectionFromLineup(squad, formation, lineup);
+  return { ...picked, selection: withBench(picked.selection, squad, club.bench) };
+}
+
+/** Does the assistant rest tired players in simmed matches? (On unless switched off.) */
+export function autoRotates(game: GameState): boolean {
+  return game.settings?.autoRotate ?? true;
 }
 
 export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { live?: boolean; home?: boolean } = {}): TeamSheet {
@@ -70,14 +82,15 @@ export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { l
     return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics };
   }
   // Optionally delegate simmed matches to the assistant manager.
+  const rotate = !opts.live && autoRotates(game);
   if (!opts.live && game.settings?.assistantTactics) {
     const oppSheet = teamSheet(game, opponent, club);
-    const select = (f: Formation) => userSelection(game, f).selection;
+    const select = (f: Formation) => userSelection(game, f, rotate).selection;
     const { tactics } = recommendTactics(squadOf(game, club.id), oppSheet, opts.home ? 'home' : 'away', false, select);
     return { selection: select(tactics.formation), tactics };
   }
   const tactics = { ...club.tactics, pressing: club.tactics.pressing ?? 'medium' };
-  return { selection: userSelection(game).selection, tactics };
+  return { selection: userSelection(game, undefined, rotate).selection, tactics };
 }
 
 
@@ -134,6 +147,7 @@ export function simUserMatchToday(game: GameState): Fixture | undefined {
 export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
   const home = game.clubs[fixture.homeId];
   const away = game.clubs[fixture.awayId];
+  recoverTo(game, game.week * 7 + (game.day ?? MATCHDAY));
   const seed = withRng(game, (rng) => rng.int(0, 2 ** 31));
   const opts = isCupTie(fixture) ? tieMatchOptions(game, fixture) : { capacity: home.capacity, crowdFill: crowdFill(game, home) };
   return createLiveMatch(new Rng(seed), teamSheet(game, home, away, { live: true }), teamSheet(game, away, home, { live: true }), {
@@ -172,6 +186,7 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
     { club: away, used: result.awayXI, scored: result.awayGoals, conceded: result.homeGoals },
   ];
   for (const { club, used, scored, conceded } of sides) {
+    club.seasonGames = (club.seasonGames ?? 0) + 1;
     const usedSet = new Set(used);
     const moraleShift = scored > conceded ? 4 : scored < conceded ? -4 : 0;
     for (const id of club.playerIds) {
@@ -210,10 +225,10 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
   }
 }
 
+/** Injuries heal a week at a time (fitness recovers daily: see recoverTo). */
 function weeklyRecovery(game: GameState) {
   for (const id in game.players) {
     const p = game.players[id];
-    p.fitness = Math.min(100, p.fitness + 14 + attr100(p, 'stamina') / 20);
     if (p.injuryWeeks > 0) p.injuryWeeks--;
   }
 }
@@ -229,6 +244,7 @@ export function playWeek(game: GameState): Fixture[] {
   playDueCupRounds(game, game.week, MATCHDAY);
   // It's matchday: messages from today's games and business carry Saturday's date.
   game.day = MATCHDAY;
+  recoverTo(game, game.week * 7 + MATCHDAY);
   const fixtures = fixturesForWeek(game, game.week).filter((f) => !f.result);
   withRng(game, (rng) => {
     for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId);
@@ -240,6 +256,7 @@ export function playWeek(game: GameState): Fixture[] {
     marketWeek(game, rng);
   });
   userMatchMood(game, fixtures);
+  if (game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
   const wasOpen = transferWindow(game).open;
   game.week++;
   // Saturday evening: day -1 of the new week is the Saturday just gone,
@@ -427,6 +444,8 @@ export function startNextSeason(game: GameState) {
   game.half = 'am';
   game.phase = 'season';
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
+  game.recoveredTo = undefined;
+  assignRoles(game, game.clubs[game.userClubId]);
   scheduleSeason(game);
   setupEurope(game);
   setupCups(game);

@@ -6,6 +6,7 @@ import { MAX_FACILITY } from './club/facilities';
 import { STAND_NAMES, createStadium, syncCapacity } from './club/stadium';
 import { setupCups } from './season/cups';
 import { setupEurope } from './season/europe';
+import { assignRoles } from './players/squad';
 import { foreignSquad } from './season/foreign';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
@@ -254,6 +255,7 @@ export function createGame(config: NewGameConfig): GameState {
   setupEurope(game);
   setupCups(game);
   addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb. Press Continue to move through the days; matches are on Saturdays.`, { subject: 'Welcome' });
+  assignRoles(game, user);
   startOfSeasonBusiness(game);
   return game;
 }

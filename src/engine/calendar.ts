@@ -1,4 +1,5 @@
 import { injuryFactor } from './club/facilities';
+import { recoverTo } from './players/squad';
 import { playerName } from './players/generate';
 import type { Rng } from './rng';
 import { playWeek } from './season/season';
@@ -110,6 +111,7 @@ export function advanceHalfDay(game: GameState): StepResult {
   }
   game.half = 'am';
   game.day = (day + 1) % 7;
+  recoverTo(game, game.week * 7 + game.day);
   dailyEvents(game);
   return 'moved';
 }

@@ -1,4 +1,5 @@
 import { SALE_REINVEST, budgetsOf, ledgerOf, wageBill, weeklyIncomeEstimate } from '../economy/finance';
+import { roleOnArrival } from '../players/squad';
 import { pickTeam } from '../match/selection';
 import { generatePlayer, playerName } from '../players/generate';
 import { playerWage, roundMoney } from '../players/ratings';
@@ -227,6 +228,10 @@ export function completeTransfer(game: GameState, p: Player, toClubId: string, f
   p.contractEnd = game.season + years - 1;
   p.listed = false;
   p.morale = Math.max(p.morale, 75);
+  if (buyer.isUser) roleOnArrival(game, buyer, p);
+  else p.role = undefined;
+  p.transferRequest = false;
+  p.unhappy = 0;
   game.transfers ??= [];
   game.transfers.unshift({ season: game.season, week: game.week, playerId: p.id, playerName: playerName(p), fromClubId: fromId, toClubId, fee });
   if (game.transfers.length > 300) game.transfers.length = 300;
@@ -269,8 +274,9 @@ export function renewalDemand(game: GameState, p: Player): { wage: number; refus
   const base = Math.max(Math.min(p.wage * 1.1, fairWage(game, club, p) * 1.5), fairWage(game, club, p));
   const moraleMult = p.morale < 40 ? 1.25 : 1;
   const ageMult = p.age >= 31 ? 0.9 : 1;
-  const refuses =
-    p.overall > quality + 8 && p.ambition >= 14
+  const refuses = p.transferRequest
+    ? `${p.lastName} has asked to leave and won't talk about a new deal.`
+    : p.overall > quality + 8 && p.ambition >= 14
       ? `${p.lastName} wants to play at a higher level and won't sign a new deal.`
       : null;
   return { wage: roundMoney(base * moraleMult * ageMult), refuses };
@@ -378,7 +384,8 @@ function aiBidForUser(game: GameState, rng: Rng) {
   const userQuality = divisionOf(game, user.id).def.quality;
   const pending = new Set(openInboxItems(game).map((i) => i.bid!.playerId));
   const squad = squadOf(game, user.id).filter((p) => !pending.has(p.id));
-  const listed = squad.filter((p) => p.listed && rng.chance(0.45));
+  // Listed players, and those who've asked to leave, attract bids.
+  const listed = squad.filter((p) => (p.listed || p.transferRequest) && rng.chance(0.45));
   const standout = squad.filter((p) => !p.listed && p.overall > userQuality + 2 && rng.chance(0.06));
   for (const p of [...listed, ...standout].slice(0, 2)) {
     const fee = roundMoney(p.value * (p.listed ? 0.75 + rng.next() * 0.3 : 0.95 + rng.next() * 0.35));

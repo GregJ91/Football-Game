@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { TIRED } from '../../engine/players/squad';
 import { previewMatch, recommendTactics } from '../../engine/match/preview';
 import { pickTeam } from '../../engine/match/selection';
 import { aiTactics, userSelection } from '../../engine/season/season';
@@ -20,6 +21,8 @@ export function PreMatch() {
   const kickOff = useGame((s) => s.kickOff);
   const simNextMatch = useGame((s) => s.simNextMatch);
   const go = useGame((s) => s.go);
+  const restTiredPlayers = useGame((s) => s.restTiredPlayers);
+  const showToast = useGame((s) => s.showToast);
 
   const club = userClub(game);
   const fixture = nextUserFixture(game);
@@ -112,6 +115,28 @@ export function PreMatch() {
             })}
           </ul>
         )}
+        {(() => {
+          const tired = userSelection(game).selection.xi.filter((p) => p.fitness < TIRED);
+          if (!tired.length) return null;
+          return (
+            <div className="tired-box">
+              <p className="note bad">
+                <span aria-hidden="true">▼</span>
+                Tired: {tired.map((p) => `${p.lastName} ${Math.round(p.fitness)}%`).join(', ')}.
+              </p>
+              <button
+                type="button"
+                className="btn tile"
+                onClick={() => {
+                  const n = restTiredPlayers();
+                  showToast(n ? `Rested ${n} tired player${n === 1 ? '' : 's'}.` : 'Nobody fresh is good enough to come in.');
+                }}
+              >
+                Rest tired players
+              </button>
+            </div>
+          );
+        })()}
         <button type="button" className="link-btn" onClick={() => go('tactics')}>
           Change starting XI ({club.lineup ? 'your picks' : 'auto-picked'}) →
         </button>

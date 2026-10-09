@@ -62,6 +62,7 @@ function sign(game: GameState, rng: Rng, clubId: string, position: Player['posit
 export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<string>) {
   for (const club of domesticClubs(game)) {
     const clubId = club.id;
+    club.seasonGames = 0;
     const quality = divisionOf(game, clubId).def.quality;
     const squad = club.playerIds.map((id) => game.players[id]);
 

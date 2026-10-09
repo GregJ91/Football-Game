@@ -20,6 +20,15 @@ export function isAvailable(p: Player): boolean {
   return p.injuryWeeks === 0 && p.suspendedMatches === 0;
 }
 
+/**
+ * How strongly to want a player in a slot when picking a side. A tired player
+ * starts the match tired and fades further, so below 75% fitness he counts
+ * for less than his rating today suggests.
+ */
+function selectionScore(p: Player, slot: Position): number {
+  return effectiveRating(p, slot) * (p.fitness < 75 ? 0.75 + p.fitness / 300 : 1);
+}
+
 /** Fill the scarcest slots first so a lone GK isn't wasted elsewhere. */
 const FILL_ORDER: Position[] = ['GK', 'ST', 'DC', 'DR', 'DL', 'AMC', 'DMC', 'MR', 'ML', 'MC'];
 
@@ -32,7 +41,7 @@ export function pickTeam(squad: Player[], formation: Formation, benchSize = 7): 
   // First, only players who can play the position: best pairings first.
   const pairs: { i: number; p: Player; score: number }[] = [];
   slots.forEach((s, i) => {
-    for (const p of pool) if (canPlay(p, s)) pairs.push({ i, p, score: effectiveRating(p, s) });
+    for (const p of pool) if (canPlay(p, s)) pairs.push({ i, p, score: selectionScore(p, s) });
   });
   pairs.sort((a, b) => b.score - a.score);
   for (const { i, p } of pairs) {
@@ -50,7 +59,7 @@ export function pickTeam(squad: Player[], formation: Formation, benchSize = 7): 
     let bestScore = -1;
     for (const p of pool) {
       if (used.has(p.id)) continue;
-      const score = effectiveRating(p, s);
+      const score = selectionScore(p, s);
       if (score > bestScore) {
         bestScore = score;
         best = p;

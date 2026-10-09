@@ -5,6 +5,7 @@ import { crowdFill } from '../economy/finance';
 import type { SimOptions } from '../match/engine';
 import { ledgerOf } from '../economy/finance';
 import { roundMoney } from '../players/ratings';
+import { recoverTo } from '../players/squad';
 import type { Rng } from '../rng';
 import type { CupDef, CupRound, CupState, CupTie, GameState } from '../types';
 import { addInbox } from '../transfers/market';
@@ -234,6 +235,7 @@ export function playDueCupRounds(game: GameState, week: number, day: number) {
     for (let guard = 0; guard < 50; guard++) {
       const next = dueRounds(game, week, day)[0];
       if (!next) return;
+      recoverTo(game, next.round.week * 7 + next.round.day);
       playCupRound(game, rng, next.cup, next.r);
     }
   });

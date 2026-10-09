@@ -7,6 +7,7 @@ import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { PlayerSheet } from '../components/PlayerSheet';
 import { moneyPw } from '../../engine/economy/finance';
+import { ROLE_LABEL, TIRED, moodOf, roleOf } from '../../engine/players/squad';
 
 function status(p: Player): string | null {
   if (p.injuryWeeks > 0) return `Injured ${p.injuryWeeks}w`;
@@ -51,14 +52,14 @@ export function Squad() {
                 <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
                 <span className="ovr">{p.overall}</span>
                 <span className="who">
-                  <strong>{playerName(p)}</strong>
+                  <strong><i className={`mood-dot mood-${moodOf(p)}`} aria-label={moodOf(p)} />{playerName(p)}</strong>
                   <small>
-                    {p.age} yrs · {apps} apps{p.seasonStats.goals ? ` · ${p.seasonStats.goals} gls` : ''}
+                    {ROLE_LABEL[roleOf(p)]} · <span className={p.fitness < TIRED ? 'warn' : undefined}>Fit {Math.round(p.fitness)}%</span> · {p.age} yrs · {apps} apps{p.seasonStats.goals ? ` · ${p.seasonStats.goals} gls` : ''}
                     {apps ? ` · ${(p.seasonStats.ratingSum / apps).toFixed(1)} avg` : ''}
                   </small>
                 </span>
                 <span className="role">
-                  {st ? <em className="warn">{st}</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
+                  {st ? <em className="warn">{st}</em> : p.transferRequest ? <em className="warn">Wants away</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
                   <small>{moneyPw(p.wage)}</small>
                   {p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
                 </span>

@@ -45,7 +45,17 @@ export interface Player {
   seasonStats: { apps: number; goals: number; assists: number; ratingSum: number };
   /** Placed on the transfer list by their club. */
   listed?: boolean;
+  /** Where he stands in the squad, and so how much football he expects. */
+  role?: SquadRole;
+  /** The manager set the role himself (it isn't reset each summer). */
+  roleSetByUser?: boolean;
+  /** Playing-time checks in a row he's fallen short of what his role promises. */
+  unhappy?: number;
+  /** Has asked to leave. */
+  transferRequest?: boolean;
 }
+
+export type SquadRole = 'key' | 'first' | 'rotation' | 'backup' | 'prospect';
 
 export type KitPattern = 'plain' | 'stripes' | 'hoops' | 'halves' | 'sash';
 
@@ -71,6 +81,10 @@ export interface Club {
   tactics: Tactics;
   /** The user's chosen XI (player ids per formation slot); unset = auto-pick. */
   lineup?: (string | null)[];
+  /** The user's chosen substitutes, in order; unset = the best of the rest. */
+  bench?: string[];
+  /** Matches played this season (league, cups and Europe). */
+  seasonGames?: number;
   history: SeasonRecord[];
   trophies?: Trophy[];
   /** This season's money in and out. */
@@ -454,6 +468,8 @@ export interface GameState {
   /** Day of the current week, 0 = Sunday … 6 = Saturday (matchday); -1 = the Saturday evening just gone. */
   day?: number;
   half?: 'am' | 'pm';
+  /** Day (week * 7 + day) players' fitness has recovered up to. */
+  recoveredTo?: number;
   /** Scouts out watching players; reports arrive on `dueDay` (week * 7 + day). */
   scoutAssignments?: { playerId: string; dueDay: number }[];
   /** This season's cup competitions. */
@@ -465,6 +481,8 @@ export interface GameState {
 export interface GameSettings {
   /** Let the assistant manager pick tactics for simulated matches. */
   assistantTactics: boolean;
+  /** The assistant rests tired players in matches you sim. */
+  autoRotate?: boolean;
   /** Testing aid: the user's club never runs out of money. */
   unlimitedMoney?: boolean;
   /** Bank balance before unlimited money was switched on, restored when it's switched off. */

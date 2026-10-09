@@ -9,6 +9,7 @@ import {
 } from '../../engine/transfers/market';
 import { GOALKEEPING, MENTAL, PHYSICAL, TECHNICAL, type AttributeKey, type Player } from '../../engine/types';
 import { divisionOf } from '../../engine/world';
+import { ROLES, ROLE_LABEL, ROLE_SHARE, happinessText, moodOf, roleOf } from '../../engine/players/squad';
 import { useGame } from '../../state/store';
 import { money } from '../format';
 
@@ -64,6 +65,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const renew = useGame((s) => s.renew);
   const showToast = useGame((s) => s.showToast);
   const adjustBudgets = useGame((s) => s.adjustBudgets);
+  const setPlayerRole = useGame((s) => s.setPlayerRole);
 
   const p = player;
   const club = game.clubs[game.userClubId];
@@ -135,6 +137,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
           {p.clubId && <span>Value {money(p.value)}</span>}
           <span>Wage {moneyPw(p.wage)}</span>
           {p.clubId && <span>Contract ends summer {p.contractEnd + 1}</span>}
+          {own && <span>Fitness {Math.round(p.fitness)}%</span>}
           {own && <span>Morale {Math.round(p.morale)}</span>}
           {own && <span>Form {p.form.toFixed(1)}</span>}
           {own && p.listed && <span className="warn">Transfer listed</span>}
@@ -144,6 +147,24 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
 
         {step.kind === 'view' && (
           <>
+            {own && (
+              <div className="role-box">
+                <div className="card-label">
+                  <span>Squad role</span>
+                  <span className={`mood mood-${moodOf(p)}`}>{moodOf(p)}</span>
+                </div>
+                <div className="pills compact" role="group" aria-label="Squad role">
+                  {ROLES.map((r) => (
+                    <button key={r} type="button" className="pill" aria-pressed={roleOf(p) === r} onClick={() => setPlayerRole(p.id, r)}>
+                      {ROLE_LABEL[r]}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted small">
+                  {happinessText(game, p)} Expects about {Math.round(ROLE_SHARE[roleOf(p)] * 100)}% of games.
+                </p>
+              </div>
+            )}
             {known ? (
               <div className="cm-attrs">
                 {groupsFor(p).map((g) => (

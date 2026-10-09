@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FORMATIONS } from '../../engine/match/selection';
 import { canPlay, effectiveRating, positionFit, positionsLabel, positionsOf } from '../../engine/players/ratings';
-import { userSelection } from '../../engine/season/season';
+import { autoRotates, userSelection } from '../../engine/season/season';
+import { BENCH_SIZE, TIRED } from '../../engine/players/squad';
 import type { Formation, Player, Position } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -36,7 +37,13 @@ export function Tactics() {
   const setLineupSlot = useGame((s) => s.setLineupSlot);
   const resetLineup = useGame((s) => s.resetLineup);
   const setAssistantTactics = useGame((s) => s.setAssistantTactics);
+  const setBenchSlot = useGame((s) => s.setBenchSlot);
+  const resetBench = useGame((s) => s.resetBench);
+  const restTiredPlayers = useGame((s) => s.restTiredPlayers);
+  const setAutoRotate = useGame((s) => s.setAutoRotate);
+  const showToast = useGame((s) => s.showToast);
   const [picking, setPicking] = useState<number | null>(null);
+  const [pickingSub, setPickingSub] = useState<number | null>(null);
 
   const club = userClub(game);
   const formation = club.tactics.formation;
@@ -57,6 +64,10 @@ export function Tactics() {
   const starters = new Set(selection.xi.map((p) => p.id));
   const avg = Math.round(selection.xi.reduce((s, p, i) => s + effectiveRating(p, selection.slots[i]), 0) / Math.max(1, selection.xi.length));
   const manual = !!club.lineup;
+  const tired = selection.xi.filter((p) => p.fitness < TIRED);
+  const benchIds = new Set(selection.bench.map((p) => p.id));
+  // Candidates for a bench place: everyone fit who isn't starting, best first.
+  const subOptions = squad.filter((p) => !starters.has(p.id)).sort((a, b) => Number(!!statusOf(a)) - Number(!!statusOf(b)) || b.overall - a.overall);
 
   const pickingSlot = picking !== null ? slots[picking] : null;
   // Best to worst at this position: those who play there first, then everyone else.
@@ -117,10 +128,10 @@ export function Tactics() {
               const p = bySlot[i];
               const slot = slots[i];
               return (
-                <button key={i} type="button" className={`slot-chip ${p ? fitClass(p, slot) : 'empty'}`} onClick={() => setPicking(i)}>
+                <button key={i} type="button" className={`slot-chip ${p ? fitClass(p, slot) : 'empty'}${p && p.fitness < TIRED ? ' tired' : ''}`} onClick={() => setPicking(i)}>
                   <span className="slot-rating">{p ? Math.round(effectiveRating(p, slot)) : '–'}</span>
                   <span className="slot-name">{p ? surname(p) : 'Pick'}</span>
-                  <span className="slot-pos">{slot}{p && !canPlay(p, slot) ? ` (${p.position})` : ''}</span>
+                  <span className="slot-pos">{slot}{p && !canPlay(p, slot) ? ` (${p.position})` : ''}{p && p.fitness < TIRED ? ` · ${Math.round(p.fitness)}%` : ''}</span>
                 </button>
               );
             })}
@@ -149,6 +160,25 @@ export function Tactics() {
         </section>
       )}
 
+      {tired.length > 0 && (
+        <section className="card warn-card">
+          <p className="note bad">
+            <span aria-hidden="true">▼</span>
+            Tired: {tired.map((p) => `${p.lastName} (${Math.round(p.fitness)}%)`).join(', ')}. Tired players fade and play below their best.
+          </p>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => {
+              const n = restTiredPlayers();
+              showToast(n ? `Rested ${n} tired player${n === 1 ? '' : 's'}.` : 'Nobody fresh is good enough to come in.');
+            }}
+          >
+            Rest tired players
+          </button>
+        </section>
+      )}
+
       <div className="grid-2">
         <button type="button" className="btn secondary" onClick={resetLineup} disabled={!manual}>
           Pick best XI
@@ -170,16 +200,77 @@ export function Tactics() {
             <small>He'll counter each opponent using your chosen players. Matches you play live use your own tactics.</small>
           </span>
         </label>
+        <label className="toggle" htmlFor="auto-rotate">
+          <input id="auto-rotate" type="checkbox" checked={autoRotates(game)} onChange={(e) => setAutoRotate(e.target.checked)} />
+          <span>
+            Rest tired players in simmed matches
+            <small>Your assistant swaps anyone below {TIRED}% fitness for a fresh player who'd do as well. Your picks are kept for next time.</small>
+          </span>
+        </label>
       </section>
 
       <section className="card">
-        <div className="card-label"><span>Substitutes</span><span>Best of the rest</span></div>
+        <div className="card-label">
+          <span>Substitutes</span>
+          {club.bench ? <button type="button" className="link-btn" onClick={resetBench}>Auto-pick subs</button> : <span>Best of the rest</span>}
+        </div>
         <ul className="bench-list">
-          {selection.bench.map((p) => (
-            <li key={p.id}><span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>{p.firstName} {p.lastName}<b>{p.overall}</b></li>
+          {Array.from({ length: BENCH_SIZE }, (_, i) => selection.bench[i]).map((p, i) => (
+            <li key={p?.id ?? `empty-${i}`}>
+              <button type="button" className="bench-row" onClick={() => setPickingSub(i)}>
+                {p ? (
+                  <>
+                    <span className={`pos pos-${p.position}`}>{positionsLabel(p)}</span>
+                    <span className="grow">{p.firstName} {p.lastName}{p.fitness < TIRED ? <small className="warn"> {Math.round(p.fitness)}%</small> : null}</span>
+                    <b>{p.overall}</b>
+                  </>
+                ) : (
+                  <span className="grow muted">Choose a substitute</span>
+                )}
+              </button>
+            </li>
           ))}
         </ul>
+        <p className="muted small">Tap a substitute to choose who's on the bench.</p>
       </section>
+
+      {pickingSub !== null && (
+        <div className="sheet-backdrop" onClick={() => setPickingSub(null)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Choose a substitute" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <strong className="grow">Substitute {pickingSub + 1}</strong>
+              <button type="button" className="link-btn" onClick={() => setPickingSub(null)}>Close</button>
+            </div>
+            <ul className="player-list">
+              {subOptions.map((p) => {
+                const st = statusOf(p);
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="player-row"
+                      aria-pressed={selection.bench[pickingSub]?.id === p.id}
+                      disabled={!!st}
+                      onClick={() => {
+                        setBenchSlot(pickingSub, p.id);
+                        setPickingSub(null);
+                      }}
+                    >
+                      <span className="pos">{positionsLabel(p)}</span>
+                      <span className="ovr">{p.overall}</span>
+                      <span className="who">
+                        <strong>{p.firstName} {p.lastName}</strong>
+                        <small>{p.age} yrs · Fit {Math.round(p.fitness)}%</small>
+                      </span>
+                      <span className="role">{st ? <em className="warn">{st}</em> : benchIds.has(p.id) ? 'On bench' : ''}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {picking !== null && pickingSlot && (
         <div className="sheet-backdrop" onClick={() => setPicking(null)}>

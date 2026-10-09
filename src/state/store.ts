@@ -1,11 +1,12 @@
 import { create } from 'zustand';
+import { assignToBench, restTired, setRole } from '../engine/players/squad';
 import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
 import {
-  advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch,
+  advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch, userSelection,
 } from '../engine/season/season';
-import type { FacilityKind, Fixture, GameState, Tactics } from '../engine/types';
+import type { FacilityKind, Fixture, GameState, SquadRole, Tactics } from '../engine/types';
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
@@ -52,6 +53,14 @@ interface Store {
   setLineupSlot: (slotIndex: number, playerId: string) => void;
   /** Go back to the automatically picked best XI. */
   resetLineup: () => void;
+  /** Choose a substitute for a place on the bench. */
+  setBenchSlot: (index: number, playerId: string) => void;
+  /** Go back to the best of the rest on the bench. */
+  resetBench: () => void;
+  /** Swap tired players in your XI for fresher ones; returns how many. */
+  restTiredPlayers: () => number;
+  setAutoRotate: (on: boolean) => void;
+  setPlayerRole: (playerId: string, role: SquadRole) => void;
 
   /** Send a scout; the report lands in the inbox a few days later. */
   scout: (playerId: string) => ScoutResult;
@@ -345,6 +354,51 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return;
       delete game.clubs[game.userClubId].lineup;
+      commit();
+    },
+
+    setBenchSlot: (index, playerId) => {
+      const { game } = get();
+      if (!game) return;
+      const club = game.clubs[game.userClubId];
+      const current = userSelection(game).selection.bench.map((p) => p.id);
+      club.bench = assignToBench(club.bench ?? current, index, playerId);
+      commit();
+    },
+
+    resetBench: () => {
+      const { game } = get();
+      if (!game) return;
+      delete game.clubs[game.userClubId].bench;
+      commit();
+    },
+
+    restTiredPlayers: () => {
+      const { game } = get();
+      if (!game) return 0;
+      const club = game.clubs[game.userClubId];
+      const squad = squadOf(game, club.id);
+      const base = club.lineup ?? autoLineup(squad, club.tactics.formation);
+      const { lineup, swaps } = restTired(squad, club.tactics.formation, base);
+      if (swaps.length) {
+        club.lineup = lineup;
+        commit();
+      }
+      return swaps.length;
+    },
+
+    setAutoRotate: (on) => {
+      const { game } = get();
+      if (!game) return;
+      game.settings = { ...game.settings, assistantTactics: !!game.settings?.assistantTactics, autoRotate: on };
+      commit();
+    },
+
+    setPlayerRole: (playerId, role) => {
+      const { game } = get();
+      const p = game?.players[playerId];
+      if (!game || !p || p.clubId !== game.userClubId) return;
+      setRole(p, role);
       commit();
     },
 
