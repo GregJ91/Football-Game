@@ -106,6 +106,12 @@ function levelOf(game: GameState, clubId: string) {
 
 /** How willing a player is to join `buyer`. */
 export function interestIn(game: GameState, buyer: Club, p: Player): Interest {
+  const score = interestScore(game, buyer, p);
+  return score >= 1 ? 'keen' : score >= 0 ? 'open' : score >= -1.5 ? 'reluctant' : 'no';
+}
+
+/** Positive: the player wants to come. Negative: how far it's a step down for him. */
+export function interestScore(game: GameState, buyer: Club, p: Player): number {
   const buyerDiv = divisionOf(game, buyer.id).def;
   let score = 0;
   if (p.clubId) {
@@ -119,7 +125,7 @@ export function interestIn(game: GameState, buyer: Club, p: Player): Interest {
   if (gap > 10) score -= (gap - 10) / 3;
   if (p.age >= 31) score += 0.5;
   if (p.listed) score += 1;
-  return score >= 1 ? 'keen' : score >= 0 ? 'open' : score >= -1.5 ? 'reluctant' : 'no';
+  return score;
 }
 
 export function askingPrice(game: GameState, p: Player): number {
@@ -146,7 +152,17 @@ export function wageDemand(game: GameState, buyer: Club, p: Player): number {
   const fair = fairWage(game, buyer, p);
   // A good player expects to be paid like one, wherever he goes.
   const base = Math.max(Math.min(p.wage * 1.1, fair * 1.5), fair, playerWage(p.overall) * 0.6);
-  return roundMoney(base * INTEREST_WAGE[interestIn(game, buyer, p)]);
+  const interest = interestIn(game, buyer, p);
+  if (interest !== 'no') return roundMoney(base * INTEREST_WAGE[interest]);
+  // Money talks: a big step down can still be bought, at a price. He won't
+  // take a pay cut, and every level he drops adds to what he wants.
+  const drop = Math.max(0, -1.5 - interestScore(game, buyer, p));
+  return roundMoney(Math.max(base, p.wage * 1.5, playerWage(p.overall)) * Math.min(5, 2 + drop * 0.4));
+}
+
+/** He'd normally refuse, so it will take a big wage to tempt him. */
+export function needsBigWage(game: GameState, buyer: Club, p: Player): boolean {
+  return interestIn(game, buyer, p) === 'no';
 }
 
 // ---------------------------------------------------------------- buying
@@ -157,7 +173,6 @@ export function cannotBuy(game: GameState, p: Player): string | null {
   if (p.clubId === club.id) return 'Already at your club.';
   if (p.clubId && !transferWindow(game).open) return 'The transfer window is closed. You can still sign free agents.';
   if (club.playerIds.length >= SQUAD_MAX) return `Your squad is full (${SQUAD_MAX}). Sell or release someone first.`;
-  if (interestIn(game, club, p) === 'no') return `${p.lastName} isn't interested in joining a club at your level.`;
   return null;
 }
 
@@ -180,6 +195,7 @@ export function bidFor(game: GameState, p: Player, fee: number): BidResponse {
 }
 
 /** The player's answer when offered less than they asked for. */
+/** The player's answer to 15% below his demand. Those you're paying over the odds walk away. */
 export function acceptsLowerWage(game: GameState, rng: Rng, buyer: Club, p: Player): boolean {
   const i = interestIn(game, buyer, p);
   return i === 'keen' || (i === 'open' && rng.chance(0.5));

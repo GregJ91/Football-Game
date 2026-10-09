@@ -25,7 +25,7 @@ const INTEREST_LABEL: Record<Interest, string> = {
   keen: 'Keen to join',
   open: 'Open to a move',
   reluctant: 'Reluctant',
-  no: 'Not interested',
+  no: 'Needs a big wage to drop down',
 };
 
 type Step =
@@ -255,6 +255,9 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               <p>
                 {p.lastName} wants <strong>{moneyPw(demand)}</strong>.
               </p>
+              {interest === 'no' && (
+                <p className="muted small">He'd never normally drop this far, so this is what it takes. He won't haggle.</p>
+              )}
               <p className="muted small">
                 Wages would go to {moneyPw(bill + wage)} of your {moneyPw(budgets.wage)} budget.
               </p>

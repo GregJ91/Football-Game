@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { adjustBudgets, budgetsOf, wageBill, wageBudgetProblem, WAGE_TO_TRANSFER } from '../src/engine/economy/finance';
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
 import {
-  SCOUT_REPORTS_PER_WEEK, answerBid, askingPrice, bidFor, cannotBuy, completeTransfer, feeProblem, interestIn, isKnown,
+  SCOUT_REPORTS_PER_WEEK, acceptsLowerWage, answerBid, wageDemand, askingPrice, bidFor, cannotBuy, completeTransfer, feeProblem, interestIn, isKnown,
   openInboxItems, releaseCost, releasePlayer, renewContract, transferWindow,
 } from '../src/engine/transfers/market';
 import { Rng } from '../src/engine/rng';
@@ -25,11 +25,15 @@ describe('transfer windows', () => {
 });
 
 describe('player interest and pricing', () => {
-  it('top-flight players will not drop to the bottom of the pyramid', () => {
+  it('top-flight players will only drop to the bottom of the pyramid for a huge wage', () => {
     const game = testGame('eng', 5);
+    const club = userClub(game);
     const star = playersAtLevel(game, 1).sort((a, b) => b.overall - a.overall)[0];
-    expect(interestIn(game, userClub(game), star)).toBe('no');
-    expect(cannotBuy(game, star)).toMatch(/isn't interested/);
+    expect(interestIn(game, club, star)).toBe('no');
+    expect(cannotBuy(game, star)).toBeNull();
+    const demand = wageDemand(game, club, star);
+    expect(demand).toBeGreaterThan(star.wage * 3);
+    expect(acceptsLowerWage(game, new Rng(1), club, star)).toBe(false);
   });
 
   it('players at the next level up are open to a step down only reluctantly; same level is fine', () => {

@@ -162,7 +162,7 @@ function verdict(game: GameState, p: Player): string {
   return 'Not good enough for us right now.';
 }
 
-const INTEREST_TEXT = { keen: 'He would be keen to join.', open: 'He is open to a move.', reluctant: 'He would be reluctant to join.', no: 'He has no interest in joining a club at our level.' } as const;
+const INTEREST_TEXT = { keen: 'He would be keen to join.', open: 'He is open to a move.', reluctant: 'He would be reluctant to join.', no: 'He would only drop to our level for a very big wage.' } as const;
 
 export function deliverScoutReports(game: GameState, all = false) {
   const club = game.clubs[game.userClubId];

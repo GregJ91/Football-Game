@@ -21,7 +21,7 @@ const AGES: { v: Age; label: string; test: (a: number) => boolean }[] = [
   { v: 'vet', label: '30+', test: (a) => a >= 30 },
 ];
 const GROUPS: (PositionGroup | 'ALL')[] = ['ALL', 'GK', 'DEF', 'MID', 'ATT'];
-const INTEREST_DOT: Record<Interest, string> = { keen: 'Keen', open: 'Open', reluctant: 'Reluctant', no: 'No' };
+const INTEREST_DOT: Record<Interest, string> = { keen: 'Keen', open: 'Open', reluctant: 'Reluctant', no: 'Big wage' };
 
 export function Transfers() {
   const game = useGame((s) => s.game)!;
@@ -52,7 +52,6 @@ export function Transfers() {
       if (group !== 'ALL' && POSITION_GROUP[p.position] !== group) continue;
       if (!ageTest(p.age)) continue;
       const interest = interestIn(game, club, p);
-      if (affordable && interest === 'no') continue;
       const fee = p.clubId ? askingPrice(game, p) : 0;
       if (affordable && fee > budgets.transfer * 1.1) continue;
       // Wages you could fit in, at most by moving on one typical earner.
