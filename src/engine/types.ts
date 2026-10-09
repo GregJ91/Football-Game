@@ -104,6 +104,8 @@ export interface Club {
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
+  /** The user's backroom staff. */
+  staff?: Partial<Record<StaffRole, StaffMember>>;
   /** Weekly parachute payment after relegation, and the season it covers. */
   parachute?: { weekly: number; season: number };
   /** A club from abroad, met only in Europe. It has no division and its squad is made when needed. */
@@ -142,6 +144,8 @@ export interface Ledger {
   building?: number;
   /** Facility running costs. */
   upkeep?: number;
+  /** Backroom staff wages. */
+  staff?: number;
   /** Loan received (positive) and repayments (negative). */
   loan?: number;
 }
@@ -195,6 +199,16 @@ export interface Board {
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
+
+export type StaffRole = 'assistant' | 'coach' | 'scout' | 'physio';
+
+export interface StaffMember {
+  name: string;
+  /** 1–20, like player attributes. */
+  rating: number;
+  /** Per week, £. */
+  wage: number;
+}
 
 export interface SponsorDeal {
   name: string;

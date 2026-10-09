@@ -9,7 +9,8 @@ import { setupEurope } from './season/europe';
 import { assignRoles } from './players/squad';
 import { foreignSquad } from './season/foreign';
 import { scheduleSeason, startOfSeasonBusiness } from './season/season';
-import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
+import { addInbox, maintainFreeAgents } from './transfers/market';
+import { hireInitialStaff, scoutReportsPerWeek } from './club/staff';
 import type {
   ChallengeId, Club, ClubColours, CountryId, Difficulty, Division, DivisionDef, GameState, Player, Region,
 } from './types';
@@ -258,7 +259,8 @@ export function createGame(config: NewGameConfig): GameState {
 
   maintainFreeAgents(game, rng);
   game.rngState = rng.state;
-  game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
+  hireInitialStaff(game, game.clubs[game.userClubId]);
+  game.scoutReportsLeft = scoutReportsPerWeek(game.clubs[game.userClubId]);
   const user = game.clubs[game.userClubId];
   // Difficulty: more or less money to start with, and a more or less patient board.
   const difficulty = game.settings!.difficulty!;

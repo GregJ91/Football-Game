@@ -6,7 +6,8 @@ import {
 } from '../../engine/club/stadium';
 import { crowdFill, guideTicketPrice, ledgerOf, moneyPw, ticketPrice, wageBill, weeklyTv } from '../../engine/economy/finance';
 import { divisionTable } from '../../engine/season/table';
-import type { Build, FacilityKind, Stand } from '../../engine/types';
+import type { Build, FacilityKind, Stand, StaffRole } from '../../engine/types';
+import { STAFF_INFO, STAFF_ROLES, staffCandidates, staffWages } from '../../engine/club/staff';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { money, ordinal, seasonLabel } from '../format';
@@ -14,7 +15,7 @@ import { money, ordinal, seasonLabel } from '../format';
 type Tab = 'ground' | 'facilities' | 'money' | 'board' | 'honours';
 const TABS: { t: Tab; label: string }[] = [
   { t: 'ground', label: 'Ground' },
-  { t: 'facilities', label: 'Facilities' },
+  { t: 'facilities', label: 'Staff' },
   { t: 'money', label: 'Money' },
   { t: 'board', label: 'Board' },
   { t: 'honours', label: 'Honours' },
@@ -44,6 +45,8 @@ export function Club() {
   const setUnlimited = useGame((s) => s.setUnlimitedMoney);
   const [tab, setTab] = useState<Tab>('ground');
   const [standSheet, setStandSheet] = useState<number | null>(null);
+  const [staffSheet, setStaffSheet] = useState<StaffRole | null>(null);
+  const hire = useGame((s) => s.hireStaff);
 
   const club = userClub(game);
   const stadium = stadiumOf(club);
@@ -92,6 +95,7 @@ export function Club() {
     ['Transfer fees', ledger.transfersOut],
     ['Building work', ledger.building ?? 0],
     ['Facility upkeep', ledger.upkeep ?? 0],
+    ['Staff wages', ledger.staff ?? 0],
     ['Pay-offs', Math.max(0, -ledger.other)],
   ] as const;
   const loanNet = ledger.loan ?? 0;
@@ -169,6 +173,24 @@ export function Club() {
 
       {tab === 'facilities' && (
         <>
+          <div className="card-label"><span>Backroom staff</span><span>{moneyPw(staffWages(club))}</span></div>
+          {STAFF_ROLES.map((role) => {
+            const s = club.staff?.[role];
+            return (
+              <section key={role} className="card staff-card">
+                <div className="facility-head">
+                  <span>
+                    <strong>{STAFF_INFO[role].name}</strong>
+                    <small className="block muted">{s ? `${s.name} · ${moneyPw(s.wage)}` : 'Vacant'}</small>
+                  </span>
+                  <span className={`staff-rating ${s && s.rating >= 15 ? 'a-top' : s && s.rating >= 11 ? 'a-good' : s && s.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{s?.rating ?? '–'}</span>
+                </div>
+                <p className="muted small">{STAFF_INFO[role].effect}</p>
+                <button type="button" className="btn tile" onClick={() => setStaffSheet(role)}>Find a replacement</button>
+              </section>
+            );
+          })}
+          <div className="card-label"><span>Facilities</span></div>
           {(Object.keys(FACILITY_INFO) as FacilityKind[]).map((kind) => {
             const level = facilities[kind];
             const next = level < MAX_FACILITY ? facilityUpgrade(game, level + 1) : null;
@@ -196,6 +218,39 @@ export function Club() {
           })}
           <p className="hint left">One facility upgrade at a time. Total running costs {moneyPw(totalUpkeep(club))}.</p>
         </>
+      )}
+
+      {staffSheet && (
+        <div className="sheet-backdrop" onClick={() => setStaffSheet(null)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label={`Hire a ${STAFF_INFO[staffSheet].name}`} onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <strong className="grow">{STAFF_INFO[staffSheet].name}</strong>
+              <button type="button" className="link-btn" onClick={() => setStaffSheet(null)}>Close</button>
+            </div>
+            <p className="muted small">
+              This month's shortlist. {club.staff?.[staffSheet] ? `${club.staff[staffSheet]!.name} (rated ${club.staff[staffSheet]!.rating}) leaves if you hire someone.` : ''} A new shortlist comes every month.
+            </p>
+            <ul className="player-list">
+              {staffCandidates(game, staffSheet).map((c, i) => (
+                <li key={c.name + i}>
+                  <button
+                    type="button"
+                    className="player-row"
+                    onClick={() => {
+                      const err = hire(staffSheet, i);
+                      showToast(err ?? `${c.name} joins as ${STAFF_INFO[staffSheet].name.toLowerCase()}.`);
+                      if (!err) setStaffSheet(null);
+                    }}
+                  >
+                    <span className={`ovr ${c.rating >= 15 ? 'a-top' : c.rating >= 11 ? 'a-good' : c.rating >= 6 ? 'a-avg' : 'a-poor'}`}>{c.rating}</span>
+                    <span className="who"><strong>{c.name}</strong><small>Rating {c.rating} of 20</small></span>
+                    <span className="role">{moneyPw(c.wage)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
 
       {tab === 'money' && (

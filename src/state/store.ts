@@ -3,13 +3,14 @@ import { assignToBench, restTired, setRole } from '../engine/players/squad';
 import { takeJob, waitAWeek, waitForOffer } from '../engine/club/career';
 import { createRelegationBattle } from '../engine/club/challenge';
 import { endLoan, loanIn } from '../engine/transfers/loans';
+import { hireStaff } from '../engine/club/staff';
 import {
   changeTactics, giveTeamTalk, makeSub, runToEnd, stepMinute, type LiveMatch, type SideName, type TeamTalk,
 } from '../engine/match/engine';
 import {
   advanceToUserMatch, completeUserMatch, playWeek, simUserMatchToday, startNextSeason, startUserMatch, userSelection,
 } from '../engine/season/season';
-import type { ChallengeId, CountryId, FacilityKind, Fixture, GameState, SquadRole, Tactics } from '../engine/types';
+import type { ChallengeId, CountryId, FacilityKind, Fixture, GameState, SquadRole, StaffRole, Tactics } from '../engine/types';
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
@@ -54,6 +55,7 @@ interface Store {
   /** After winning a challenge, carry on as a normal career. */
   continueAfterChallenge: () => void;
   loanPlayer: (playerId: string) => string | null;
+  hireStaff: (role: StaffRole, index: number) => string | null;
   sendBackLoan: (playerId: string) => void;
   showToast: (text: string | null) => void;
 
@@ -190,6 +192,14 @@ export const useGame = create<Store>()((set, get) => {
       game.challenge.continued = true;
       set({ screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub' });
       commit();
+    },
+
+    hireStaff: (role, index) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = hireStaff(game, role, index);
+      if (!err) commit();
+      return err;
     },
 
     loanPlayer: (playerId) => {

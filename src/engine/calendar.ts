@@ -1,4 +1,5 @@
 import { injuryFactor } from './club/facilities';
+import { physioFactor, scoutDays } from './club/staff';
 import { recoverTo } from './players/squad';
 import { playerName } from './players/generate';
 import type { Rng } from './rng';
@@ -129,8 +130,8 @@ function dailyEvents(game: GameState) {
 }
 
 function trainingKnock(game: GameState, rng: Rng) {
-  if (!rng.chance(0.025)) return;
   const club = game.clubs[game.userClubId];
+  if (!rng.chance(0.025 * physioFactor(club))) return;
   const fit = squadOf(game, club.id).filter((p) => p.injuryWeeks === 0);
   if (!fit.length) return;
   const p = rng.pick(fit);
@@ -174,7 +175,7 @@ export function assignScout(game: GameState, playerId: string, known: boolean): 
   const left = game.scoutReportsLeft ?? 0;
   if (left <= 0) return 'none-left';
   game.scoutReportsLeft = left - 1;
-  const days = 2 + (playerId.charCodeAt(playerId.length - 1) % 3);
+  const days = scoutDays(game.clubs[game.userClubId], playerId);
   game.scoutAssignments.push({ playerId, dueDay: today(game) + days });
   return 'assigned';
 }

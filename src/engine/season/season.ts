@@ -1,4 +1,5 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
+import { assistantMorale, scoutReportsPerWeek } from '../club/staff';
 import { challengeSeasonEnd, kidsWindowClosed, kidsWindowOpened } from '../club/challenge';
 import { returnLoans } from '../transfers/loans';
 import { recommendTactics } from '../match/preview';
@@ -14,7 +15,7 @@ import { rolloverPlayers } from '../players/development';
 import { attr100 } from '../players/ratings';
 import { assignRoles, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
 import {
-  SCOUT_REPORTS_PER_WEEK, addInbox, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
+  addInbox, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
 import { Rng } from '../rng';
 import { isEuroId } from '../../data/europe';
@@ -258,6 +259,12 @@ export function playWeek(game: GameState): Fixture[] {
     marketWeek(game, rng);
   });
   userMatchMood(game, fixtures);
+  // The assistant manager's touch on squad morale.
+  if (!game.unemployed) {
+    const user = game.clubs[game.userClubId];
+    const lift = assistantMorale(user);
+    for (const p of squadOf(game, user.id)) p.morale = Math.max(0, Math.min(100, p.morale + lift));
+  }
   if (!game.unemployed && game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
   // Once a month the board takes stock; on hard it may sack you.
   if (game.week >= 8 && game.week % 4 === 2) boardCheck(game);
@@ -460,7 +467,7 @@ export function startNextSeason(game: GameState) {
   game.day = SEASON_START_DAY;
   game.half = 'am';
   game.phase = 'season';
-  game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
+  game.scoutReportsLeft = scoutReportsPerWeek(game.clubs[game.userClubId]);
   game.recoveredTo = undefined;
   assignRoles(game, game.clubs[game.userClubId]);
   scheduleSeason(game);

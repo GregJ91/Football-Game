@@ -1,4 +1,5 @@
 import { LAST_NAMES } from '../../data/names';
+import { hireInitialStaff, staffWages } from './staff';
 import { guideTicketPrice, ledgerOf, topUpUnlimited, weeklyIncomeEstimate, weeklyTv } from '../economy/finance';
 import { roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
@@ -266,6 +267,13 @@ export function chairmanWeek(game: GameState, rng: Rng) {
   const upkeep = totalUpkeep(club);
   club.balance -= upkeep;
   l.upkeep = (l.upkeep ?? 0) + upkeep;
+  // Older saves: a backroom team appropriate to the level.
+  if (!club.staff) hireInitialStaff(game, club);
+  const staff = staffWages(club);
+  club.balance -= staff;
+  l.staff = (l.staff ?? 0) + staff;
+  // Unlimited money (testing) stays topped up after the week's bills.
+  topUpUnlimited(game);
   if (club.loan) {
     const pay = Math.min(club.loan.weekly, club.loan.remaining);
     club.balance -= pay;

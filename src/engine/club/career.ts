@@ -1,4 +1,5 @@
 import { setBoardBudgets } from '../economy/finance';
+import { hireInitialStaff } from './staff';
 import { assignRoles } from '../players/squad';
 import type { Rng } from '../rng';
 import { startNextSeason, playWeek } from '../season/season';
@@ -162,6 +163,7 @@ function takeOver(game: GameState, club: Club) {
   club.scouted = {};
   for (const id of club.playerIds) game.players[id].listed = false;
   assignRoles(game, club);
+  hireInitialStaff(game, club);
   setSeasonTarget(game);
   setBoardBudgets(game, club);
   withRng(game, (rng) => makeSponsorOffers(game, rng));

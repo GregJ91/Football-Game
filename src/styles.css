@@ -514,3 +514,7 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .challenge-chip strong { font-family: var(--display); font-size: 18px; }
 .challenge-chip small { color: var(--muted); }
 .league-table sup.warn { font-size: 10px; margin-left: 2px; }
+
+/* Staff */
+.staff-card { gap: 6px; }
+.staff-rating { font-family: var(--display); font-size: 26px; min-width: 40px; text-align: right; }

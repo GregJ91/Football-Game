@@ -1,4 +1,5 @@
 import { SALE_REINVEST, budgetsOf, ledgerOf, wageBill, weeklyIncomeEstimate } from '../economy/finance';
+import { scoutReportsPerWeek } from '../club/staff';
 import { activeChallenge, challengeFeeRule, challengeSigningRule } from '../club/challenge';
 import { roleOnArrival } from '../players/squad';
 import { pickTeam } from '../match/selection';
@@ -461,7 +462,7 @@ function formatFee(n: number) {
 /** Weekly market activity across the world while a window is open. */
 export function marketWeek(game: GameState, rng: Rng) {
   expireBids(game);
-  game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
+  game.scoutReportsLeft = scoutReportsPerWeek(game.clubs[game.userClubId]);
   for (const club of domesticClubs(game)) if (!club.isUser) aiBalanceBooks(game, club);
   if (!transferWindow(game).open) return;
   for (const club of domesticClubs(game)) {

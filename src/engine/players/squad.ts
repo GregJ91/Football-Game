@@ -1,4 +1,5 @@
 import { FORMATIONS, isAvailable, type Lineup, type Selection } from '../match/selection';
+import { grievanceFactor } from '../club/staff';
 import { addInbox } from '../transfers/market';
 import type { Club, Formation, GameState, Player, SquadRole } from '../types';
 import { squadOf } from '../world';
@@ -175,7 +176,7 @@ export function playingTimeCheck(game: GameState) {
     const share = p.seasonStats.apps / games;
     if (share + 0.2 < ROLE_SHARE[role]) {
       p.unhappy = (p.unhappy ?? 0) + 1;
-      p.morale = Math.max(0, p.morale - 6 - (p.ambition >= 15 ? 3 : 0));
+      p.morale = Math.max(0, p.morale - (6 + (p.ambition >= 15 ? 3 : 0)) * grievanceFactor(club));
       if (p.unhappy === 1) complaints.push(`${playerName(p)} (${ROLE_LABEL[role].toLowerCase()}, ${p.seasonStats.apps} of ${games})`);
       if (p.unhappy >= 3 && !p.transferRequest) {
         p.transferRequest = true;

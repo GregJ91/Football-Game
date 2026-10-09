@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { scoutReportsPerWeek } from '../src/engine/club/staff';
 import { adjustBudgets, budgetsOf, wageBill, wageBudgetProblem, WAGE_TO_TRANSFER } from '../src/engine/economy/finance';
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
 import {
-  SCOUT_REPORTS_PER_WEEK, acceptsLowerWage, answerBid, wageDemand, askingPrice, bidFor, cannotBuy, completeTransfer, feeProblem, interestIn, isKnown,
+  acceptsLowerWage, answerBid, wageDemand, askingPrice, bidFor, cannotBuy, completeTransfer, feeProblem, interestIn, isKnown,
   openInboxItems, releaseCost, releasePlayer, renewContract, transferWindow,
 } from '../src/engine/transfers/market';
 import { Rng } from '../src/engine/rng';
@@ -134,10 +135,11 @@ describe('scouting', () => {
   it('sends scouts to players outside your league; reports arrive days later, limited per week', () => {
     const game = testGame('eng', 11);
     const club = userClub(game);
-    const outsiders = playersAtLevel(game, 5).slice(0, SCOUT_REPORTS_PER_WEEK + 1);
+    const perWeek = scoutReportsPerWeek(club);
+    const outsiders = playersAtLevel(game, 5).slice(0, perWeek + 1);
     expect(isKnown(game, club, outsiders[0])).toBe(false);
-    for (let i = 0; i < SCOUT_REPORTS_PER_WEEK; i++) expect(assignScout(game, outsiders[i].id, false)).toBe('assigned');
-    expect(assignScout(game, outsiders[SCOUT_REPORTS_PER_WEEK].id, false)).toBe('none-left');
+    for (let i = 0; i < perWeek; i++) expect(assignScout(game, outsiders[i].id, false)).toBe('assigned');
+    expect(assignScout(game, outsiders[perWeek].id, false)).toBe('none-left');
     expect(isKnown(game, club, outsiders[0])).toBe(false);
     for (let i = 0; i < 8; i++) advanceHalfDay(game);
     expect(isKnown(game, club, outsiders[0])).toBe(true);
