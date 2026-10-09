@@ -77,6 +77,7 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Foreign clubs:** about 120 fictional clubs from 35 nations, rated by strength. Their ratings move with the domestic game so Europe stays competitive. Your matches use the full engine against a generated squad with local names; other games use a quick model calibrated against the engine.
   - **Money:** entry, results and each knockout round pay prize money, and home gates sell at a premium. Winning adds the trophy to the cabinet.
 - **Playable UI:** Hub (board and fan meters, things needing attention), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
+- **Testing aids:** unlimited money (Club → Finances), and a "Start as a top-flight giant" option when creating a club. It puts you in the Premier League (or Scottish Premiership) with a title-challenging squad, a 52,000 all-seater ground, top facilities and a Champions League place.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.

@@ -189,3 +189,27 @@ describe('older saves', () => {
     expect(game.europe!.comps).toHaveLength(3);
   });
 });
+
+describe('testing start: a top-flight giant', () => {
+  for (const country of ['eng', 'sco'] as const) {
+    it(`${country}: top flight, top-team squad, Champions League and the big cups`, () => {
+      const game = testGame(country, 68, { topFlight: true });
+      const user = game.userClubId;
+      const div = divisionOf(game, user);
+      expect(div.def.level).toBe(1);
+      expect(div.clubIds).toHaveLength(div.def.size);
+      const xi = (id: string) => squadOf(game, id).map((p) => p.overall).sort((a, b) => b - a).slice(0, 11).reduce((s, x) => s + x, 0) / 11;
+      const ranked = [...div.clubIds].sort((a, b) => xi(b) - xi(a));
+      expect(ranked.indexOf(user)).toBeLessThan(3);
+      expect(game.clubs[user].capacity).toBeGreaterThan(40000);
+      expect(game.europe!.entries.find((e) => e.clubId === user)).toMatchObject({ compId: 'ucl', playoff: false });
+      // Top-flight clubs join the domestic cups later; the user is drawn as rounds reach them.
+      expect(game.cups!.every((c) => !c.rounds[0].ties.some((t) => t.homeId === user || t.awayId === user))).toBe(true);
+      playToSeasonEnd(game);
+      const ucl = game.europe!.comps.find((c) => c.id === 'ucl')!;
+      expect(ucl.league).toContain(user);
+      const cupTies = game.cups!.flatMap((c) => c.rounds.flatMap((r) => r.ties)).filter((t) => t.homeId === user || t.awayId === user);
+      expect(cupTies.length).toBeGreaterThan(0);
+    });
+  }
+});

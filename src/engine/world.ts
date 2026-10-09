@@ -2,7 +2,8 @@ import { COUNTRIES } from '../data/pyramids';
 import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../data/names';
 import { SQUAD_TEMPLATE, generatePlayer } from './players/generate';
 import { Rng } from './rng';
-import { createStadium, syncCapacity } from './club/stadium';
+import { MAX_FACILITY } from './club/facilities';
+import { STAND_NAMES, createStadium, syncCapacity } from './club/stadium';
 import { setupCups } from './season/cups';
 import { setupEurope } from './season/europe';
 import { foreignSquad } from './season/foreign';
@@ -34,6 +35,8 @@ export interface NewGameConfig {
   shortName: string;
   stadiumName: string;
   colours: ClubColours;
+  /** Testing aid: start as one of the biggest clubs in the top flight, in the Champions League. */
+  topFlight?: boolean;
 }
 
 /** Club-level economics by pyramid level (rough; refined in the chairman phase). */
@@ -129,6 +132,25 @@ function createClub(
   return club;
 }
 
+/**
+ * Testing aid: the user's club as a top-flight giant, with a title-winning
+ * squad, a big all-seater ground, top facilities and the most reputation in
+ * the league (so it takes a Champions League place).
+ */
+function makeGiant(game: GameState, rng: Rng, user: Club, def: DivisionDef) {
+  const eng = game.country === 'eng';
+  createSquad(game, rng, user, def.quality + 6);
+  const stands = eng ? [16000, 12000, 12000, 12000] : [14000, 10000, 10000, 10000];
+  user.stadium = {
+    stands: STAND_NAMES.map((name, i) => ({ name, capacity: stands[i], seats: stands[i], roof: true })),
+    floodlights: true,
+    builds: [],
+  };
+  user.facilities = { training: MAX_FACILITY, youth: MAX_FACILITY, medical: MAX_FACILITY };
+  user.balance = eng ? 60_000_000 : 20_000_000;
+  user.reputation = 95;
+}
+
 export function createGame(config: NewGameConfig): GameState {
   const rng = new Rng(config.seed);
   const countryDef = COUNTRIES[config.country];
@@ -156,7 +178,9 @@ export function createGame(config: NewGameConfig): GameState {
 
   const maxLevel = Math.max(...countryDef.divisions.map((d) => d.level));
   const bottom = countryDef.divisions.filter((d) => d.level === maxLevel);
-  const userDivision = bottom.find((d) => d.region === config.region) ?? bottom[0];
+  const userDivision = config.topFlight
+    ? countryDef.divisions.find((d) => d.level === 1)!
+    : bottom.find((d) => d.region === config.region) ?? bottom[0];
 
   for (const def of countryDef.divisions) {
     const division: Division = { def, clubIds: [] };
@@ -187,8 +211,9 @@ export function createGame(config: NewGameConfig): GameState {
       };
       game.clubs[user.id] = user;
       game.userClubId = user.id;
+      if (config.topFlight) makeGiant(game, rng, user, def);
       // An average side for the level; climbing is down to the manager.
-      createSquad(game, rng, user, def.quality);
+      else createSquad(game, rng, user, def.quality);
       division.clubIds.push(user.id);
     }
     game.divisions.push(division);
@@ -198,7 +223,7 @@ export function createGame(config: NewGameConfig): GameState {
   game.rngState = rng.state;
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   const user = game.clubs[game.userClubId];
-  user.stadium = createStadium();
+  user.stadium ??= createStadium();
   syncCapacity(user);
   scheduleSeason(game);
   setupEurope(game);

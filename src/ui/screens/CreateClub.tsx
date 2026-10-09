@@ -23,6 +23,7 @@ export function CreateClub() {
   const [colours, setColours] = useState<ClubColours>({ primary: '#B3202A', secondary: '#F5F1E6', pattern: 'stripes' });
   const [country, setCountry] = useState<CountryId>('eng');
   const [region, setRegion] = useState<Region>('N');
+  const [topFlight, setTopFlight] = useState(false);
 
   const clubName = name.trim();
   const valid = clubName.length >= 3;
@@ -37,6 +38,7 @@ export function CreateClub() {
       colours,
       country,
       region,
+      topFlight,
     });
   };
 
@@ -131,6 +133,7 @@ export function CreateClub() {
             ))}
           </div>
         </fieldset>
+        {!topFlight && (
         <fieldset className="field">
           <legend>League</legend>
           <div className="grid-2">
@@ -141,6 +144,19 @@ export function CreateClub() {
               </button>
             ))}
           </div>
+        </fieldset>
+        )}
+        <fieldset className="field">
+          <legend>Testing</legend>
+          <label className="toggle no-rule" htmlFor="top-flight">
+            <input id="top-flight" type="checkbox" checked={topFlight} onChange={(e) => setTopFlight(e.target.checked)} />
+            <span>
+              Start as a top-flight giant
+              <small>
+                Begin in the {COUNTRIES[country].divisions.find((d) => d.level === 1)!.name} with a title-winning squad, a big ground and a place in the Champions League.
+              </small>
+            </span>
+          </label>
         </fieldset>
       </div>
 

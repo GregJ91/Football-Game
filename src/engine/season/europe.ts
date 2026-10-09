@@ -6,7 +6,9 @@ import { simulateMatch, type SimOptions } from '../match/engine';
 import type { Rng } from '../rng';
 import type { Club, CupRound, CupState, CupTie, EuroEntry, EuroStage, EuropeState, GameState, MatchResult, SeasonSummary } from '../types';
 import { addInbox } from '../transfers/market';
-import { newId, withRng } from '../world';
+import { pickTeam } from '../match/selection';
+import { attr100 } from '../players/ratings';
+import { newId, squadOf, withRng } from '../world';
 import { createForeignClubs, setForeignStrengths } from './foreign';
 import { applyMatchToPlayers, teamSheet, xiStrength } from './season';
 import { buildTable } from './table';
@@ -563,9 +565,19 @@ function playEuroMatch(game: GameState, rng: Rng, tie: CupTie): MatchResult {
     // The user's games use the full match engine, with real squads on both sides.
     result = simulateMatch(rng, teamSheet(game, home, away, { home: true }), teamSheet(game, away, home), opts);
     applyMatchToPlayers(game, rng, result, home, away);
-  } else result = quickResult(rng, strengthOf(game, home), strengthOf(game, away), opts);
+  } else {
+    result = quickResult(rng, strengthOf(game, home), strengthOf(game, away), opts);
+    // Domestic clubs feel a European night in their legs, just as the user's players do.
+    for (const club of [home, away]) if (!club.foreign) tireFirstTeam(game, club);
+  }
   euroGate(game, tie, result);
   return result;
+}
+
+/** The same fitness cost as playing a match, for the eleven who would have played. */
+function tireFirstTeam(game: GameState, club: Club) {
+  const xi = pickTeam(squadOf(game, club.id), club.tactics.formation).xi;
+  for (const p of xi) p.fitness = Math.max(40, p.fitness - (24 - attr100(p, 'stamina') / 10));
 }
 
 /** After a European match: league-phase prize money, or the winner of a finished tie. */

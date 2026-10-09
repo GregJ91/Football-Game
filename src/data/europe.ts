@@ -107,7 +107,11 @@ export interface Nation {
   style: NameStyle;
   /** Clubs in the pool. */
   clubs: number;
-  /** Strength (best-XI average) of the nation's top club, on a scale where an average Premier League side is 76. */
+  /**
+   * Strength (best-XI average) of the nation's top club, on a scale where an
+   * average Premier League side is 76 and the best are about 80: the Premier
+   * League is the strongest league, so only a handful of foreign clubs match its top sides.
+   */
   top: number;
   /** Gap in strength between one club and the next. */
   step: number;
@@ -116,41 +120,41 @@ export interface Nation {
 }
 
 export const NATIONS: Nation[] = [
-  { code: 'ESP', name: 'Spain', style: 'iberian', clubs: 8, top: 83, step: 1.5 },
-  { code: 'GER', name: 'Germany', style: 'german', clubs: 8, top: 82, step: 1.5 },
-  { code: 'ITA', name: 'Italy', style: 'italian', clubs: 8, top: 81.5, step: 1.5 },
-  { code: 'FRA', name: 'France', style: 'french', clubs: 7, top: 79.5, step: 1.6 },
-  { code: 'ENG', name: 'England', style: 'british', clubs: 7, top: 81, step: 1.5, country: 'eng' },
-  { code: 'POR', name: 'Portugal', style: 'portuguese', clubs: 6, top: 78, step: 2 },
-  { code: 'NED', name: 'Netherlands', style: 'dutch', clubs: 6, top: 77, step: 2 },
-  { code: 'BEL', name: 'Belgium', style: 'dutch', clubs: 4, top: 74, step: 2 },
-  { code: 'TUR', name: 'Turkey', style: 'turkish', clubs: 4, top: 74, step: 2 },
+  { code: 'ESP', name: 'Spain', style: 'iberian', clubs: 8, top: 80, step: 1.5 },
+  { code: 'GER', name: 'Germany', style: 'german', clubs: 8, top: 79, step: 1.5 },
+  { code: 'ITA', name: 'Italy', style: 'italian', clubs: 8, top: 78.5, step: 1.5 },
+  { code: 'FRA', name: 'France', style: 'french', clubs: 7, top: 77, step: 1.6 },
+  { code: 'ENG', name: 'England', style: 'british', clubs: 7, top: 83, step: 1.2, country: 'eng' },
+  { code: 'POR', name: 'Portugal', style: 'portuguese', clubs: 6, top: 75, step: 2 },
+  { code: 'NED', name: 'Netherlands', style: 'dutch', clubs: 6, top: 74, step: 2 },
+  { code: 'BEL', name: 'Belgium', style: 'dutch', clubs: 4, top: 71.5, step: 2 },
+  { code: 'TUR', name: 'Turkey', style: 'turkish', clubs: 4, top: 71.5, step: 2 },
   { code: 'SCO', name: 'Scotland', style: 'british', clubs: 4, top: 70, step: 2, country: 'sco' },
-  { code: 'AUT', name: 'Austria', style: 'german', clubs: 3, top: 72, step: 2 },
-  { code: 'GRE', name: 'Greece', style: 'greek', clubs: 4, top: 72, step: 2 },
-  { code: 'CZE', name: 'Czechia', style: 'slavic', clubs: 3, top: 71, step: 2 },
-  { code: 'SUI', name: 'Switzerland', style: 'german', clubs: 3, top: 71, step: 2 },
-  { code: 'DEN', name: 'Denmark', style: 'nordic', clubs: 3, top: 71, step: 2 },
-  { code: 'UKR', name: 'Ukraine', style: 'slavic', clubs: 3, top: 71, step: 2 },
-  { code: 'NOR', name: 'Norway', style: 'nordic', clubs: 3, top: 70, step: 2 },
-  { code: 'CRO', name: 'Croatia', style: 'slavic', clubs: 3, top: 71, step: 2 },
-  { code: 'SRB', name: 'Serbia', style: 'slavic', clubs: 3, top: 70, step: 2 },
-  { code: 'POL', name: 'Poland', style: 'slavic', clubs: 4, top: 69, step: 2 },
-  { code: 'SWE', name: 'Sweden', style: 'nordic', clubs: 3, top: 68, step: 2 },
-  { code: 'ISR', name: 'Israel', style: 'greek', clubs: 2, top: 68, step: 2 },
-  { code: 'HUN', name: 'Hungary', style: 'slavic', clubs: 2, top: 68, step: 2 },
-  { code: 'CYP', name: 'Cyprus', style: 'greek', clubs: 3, top: 68, step: 2 },
-  { code: 'ROU', name: 'Romania', style: 'slavic', clubs: 3, top: 67, step: 2 },
-  { code: 'BUL', name: 'Bulgaria', style: 'slavic', clubs: 2, top: 66, step: 2 },
-  { code: 'SVK', name: 'Slovakia', style: 'slavic', clubs: 2, top: 66, step: 2 },
-  { code: 'SVN', name: 'Slovenia', style: 'slavic', clubs: 2, top: 65, step: 2 },
-  { code: 'AZE', name: 'Azerbaijan', style: 'turkish', clubs: 2, top: 65, step: 2 },
-  { code: 'KAZ', name: 'Kazakhstan', style: 'slavic', clubs: 2, top: 64, step: 2 },
-  { code: 'IRL', name: 'Ireland', style: 'british', clubs: 2, top: 63, step: 2 },
-  { code: 'FIN', name: 'Finland', style: 'nordic', clubs: 2, top: 63, step: 2 },
-  { code: 'ISL', name: 'Iceland', style: 'nordic', clubs: 1, top: 62, step: 2 },
-  { code: 'WAL', name: 'Wales', style: 'british', clubs: 1, top: 60, step: 2 },
-  { code: 'NIR', name: 'Northern Ireland', style: 'british', clubs: 1, top: 60, step: 2 },
+  { code: 'AUT', name: 'Austria', style: 'german', clubs: 3, top: 71, step: 2 },
+  { code: 'GRE', name: 'Greece', style: 'greek', clubs: 4, top: 71, step: 2 },
+  { code: 'CZE', name: 'Czechia', style: 'slavic', clubs: 3, top: 70, step: 2 },
+  { code: 'SUI', name: 'Switzerland', style: 'german', clubs: 3, top: 70, step: 2 },
+  { code: 'DEN', name: 'Denmark', style: 'nordic', clubs: 3, top: 70, step: 2 },
+  { code: 'UKR', name: 'Ukraine', style: 'slavic', clubs: 3, top: 70, step: 2 },
+  { code: 'NOR', name: 'Norway', style: 'nordic', clubs: 3, top: 69, step: 2 },
+  { code: 'CRO', name: 'Croatia', style: 'slavic', clubs: 3, top: 70, step: 2 },
+  { code: 'SRB', name: 'Serbia', style: 'slavic', clubs: 3, top: 69, step: 2 },
+  { code: 'POL', name: 'Poland', style: 'slavic', clubs: 4, top: 68, step: 2 },
+  { code: 'SWE', name: 'Sweden', style: 'nordic', clubs: 3, top: 67, step: 2 },
+  { code: 'ISR', name: 'Israel', style: 'greek', clubs: 2, top: 67, step: 2 },
+  { code: 'HUN', name: 'Hungary', style: 'slavic', clubs: 2, top: 67, step: 2 },
+  { code: 'CYP', name: 'Cyprus', style: 'greek', clubs: 3, top: 67, step: 2 },
+  { code: 'ROU', name: 'Romania', style: 'slavic', clubs: 3, top: 66, step: 2 },
+  { code: 'BUL', name: 'Bulgaria', style: 'slavic', clubs: 2, top: 65, step: 2 },
+  { code: 'SVK', name: 'Slovakia', style: 'slavic', clubs: 2, top: 65, step: 2 },
+  { code: 'SVN', name: 'Slovenia', style: 'slavic', clubs: 2, top: 64, step: 2 },
+  { code: 'AZE', name: 'Azerbaijan', style: 'turkish', clubs: 2, top: 64, step: 2 },
+  { code: 'KAZ', name: 'Kazakhstan', style: 'slavic', clubs: 2, top: 63, step: 2 },
+  { code: 'IRL', name: 'Ireland', style: 'british', clubs: 2, top: 62, step: 2 },
+  { code: 'FIN', name: 'Finland', style: 'nordic', clubs: 2, top: 62, step: 2 },
+  { code: 'ISL', name: 'Iceland', style: 'nordic', clubs: 1, top: 61, step: 2 },
+  { code: 'WAL', name: 'Wales', style: 'british', clubs: 1, top: 59, step: 2 },
+  { code: 'NIR', name: 'Northern Ireland', style: 'british', clubs: 1, top: 59, step: 2 },
 ];
 
 /** Fictional club names: a prefix or suffix plus a made-up town. */
