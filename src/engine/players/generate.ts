@@ -113,26 +113,29 @@ const PER_GAME: Record<Position, [number, number]> = {
  * from 18. Seeded from the player's id so it doesn't disturb the random
  * stream (and so the same player always gets the same past).
  */
-export function pastCareer(id: string, age: number, position: Position): [number, number, number] {
+export function pastCareer(id: string, age: number, position: Position): [number, number, number, number] {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
   const r = (k: number) => ((Math.imul(h ^ k, 2654435761) >>> 0) % 1000) / 1000;
   const seasons = Math.max(0, age - 18 + r(1));
   const games = Math.round(seasons * (20 + r(2) * 18));
   const [g, a] = PER_GAME[position];
-  return [games, Math.round(games * g * (0.6 + r(3) * 0.8)), Math.round(games * a * (0.6 + r(4) * 0.8))];
+  // Keepers keep a clean sheet in roughly a quarter to two-fifths of their games.
+  const cleanSheets = position === 'GK' ? Math.round(games * (0.25 + r(5) * 0.15)) : 0;
+  return [games, Math.round(games * g * (0.6 + r(3) * 0.8)), Math.round(games * a * (0.6 + r(4) * 0.8)), cleanSheets];
 }
 
 /** Career games, goals and assists including this season so far. */
-export function careerTotals(p: Player): { games: number; goals: number; assists: number } {
+export function careerTotals(p: Player): { games: number; goals: number; assists: number; cleanSheets: number } {
   const c = p.careerStats ?? pastCareer(p.id, p.age, p.position);
-  return { games: c[0] + p.seasonStats.apps, goals: c[1] + p.seasonStats.goals, assists: c[2] + p.seasonStats.assists };
+  const pastCs = c[3] ?? (p.position === 'GK' ? pastCareer(p.id, p.age, p.position)[3] : 0);
+  return { games: c[0] + p.seasonStats.apps, goals: c[1] + p.seasonStats.goals, assists: c[2] + p.seasonStats.assists, cleanSheets: pastCs + (p.seasonStats.cleanSheets ?? 0) };
 }
 
 /** End of season: add the season's games, goals and assists to the career totals. */
 export function bankSeasonStats(p: Player) {
-  const c = p.careerStats ?? pastCareer(p.id, p.age, p.position);
-  p.careerStats = [c[0] + p.seasonStats.apps, c[1] + p.seasonStats.goals, c[2] + p.seasonStats.assists];
+  const t = careerTotals(p);
+  p.careerStats = [t.games, t.goals, t.assists, t.cleanSheets];
   p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
 }
 

@@ -10,7 +10,7 @@ import { pickTeam } from '../match/selection';
 import { attr100 } from '../players/ratings';
 import { newId, squadOf, withRng } from '../world';
 import { createForeignClubs, ensureForeignSquads, rolloverForeignSquads, setForeignStrengths } from './foreign';
-import { applyMatchToPlayers, teamSheet, xiStrength } from './season';
+import { applyMatchToPlayers, creditCleanSheet, teamSheet, xiStrength } from './season';
 import { buildTable } from './table';
 
 const LEAGUE_SIZE = 36;
@@ -565,9 +565,15 @@ function playEuroMatch(game: GameState, rng: Rng, tie: CupTie): MatchResult {
   if (home.isUser || away.isUser) {
     // The user's games use the full match engine, with real squads on both sides.
     result = simulateMatch(rng, teamSheet(game, home, away, { home: true }), teamSheet(game, away, home), opts);
-    applyMatchToPlayers(game, rng, result, home, away);
+    applyMatchToPlayers(game, rng, result, home, away, tie.cupId);
   } else {
     result = quickResult(rng, strengthOf(game, home), strengthOf(game, away), opts);
+    // A quick result has no line-ups: the first-choice keeper gets any clean sheet.
+    for (const [club, conceded] of [[home, result.awayGoals], [away, result.homeGoals]] as const) {
+      if (conceded > 0) continue;
+      const keeper = pickTeam(squadOf(game, club.id), club.tactics.formation).xi.find((p) => p.position === 'GK');
+      if (keeper) creditCleanSheet(game, keeper, tie.cupId);
+    }
     // Domestic clubs feel a European night in their legs, just as the user's players do.
     for (const club of [home, away]) if (!club.foreign) tireFirstTeam(game, club);
   }

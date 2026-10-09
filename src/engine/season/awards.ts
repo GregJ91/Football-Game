@@ -5,7 +5,9 @@ import { playerName } from '../players/generate';
 import { canPlay } from '../players/ratings';
 import type { AwardWinner, BallonDorPlace, DivisionAwards, GameState, MatchResult, MonthlyAwards, Player, Position, SeasonSummary, YearAwards } from '../types';
 import { addInbox } from '../transfers/market';
-import { squadOf, withRng } from '../world';
+import { playerById, squadOf, withRng } from '../world';
+import { cupDef } from '../../data/cups';
+import { euroDef } from '../../data/europe';
 import { nationOf } from './europe';
 
 const TEAM_SLOTS: Position[] = ['GK', 'DR', 'DC', 'DC', 'DL', 'MR', 'MC', 'MC', 'ML', 'ST', 'ST'];
@@ -26,7 +28,7 @@ function divisionPlayers(game: GameState, clubIds: string[]) {
  * average rating, with enough games), the Golden Boot, most assists and a
  * Team of the Season in a 4-4-2.
  */
-export function divisionAwards(game: GameState, clubIds: string[], leagueGames: number): DivisionAwards {
+export function divisionAwards(game: GameState, clubIds: string[], leagueGames: number, divisionId?: string): DivisionAwards {
   const all = divisionPlayers(game, clubIds);
   const regulars = all.filter(({ p }) => p.seasonStats.apps >= Math.max(5, leagueGames * 0.5));
   const best = (list: typeof all) => [...list].sort((a, b) => avg(b.p) - avg(a.p))[0];
@@ -41,6 +43,7 @@ export function divisionAwards(game: GameState, clubIds: string[], leagueGames: 
   if (boot && boot.p.seasonStats.goals > 0) out.topScorer = winner(boot.p, boot.clubId, boot.p.seasonStats.goals);
   const assists = most('assists');
   if (assists && assists.p.seasonStats.assists > 0) out.topAssists = winner(assists.p, assists.clubId, assists.p.seasonStats.assists);
+  if (divisionId) out.goldenGlove = goldenGlove(game, divisionId);
 
   const used = new Set<string>();
   for (const slot of TEAM_SLOTS) {
@@ -52,6 +55,17 @@ export function divisionAwards(game: GameState, clubIds: string[], leagueGames: 
     out.team.push(winner(pick.p, pick.clubId, avg(pick.p), slot));
   }
   return out;
+}
+
+/** Golden Glove: the keeper with the most clean sheets in a competition (ties: the better keeper). */
+export function goldenGlove(game: GameState, compId: string): AwardWinner | undefined {
+  const tally = game.cleanSheets?.[compId];
+  if (!tally) return undefined;
+  const best = Object.entries(tally)
+    .map(([id, n]) => ({ p: playerById(game, id), n }))
+    .filter((x): x is { p: Player; n: number } => !!x.p)
+    .sort((a, b) => b.n - a.n || b.p.overall - a.p.overall)[0];
+  return best && best.n > 0 ? winner(best.p, best.p.clubId ?? '', best.n) : undefined;
 }
 
 function awardsOf(game: GameState) {
@@ -190,6 +204,7 @@ function yearAwards(game: GameState, summary: SeasonSummary): YearAwards {
     playerOfYear: poy && winner(poy.p, poy.clubId, avg(poy.p)),
     youngPlayerOfYear: ypoy && winner(ypoy.p, ypoy.clubId, avg(ypoy.p)),
     goldenBoot: summary.awards?.[top.def.id]?.topScorer,
+    goldenGlove: summary.awards?.[top.def.id]?.goldenGlove,
   };
 }
 
@@ -198,7 +213,15 @@ export function seasonAwards(game: GameState, summary: SeasonSummary) {
   summary.awards = {};
   for (const div of game.divisions) {
     const leagueGames = (div.clubIds.length - 1) * div.def.rounds;
-    summary.awards[div.def.id] = divisionAwards(game, div.clubIds, leagueGames);
+    summary.awards[div.def.id] = divisionAwards(game, div.clubIds, leagueGames, div.def.id);
+  }
+  // Golden Gloves for every cup and European competition.
+  const leagues = new Set(game.divisions.map((d) => d.def.id));
+  summary.cupGloves = {};
+  for (const compId of Object.keys(game.cleanSheets ?? {})) {
+    if (leagues.has(compId)) continue;
+    const glove = goldenGlove(game, compId);
+    if (glove) summary.cupGloves[compId] = glove;
   }
   const user = game.userClubId;
   const mine = summary.awards[game.divisions.find((d) => d.clubIds.includes(user))!.def.id];
@@ -214,6 +237,10 @@ export function seasonAwards(game: GameState, summary: SeasonSummary) {
   note('Player of the Season', mine.player);
   note('Young Player of the Season', mine.young);
   note('Golden Boot', mine.topScorer);
+  note('Golden Glove', mine.goldenGlove);
+  for (const [compId, glove] of Object.entries(summary.cupGloves)) {
+    if (glove.clubId === user) honours.push(`${glove.name}: Golden Glove (${competitionName(game, compId)})`);
+  }
   for (const t of mine.team) if (t.clubId === user) honours.push(`${t.name}: Team of the Season`);
   const year = yearAwards(game, summary);
   awardsOf(game).history.push(year);
@@ -269,4 +296,9 @@ export function topScorers(game: GameState, clubIds: string[], count = 10) {
     .filter(({ p }) => p.seasonStats.goals > 0)
     .sort((a, b) => b.p.seasonStats.goals - a.p.seasonStats.goals || a.p.seasonStats.apps - b.p.seasonStats.apps)
     .slice(0, count);
+}
+
+/** A cup or European competition's name. */
+export function competitionName(game: GameState, compId: string): string {
+  return EURO_COMPS.some((c) => c.id === compId) ? euroDef(compId).name : cupDef(game.country, compId).name;
 }

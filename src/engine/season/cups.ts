@@ -212,7 +212,7 @@ export function playCupRound(game: GameState, rng: Rng, cup: CupState, r: number
   const round = cup.rounds[r];
   for (const tie of round.ties) {
     if (tie.result) continue;
-    tie.result = playMatch(game, rng, tie.homeId, tie.awayId, { knockout: true, neutral: tie.neutral });
+    tie.result = playMatch(game, rng, tie.homeId, tie.awayId, { knockout: true, neutral: tie.neutral, compId: cup.id });
     settleTie(game, cup, tie);
   }
   finishRound(game, rng, cup, r);

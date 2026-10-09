@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { AwardWinner } from '../../engine/types';
-import { divisionOf } from '../../engine/world';
+import type { AwardWinner, Player } from '../../engine/types';
+import { competitionName } from '../../engine/season/awards';
+import { divisionOf, playerById } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { LeagueTabs } from '../components/LeagueTabs';
 import { seasonLabel } from '../format';
@@ -16,6 +17,12 @@ export function Awards() {
   const latest = awards.history.at(-1);
   const lastSeason = game.lastSummary?.awards?.[divId];
   const club = (id: string) => game.clubs[id]?.name ?? '';
+  // This season's clean sheets in the league on show.
+  const gloveRace = Object.entries(game.cleanSheets?.[divId] ?? {})
+    .map(([id, n]) => ({ p: playerById(game, id), n }))
+    .filter((x): x is { p: Player; n: number } => !!x.p)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 5);
 
   const row = (label: string, w: AwardWinner | undefined, value?: string) =>
     w && (
@@ -66,6 +73,7 @@ export function Awards() {
           {row("Players' Player of the Year", latest.playerOfYear, latest.playerOfYear?.value.toFixed(2))}
           {row("Young Players' Player of the Year", latest.youngPlayerOfYear, latest.youngPlayerOfYear?.value.toFixed(2))}
           {row('Golden Boot', latest.goldenBoot, latest.goldenBoot && `${latest.goldenBoot.value} goals`)}
+          {row('Golden Glove', latest.goldenGlove, latest.goldenGlove && `${latest.goldenGlove.value} clean sheets`)}
           <p className="muted small">Voted by the players on form, goals and assists. The league's own Player of the Season is judged on form alone.</p>
         </section>
       )}
@@ -76,6 +84,19 @@ export function Awards() {
           {game.divisions.map((d) => <option key={d.def.id} value={d.def.id}>{d.def.name}</option>)}
         </select>
       </label>
+
+      {gloveRace.length > 0 && (
+        <section className="card">
+          <div className="card-label"><span>Golden Glove race</span><span>Clean sheets</span></div>
+          {gloveRace.map(({ p, n }, i) => (
+            <div key={p.id} className={`po-row${p.clubId === user ? ' is-user' : ''}`}>
+              <span>{i + 1}</span>
+              <span className="grow">{p.firstName} {p.lastName}<small className="block muted">{club(p.clubId ?? '')}</small></span>
+              <strong>{n}</strong>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="card">
         <div className="card-label"><span>Monthly awards</span><span>{seasonLabel(game.season)}</span></div>
@@ -100,6 +121,16 @@ export function Awards() {
           {row('Young Player of the Season', lastSeason.young, lastSeason.young?.value.toFixed(2))}
           {row('Golden Boot', lastSeason.topScorer, lastSeason.topScorer && `${lastSeason.topScorer.value} goals`)}
           {row('Most assists', lastSeason.topAssists, lastSeason.topAssists && `${lastSeason.topAssists.value}`)}
+          {row('Golden Glove', lastSeason.goldenGlove, lastSeason.goldenGlove && `${lastSeason.goldenGlove.value} clean sheets`)}
+        </section>
+      )}
+
+      {Object.keys(game.lastSummary?.cupGloves ?? {}).length > 0 && (
+        <section className="card">
+          <div className="card-label"><span>Golden Gloves: cups and Europe</span><span>{seasonLabel(game.lastSummary!.season)}</span></div>
+          {Object.entries(game.lastSummary!.cupGloves!).map(([compId, w]) => (
+            <div key={compId}>{row(competitionName(game, compId), w, `${w.value} clean sheets`)}</div>
+          ))}
         </section>
       )}
     </main>

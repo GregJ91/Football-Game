@@ -169,19 +169,23 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
         {(() => {
           const c = careerTotals(p);
           const s = p.seasonStats;
+          const keeper = p.position === 'GK';
+          // Keepers: clean sheets instead of assists.
+          const third = (cs: number, as: number) =>
+            keeper ? <span {...hp('cleanSheets')}><b>{cs}</b> clean sheet{cs === 1 ? '' : 's'}</span> : <span><b>{as}</b> assist{as === 1 ? '' : 's'}</span>;
           return (
             <div className="stat-totals">
               <div {...hp('seasonStats')}>
                 <small>This season</small>
-                <span><b>{s.apps}</b> games</span>
-                <span><b>{s.goals}</b> goals</span>
-                <span><b>{s.assists}</b> assists</span>
+                <span><b>{s.apps}</b> game{s.apps === 1 ? '' : 's'}</span>
+                <span><b>{s.goals}</b> goal{s.goals === 1 ? '' : 's'}</span>
+                {third(s.cleanSheets ?? 0, s.assists)}
               </div>
               <div {...hp('careerStats')}>
                 <small>Career</small>
-                <span><b>{c.games}</b> games</span>
-                <span><b>{c.goals}</b> goals</span>
-                <span><b>{c.assists}</b> assists</span>
+                <span><b>{c.games}</b> game{c.games === 1 ? '' : 's'}</span>
+                <span><b>{c.goals}</b> goal{c.goals === 1 ? '' : 's'}</span>
+                {third(c.cleanSheets, c.assists)}
               </div>
             </div>
           );

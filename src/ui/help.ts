@@ -40,6 +40,7 @@ const HELP = {
   listed: ['Transfer list', 'Put him up for sale. Other clubs are more likely to bid, and for a little less.'],
   seasonStats: ['This season', 'Games played, goals and assists this season, for every club he has played for.'],
   careerStats: ['Career', 'Games played, goals and assists across his whole career, including this season.'],
+  cleanSheets: ['Clean sheets', "Games where he started in goal and his side didn't concede. The keeper with the most in each league, cup and European competition wins its Golden Glove."],
   release: ['Release', 'Cancel his contract. You pay half the wages left on his deal as a pay-off.'],
   renew: ['Renew contract', 'Offer him a new deal before his contract runs out. He tells you the wage he wants.'],
   offer: ['Make an offer', 'Bid a transfer fee to his club. They accept, counter or reject. If they accept, you then agree his wage.'],

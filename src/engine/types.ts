@@ -44,9 +44,9 @@ export interface Player {
   suspendedMatches: number;
   ambition: number; // 1–20
   loyalty: number; // 1–20
-  seasonStats: { apps: number; goals: number; assists: number; ratingSum: number };
-  /** Career games, goals and assists before this season. */
-  careerStats?: [number, number, number];
+  seasonStats: { apps: number; goals: number; assists: number; ratingSum: number; cleanSheets?: number };
+  /** Career games, goals, assists and clean sheets before this season. */
+  careerStats?: [number, number, number, number?];
   /** This calendar month's games, for the monthly awards. */
   monthStats?: { apps: number; goals: number; assists: number; ratingSum: number };
   /** Placed on the transfer list by their club. */
@@ -560,6 +560,8 @@ export interface SeasonSummary {
   deniedPromotion?: { clubId: string; replacementId: string };
   /** Player awards and the Team of the Season, by division. */
   awards?: Record<string, DivisionAwards>;
+  /** Golden Glove (most clean sheets) in each cup and European competition. */
+  cupGloves?: Record<string, AwardWinner>;
   /** European winners this season and the places earned for next season. */
   europe?: { winners: { compId: string; clubId: string }[]; qualified: EuroEntry[] };
 }
@@ -602,6 +604,7 @@ export interface YearAwards {
   playerOfYear?: AwardWinner;
   youngPlayerOfYear?: AwardWinner;
   goldenBoot?: AwardWinner;
+  goldenGlove?: AwardWinner;
 }
 
 export interface DivisionAwards {
@@ -609,6 +612,8 @@ export interface DivisionAwards {
   young?: AwardWinner;
   topScorer?: AwardWinner;
   topAssists?: AwardWinner;
+  /** Most clean sheets in the league. */
+  goldenGlove?: AwardWinner;
   team: AwardWinner[];
 }
 
@@ -689,6 +694,8 @@ export interface GameState {
   scoutAssignments?: { playerId: string; dueDay: number }[];
   /** Scouts out on a brief to find players; they report back on `dueDay`. */
   scoutMissions?: ScoutMission[];
+  /** This season's clean sheets by competition (league, cup or European id), then keeper id. */
+  cleanSheets?: Record<string, Record<string, number>>;
   /** The game uses real club names (set when it's created). */
   realNames?: boolean;
   /** This season's cup competitions. */

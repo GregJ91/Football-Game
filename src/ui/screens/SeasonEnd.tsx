@@ -99,6 +99,7 @@ export function SeasonEnd() {
             {line('Young Player of the Season', a.young, 'rating')}
             {line('Golden Boot', a.topScorer, 'goals')}
             {line('Most assists', a.topAssists, 'assists')}
+            {line('Golden Glove', a.goldenGlove, 'clean sheets')}
             {a.team.length > 0 && (
               <>
                 <div className="card-label"><span>Team of the Season</span></div>
@@ -124,7 +125,10 @@ export function SeasonEnd() {
             const w = cup.winnerId ? game.clubs[cup.winnerId] : null;
             return (
               <div key={cup.id} className="po-row">
-                <span className="grow">{cupDef(game.country, cup.id).name}</span>
+                <span className="grow">
+                  {cupDef(game.country, cup.id).name}
+                  {summary.cupGloves?.[cup.id] && <small className="block muted">Golden Glove: {summary.cupGloves[cup.id].name} ({summary.cupGloves[cup.id].value})</small>}
+                </span>
                 {w && <ClubDot colours={w.colours} size={12} />}
                 <strong>{w ? w.name : '–'}</strong>
               </div>
@@ -140,7 +144,10 @@ export function SeasonEnd() {
             const c = game.clubs[w.clubId];
             return (
               <div key={w.compId} className="po-row">
-                <span className="grow">{euroDef(w.compId).name}</span>
+                <span className="grow">
+                  {euroDef(w.compId).name}
+                  {summary.cupGloves?.[w.compId] && <small className="block muted">Golden Glove: {summary.cupGloves[w.compId].name} ({summary.cupGloves[w.compId].value})</small>}
+                </span>
                 <ClubDot colours={c.colours} size={12} />
                 <strong>{c.name} <small className="muted">{nationOf(game, c.id)}</small></strong>
               </div>

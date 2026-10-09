@@ -23,9 +23,9 @@ import {
 import { Rng } from '../rng';
 import { isEuroId } from '../../data/europe';
 import type {
-  Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
+  Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, Player, PlayoffTie, Region, SeasonSummary, Tactics,
 } from '../types';
-import { divisionOf, newId, squadOf, withRng } from '../world';
+import { divisionOf, newId, playerById, squadOf, withRng } from '../world';
 import { matchdayCount, roundRobin, weekForMatchday } from './fixtures';
 import { divisionTable } from './table';
 
@@ -105,16 +105,17 @@ export function playMatch(
   rng: Rng,
   homeId: string,
   awayId: string,
-  opts: { neutral?: boolean; knockout?: boolean } = {},
+  opts: { neutral?: boolean; knockout?: boolean; compId?: string } = {},
 ): MatchResult {
   const home = game.clubs[homeId];
   const away = game.clubs[awayId];
+  const { compId, ...simOpts } = opts;
   const result = simulateMatch(rng, teamSheet(game, home, away, { home: true }), teamSheet(game, away, home), {
-    ...opts,
+    ...simOpts,
     capacity: opts.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
     crowdFill: crowdFill(game, home),
   });
-  applyMatchToPlayers(game, rng, result, home, away);
+  applyMatchToPlayers(game, rng, result, home, away, compId);
   if (opts.neutral) {
     addGate(game, home, result.attendance / 2);
     addGate(game, away, result.attendance / 2);
@@ -167,7 +168,7 @@ export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
 export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveMatch): MatchResult {
   const result = finishMatch(live);
   fixture.result = result;
-  withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId]));
+  withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId], fixture.divisionId));
   if (isCupTie(fixture)) {
     if (isEuroId(fixture.cupId)) {
       // European gates (and foreign grounds) are handled with the tie.
@@ -186,11 +187,17 @@ export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveM
   return result;
 }
 
-export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResult, home: Club, away: Club) {
+export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResult, home: Club, away: Club, compId?: string) {
   const sides = [
     { club: home, used: result.homeXI, scored: result.homeGoals, conceded: result.awayGoals },
     { club: away, used: result.awayXI, scored: result.awayGoals, conceded: result.homeGoals },
   ];
+  // Clean sheets go to the keeper who started.
+  for (const { used, conceded } of sides) {
+    if (conceded > 0) continue;
+    const keeper = used.map((id) => playerById(game, id)).find((p) => p?.position === 'GK');
+    if (keeper) creditCleanSheet(game, keeper, compId);
+  }
   if (!game.unemployed) updateClubRecords(game, home.id, away.id, result);
   for (const { club, used, scored, conceded } of sides) {
     club.seasonGames = (club.seasonGames ?? 0) + 1;
@@ -242,6 +249,14 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
   }
 }
 
+/** A clean sheet for a keeper: on his record, and towards the competition's Golden Glove. */
+export function creditCleanSheet(game: GameState, keeper: Player, compId?: string) {
+  keeper.seasonStats.cleanSheets = (keeper.seasonStats.cleanSheets ?? 0) + 1;
+  if (!compId) return;
+  const tally = ((game.cleanSheets ??= {})[compId] ??= {});
+  tally[keeper.id] = (tally[keeper.id] ?? 0) + 1;
+}
+
 /** Injuries heal a week at a time (fitness recovers daily: see recoverTo). */
 function weeklyRecovery(game: GameState) {
   for (const id in game.players) {
@@ -267,7 +282,7 @@ export function playWeek(game: GameState): Fixture[] {
   recoverTo(game, game.week * 7 + MATCHDAY);
   const fixtures = fixturesForWeek(game, game.week).filter((f) => !f.result);
   withRng(game, (rng) => {
-    for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId);
+    for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId, { compId: f.divisionId });
   });
   if (!game.unemployed) withRng(game, (rng) => weeklyTraining(game, rng));
   weeklyRecovery(game);
@@ -333,7 +348,7 @@ export function playToSeasonEnd(game: GameState) {
 }
 
 function playKnockout(game: GameState, rng: Rng, divisionId: string, round: PlayoffTie['round'], homeId: string, awayId: string): PlayoffTie {
-  const result = playMatch(game, rng, homeId, awayId, { knockout: true, neutral: round === 'final' });
+  const result = playMatch(game, rng, homeId, awayId, { knockout: true, neutral: round === 'final', compId: divisionId });
   let winnerId: string;
   if (result.homeGoals !== result.awayGoals) winnerId = result.homeGoals > result.awayGoals ? homeId : awayId;
   else winnerId = result.penalties!.home > result.penalties!.away ? homeId : awayId;
@@ -475,6 +490,7 @@ export function startNextSeason(game: GameState) {
   // Loans end with the season; deductions don't carry over.
   returnLoans(game);
   game.deductions = {};
+  game.cleanSheets = {};
   const userLevel = divisionOf(game, game.userClubId).def.level;
   const moves = applyMovements(game, game.lastSummary);
   // A new level has a different going rate for tickets.

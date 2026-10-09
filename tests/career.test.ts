@@ -17,6 +17,29 @@ describe('career totals', () => {
     expect(season.apps).toBeGreaterThan(10);
     startNextSeason(game);
     expect(p.seasonStats.apps).toBe(0);
-    expect(careerTotals(p)).toEqual({ games: before.games + season.apps, goals: before.goals + season.goals, assists: before.assists + season.assists });
+    expect(careerTotals(p)).toMatchObject({ games: before.games + season.apps, goals: before.goals + season.goals, assists: before.assists + season.assists });
+  });
+});
+
+describe('clean sheets and the Golden Glove', () => {
+  it('keepers collect clean sheets; each league, cup and European competition crowns a Golden Glove', () => {
+    const game = testGame('eng', 602, { topFlight: true });
+    const keeper = squadOf(game, game.userClubId).filter((p) => p.position === 'GK').sort((a, b) => b.overall - a.overall)[0];
+    const career = careerTotals(keeper).cleanSheets;
+    expect(career).toBeGreaterThan(0);
+    playToSeasonEnd(game);
+    const s = game.lastSummary!;
+    const top = game.divisions[0].def.id;
+    const glove = s.awards![top].goldenGlove!;
+    expect(glove.value).toBeGreaterThan(5);
+    // The winner has the most clean sheets in the league.
+    expect(Math.max(...Object.values(game.cleanSheets![top]))).toBe(glove.value);
+    expect(Object.keys(s.cupGloves!).length).toBeGreaterThanOrEqual(3);
+    expect(s.cupGloves!.ucl).toBeDefined();
+    const season = keeper.seasonStats.cleanSheets ?? 0;
+    expect(season).toBeGreaterThan(0);
+    startNextSeason(game);
+    expect(careerTotals(keeper).cleanSheets).toBe(career + season);
+    expect(game.cleanSheets).toEqual({});
   });
 });
