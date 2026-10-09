@@ -43,3 +43,25 @@ describe('clean sheets and the Golden Glove', () => {
     expect(game.cleanSheets).toEqual({});
   });
 });
+
+describe('the rating scale tops out at 100', () => {
+  it('unscouted ranges, ratings and potential never pass 100', async () => {
+    const { ratingRange } = await import('../src/engine/transfers/market');
+    const { ratingAt } = await import('../src/engine/players/ratings');
+    const game = testGame('eng', 801, { topFlight: true });
+    const all = [...Object.values(game.players), ...Object.values(game.europe!.players)];
+    for (const p of all) {
+      expect(p.overall).toBeLessThanOrEqual(100);
+      expect(p.potential).toBeLessThanOrEqual(100);
+      const [lo, hi] = ratingRange(p);
+      expect(hi).toBeLessThanOrEqual(100);
+      expect(lo <= p.overall && p.overall <= hi).toBe(true);
+    }
+    // A 97-rated player's range still contains him and stops at 100.
+    const star = { ...all[0], id: 'x0', overall: 97 };
+    expect(ratingRange(star)[1]).toBeLessThanOrEqual(100);
+    // Every attribute at 20 is exactly 100.
+    const maxed = Object.fromEntries(Object.keys(all[0].attributes).map((k) => [k, 20])) as typeof all[0]['attributes'];
+    expect(ratingAt(maxed, 'ST')).toBe(100);
+  });
+});

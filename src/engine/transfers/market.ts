@@ -4,7 +4,7 @@ import { activeChallenge, challengeFeeRule, challengeSigningRule } from '../club
 import { roleOnArrival } from '../players/squad';
 import { pickTeam } from '../match/selection';
 import { generatePlayer, playerName } from '../players/generate';
-import { playerWage, roundMoney } from '../players/ratings';
+import { MAX_RATING, playerWage, roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
 import type { Club, Division, GameState, InboxItem, InboxKind, Player, Position } from '../types';
 import { divisionOf, domesticClubs, newId, squadOf } from '../world';
@@ -91,8 +91,9 @@ function hash(s: string) {
 /** What an unscouted player looks like: a range that contains the truth. */
 export function ratingRange(p: Player): [number, number] {
   const width = 8;
-  const lo = p.overall - (hash(p.id) % (width + 1));
-  return [Math.max(1, lo), Math.max(1, lo) + width];
+  // Kept within 1–100: near the top the range sits under 100 and still contains the truth.
+  const lo = Math.min(MAX_RATING - width, Math.max(1, p.overall - (hash(p.id) % (width + 1))));
+  return [lo, lo + width];
 }
 
 /** Potential as 1–5 stars relative to their current ability. */

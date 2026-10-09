@@ -11,7 +11,7 @@ export const SQUAD_TEMPLATE: Position[] = [
   'AMC', 'AMC', 'ST', 'ST', 'ST',
 ];
 
-const clamp = (n: number, lo = 1, hi = 99) => Math.max(lo, Math.min(hi, Math.round(n)));
+const clamp = (n: number, lo = 1, hi = 100) => Math.max(lo, Math.min(hi, Math.round(n)));
 
 export interface GenerateOptions {
   id: string;
@@ -144,7 +144,7 @@ export function bankSeasonStats(p: Player) {
  * well beyond what normal youngsters can reach.
  */
 export function makeWonderkid(rng: Rng, p: Player): Player {
-  p.potential = Math.max(p.overall + 10, Math.min(97, rng.int(88, 96)));
+  p.potential = Math.min(100, Math.max(p.overall + 10, rng.int(88, 96)));
   p.value = playerValue(p.overall, p.age, p.potential);
   return p;
 }

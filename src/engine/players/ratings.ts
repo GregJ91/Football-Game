@@ -40,6 +40,9 @@ export const POSITION_GROUP: Record<Position, PositionGroup> = {
 export const POSITION_ORDER: Position[] = ['GK', 'DR', 'DC', 'DL', 'DMC', 'MR', 'MC', 'ML', 'AMC', 'ST'];
 
 /** Ability in a position on a 1–100 scale (attributes are 1–20). */
+/** The top of the rating scale: every attribute at 20. */
+export const MAX_RATING = 100;
+
 export function ratingAt(attributes: Attributes, position: Position): number {
   const w = POSITION_WEIGHTS[position];
   let sum = 0;
@@ -49,7 +52,7 @@ export function ratingAt(attributes: Attributes, position: Position): number {
     sum += attributes[k] * w[k]!;
     total += w[k]!;
   }
-  return Math.round((sum / total) * 5);
+  return Math.min(MAX_RATING, Math.round((sum / total) * 5));
 }
 
 export function computeOverall(p: Pick<Player, 'attributes' | 'position'>): number {
@@ -103,14 +106,14 @@ export function playerValue(overall: number, age: number, potential: number): nu
 
 /** Prime-age value above 70: the elite cost serious money (log-linear between these). */
 const ELITE_VALUES: [number, number][] = [
-  [70, 375_000], [74, 2_500_000], [78, 9_000_000], [82, 25_000_000], [86, 50_000_000], [90, 85_000_000], [94, 130_000_000], [99, 180_000_000],
+  [70, 375_000], [74, 2_500_000], [78, 9_000_000], [82, 25_000_000], [86, 50_000_000], [90, 85_000_000], [94, 130_000_000], [100, 200_000_000],
 ];
 
 function baseValue(overall: number): number {
   // Exponential through the leagues…
   if (overall <= 70) return 300 * Math.exp((overall - 40) / 4.2);
   // …then steeper into the elite, easing off at the very top.
-  const o = Math.min(overall, 99);
+  const o = Math.min(overall, MAX_RATING);
   for (let i = 1; i < ELITE_VALUES.length; i++) {
     const [o1, v1] = ELITE_VALUES[i];
     if (o > o1) continue;

@@ -98,7 +98,7 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       const names: string[] = [];
       for (let i = 0; i < intake.count; i++) {
         const p = sign(game, rng, clubId, rng.pick(SQUAD_TEMPLATE), quality - 13 + intake.qualityBonus + rng.normal() * 3, rng.int(16, 18));
-        p.potential = Math.min(99, p.potential + intake.potentialBonus);
+        p.potential = Math.min(100, p.potential + intake.potentialBonus);
         // A top academy now and then produces a real gem.
         if (i === 0 && rng.chance((facilitiesOf(club).youth - 1) * 0.04)) makeWonderkid(rng, p);
         p.contractEnd = game.season + 3;

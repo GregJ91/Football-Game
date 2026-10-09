@@ -54,9 +54,12 @@ function migratePlayer(p: Player) {
     p.overall = computeOverall(p);
     p.potential = Math.max(p.potential, p.overall);
   }
+  // Nothing goes past 100 (older saves could have potential above it).
+  p.overall = Math.min(100, p.overall);
+  p.potential = Math.min(100, p.potential);
 }
 
 /** Bring an older save up to date. */
 export function migratePlayers(game: GameState) {
-  for (const p of Object.values(game.players)) migratePlayer(p);
+  for (const p of [...Object.values(game.players), ...Object.values(game.europe?.players ?? {})]) migratePlayer(p);
 }
