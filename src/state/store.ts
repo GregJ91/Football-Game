@@ -14,7 +14,7 @@ import type { ChallengeId, ClubColours, CountryId, CrestDesign, FacilityKind, Fi
 import { advanceHalfDay, assignScout, matchDay, nextUserMatch, type ScoutResult } from '../engine/calendar';
 import { userCupTies } from '../engine/season/cups';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
-import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
+import { createGame, playerById, squadOf, withRng, type NewGameConfig } from '../engine/world';
 import {
   adjustBudgets as adjustBudgetsEngine, moneyPw, setUnlimitedMoney as setUnlimitedMoneyEngine, topUpUnlimited, wageBudgetProblem,
 } from '../engine/economy/finance';
@@ -217,7 +217,7 @@ export const useGame = create<Store>()((set, get) => {
 
     loanPlayer: (playerId) => {
       const { game } = get();
-      const p = game?.players[playerId];
+      const p = (game ? playerById(game, playerId) : undefined);
       if (!game || !p) return 'No such player.';
       const err = loanIn(game, p);
       if (!err) commit();
@@ -226,7 +226,7 @@ export const useGame = create<Store>()((set, get) => {
 
     sendBackLoan: (playerId) => {
       const { game } = get();
-      const p = game?.players[playerId];
+      const p = (game ? playerById(game, playerId) : undefined);
       if (!game || !p) return;
       endLoan(game, p);
       commit();
@@ -269,7 +269,7 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return 'none-left';
       const club = game.clubs[game.userClubId];
-      const result = assignScout(game, playerId, isKnown(game, club, game.players[playerId]));
+      const result = assignScout(game, playerId, isKnown(game, club, playerById(game, playerId)!));
       commit();
       return result;
     },
@@ -300,7 +300,7 @@ export const useGame = create<Store>()((set, get) => {
     bid: (playerId, fee) => {
       const { game } = get();
       if (!game) return { error: 'No game loaded.' };
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       const problem = cannotBuy(game, p) ?? feeProblem(game, fee);
       if (problem) return { error: problem };
       return bidFor(game, p, fee);
@@ -309,7 +309,7 @@ export const useGame = create<Store>()((set, get) => {
     sign: (playerId, fee, wage, years) => {
       const { game } = get();
       if (!game) return 'No game loaded.';
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       const club = game.clubs[game.userClubId];
       const problem = cannotBuy(game, p) ?? (fee ? feeProblem(game, fee) : null) ?? wageBudgetProblem(game, club, wage);
       if (problem) return problem;
@@ -323,14 +323,14 @@ export const useGame = create<Store>()((set, get) => {
     offerLowerWage: (playerId) => {
       const { game } = get();
       if (!game) return false;
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       return withRng(game, (rng) => acceptsLowerWage(game, rng, game.clubs[game.userClubId], p));
     },
 
     toggleListed: (playerId) => {
       const { game } = get();
       if (!game) return;
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       p.listed = !p.listed;
       commit();
     },
@@ -338,7 +338,7 @@ export const useGame = create<Store>()((set, get) => {
     release: (playerId) => {
       const { game } = get();
       if (!game) return 'No game loaded.';
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       const problem = cannotRelease(game, p);
       if (problem) return problem;
       releasePlayer(game, p);
@@ -349,7 +349,7 @@ export const useGame = create<Store>()((set, get) => {
     renew: (playerId, wage, years) => {
       const { game } = get();
       if (!game) return 'No game loaded.';
-      const p = game.players[playerId];
+      const p = playerById(game, playerId)!;
       const problem = wageBudgetProblem(game, game.clubs[game.userClubId], wage, p.wage);
       if (problem) return problem;
       renewContract(game, p, wage, years);
@@ -508,7 +508,7 @@ export const useGame = create<Store>()((set, get) => {
 
     setPlayerRole: (playerId, role) => {
       const { game } = get();
-      const p = game?.players[playerId];
+      const p = (game ? playerById(game, playerId) : undefined);
       if (!game || !p || p.clubId !== game.userClubId) return;
       setRole(p, role);
       commit();

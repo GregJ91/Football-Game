@@ -8,7 +8,7 @@ import {
   releaseCost, renewalDemand, wageDemand, type Interest,
 } from '../../engine/transfers/market';
 import { GOALKEEPING, MENTAL, PHYSICAL, TECHNICAL, type AttributeKey, type Player } from '../../engine/types';
-import { divisionOf } from '../../engine/world';
+import { leagueNameOf } from '../../engine/world';
 import { ROLES, ROLE_LABEL, ROLE_SHARE, happinessText, moodOf, roleOf } from '../../engine/players/squad';
 import { cannotLoan } from '../../engine/transfers/loans';
 import { useGame } from '../../state/store';
@@ -76,7 +76,6 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const known = isKnown(game, club, p);
   const [lo, hi] = ratingRange(p);
   const currentClub = p.clubId ? game.clubs[p.clubId] : null;
-  const level = currentClub ? divisionOf(game, currentClub.id).def : null;
   const interest = own ? null : interestIn(game, club, p);
   const budgets = budgetsOf(game, club);
   const bill = wageBill(game, club);
@@ -130,7 +129,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
           <div className="grow">
             <strong>{playerName(p)}</strong>
             <small>
-              {positionsLabel(p)} · {p.age} yrs · {currentClub ? `${currentClub.name} (${level!.name})` : 'Free agent'}
+              {positionsLabel(p)} · {p.age} yrs · {currentClub ? `${currentClub.name} (${leagueNameOf(game, currentClub.id)})` : 'Free agent'}
             </small>
           </div>
           <button type="button" className="link-btn" onClick={onClose}>Close</button>

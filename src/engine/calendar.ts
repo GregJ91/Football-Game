@@ -7,7 +7,7 @@ import { playWeek } from './season/season';
 import { addInbox, askingPrice, interestIn, potentialStars } from './transfers/market';
 import { cupName, cupRoundsToday, isCupTie, playDueCupRounds, roundOf, userCupTies, userTieToday } from './season/cups';
 import type { Fixture, GameState, Player } from './types';
-import { divisionOf, squadOf, withRng } from './world';
+import { leagueNameOf, playerById, squadOf, withRng } from './world';
 
 /** Days run Sunday (0) to Saturday (6); league matches are on Saturdays. */
 export const MATCHDAY = 6;
@@ -207,10 +207,10 @@ export function deliverScoutReports(game: GameState, all = false) {
   if (!due.length) return;
   game.scoutAssignments = (game.scoutAssignments ?? []).filter((a) => !due.includes(a));
   for (const a of due) {
-    const p = game.players[a.playerId];
+    const p = playerById(game, a.playerId);
     if (!p) continue;
     club.scouted = { ...club.scouted, [p.id]: true };
-    const where = p.clubId ? `${game.clubs[p.clubId].name} (${divisionOf(game, p.clubId).def.name})` : 'a free agent';
+    const where = p.clubId ? `${game.clubs[p.clubId].name} (${leagueNameOf(game, p.clubId)})` : 'a free agent';
     const price = p.clubId ? ` Expect to pay around £${Math.round(askingPrice(game, p) / 1000)}k.` : '';
     addInbox(
       game,

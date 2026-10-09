@@ -3,6 +3,7 @@ import { KIT_COLOURS, clubSuffixes, townNameParts } from '../../data/names';
 import { SQUAD_TEMPLATE, generatePlayer } from '../players/generate';
 import { Rng } from '../rng';
 import { randomAge, stillToGrow } from '../world';
+import { developPlayer } from '../players/development';
 import type { Club, GameState, Player } from '../types';
 
 /** A made-up club name in the nation's style, plus the town it's named after. */
@@ -79,9 +80,20 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
+/** One foreign player, named in his club's style. */
+function makePlayer(game: GameState, rng: Rng, club: Club, id: string, position: Player['position'], quality: number, age?: number): Player {
+  const names = club.foreign!.style === 'british' ? null : PLAYER_NAMES[club.foreign!.style as keyof typeof PLAYER_NAMES];
+  const p = generatePlayer(rng, { id, position, quality, clubId: club.id, season: game.season, age });
+  if (names) {
+    p.firstName = rng.pick(names.first);
+    p.lastName = rng.pick(names.last);
+  }
+  return p;
+}
+
 /**
- * A foreign club's squad, made the first time it's needed this season (the
- * same club always gets the same players within a season).
+ * A foreign club's squad, made the first time it's needed and kept from then
+ * on (it ages and develops each summer like everyone else's).
  */
 export function foreignSquad(game: GameState, clubId: string): Player[] {
   const eu = game.europe;
@@ -89,8 +101,7 @@ export function foreignSquad(game: GameState, clubId: string): Player[] {
   if (!eu || !club.foreign) return [];
   let ids = eu.squads[clubId];
   if (!ids) {
-    const rng = new Rng(hash(`${game.seed}:${clubId}:${game.season}`));
-    const names = club.foreign.style === 'british' ? null : PLAYER_NAMES[club.foreign.style as keyof typeof PLAYER_NAMES];
+    const rng = new Rng(hash(`${game.seed}:${clubId}`));
     // Stronger clubs have more stars; the best eleven come out close to the club's strength.
     const strength = club.foreign.strength;
     const stars = strength >= 76 ? 3 : strength >= 70 ? 2 : 1;
@@ -99,22 +110,59 @@ export function foreignSquad(game: GameState, clubId: string): Player[] {
     ids = SQUAD_TEMPLATE.map((position, i) => {
       const star = starSlots.has(i);
       const age = star ? rng.int(23, 29) : randomAge(rng);
-      const p = generatePlayer(rng, {
-        id: `${clubId}p${i}`,
-        position,
-        quality: star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3,
-        age,
-        clubId,
-        season: game.season,
-      });
-      if (names) {
-        p.firstName = rng.pick(names.first);
-        p.lastName = rng.pick(names.last);
-      }
+      const p = makePlayer(game, rng, club, `${clubId}p${i}`, position, star ? quality + 6 + rng.next() * 7 : quality - stillToGrow(age) + rng.normal() * 3, age);
       eu.players[p.id] = p;
       return p.id;
     });
     eu.squads[clubId] = ids;
   }
-  return ids.map((id) => eu.players[id]);
+  return ids.map((id) => eu.players[id]).filter(Boolean);
+}
+
+/** Every foreign club has its squad (so their players can be found and bought). */
+export function ensureForeignSquads(game: GameState) {
+  for (const id of game.europe?.foreignIds ?? []) foreignSquad(game, id);
+}
+
+/**
+ * Summer for foreign squads: everyone ages and develops, veterans retire and
+ * youngsters come through, and contracts roll on.
+ */
+export function rolloverForeignSquads(game: GameState, rng: Rng) {
+  const eu = game.europe;
+  if (!eu) return;
+  for (const clubId of eu.foreignIds) {
+    const club = game.clubs[clubId];
+    const ids = eu.squads[clubId];
+    if (!ids) continue;
+    const keep: string[] = [];
+    for (const id of ids) {
+      const p = eu.players[id];
+      if (!p) continue;
+      developPlayer(rng, p);
+      p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
+      p.fitness = 100;
+      p.injuryWeeks = 0;
+      if (p.contractEnd <= game.season) p.contractEnd = game.season + rng.int(1, 4);
+      if (p.age >= 35 || (p.age >= 33 && rng.chance(0.3))) {
+        delete eu.players[id];
+        // A youngster from the academy takes his place.
+        const young = makePlayer(game, rng, club, `${clubId}y${game.nextId++}`, p.position, club.foreign!.strength - 11 + rng.normal() * 3, rng.int(17, 19));
+        eu.players[young.id] = young;
+        keep.push(young.id);
+      } else keep.push(id);
+    }
+    // Replace anyone sold to the user, position for position.
+    const need = [...SQUAD_TEMPLATE];
+    for (const id of keep) {
+      const i = need.indexOf(eu.players[id].position);
+      if (i >= 0) need.splice(i, 1);
+    }
+    for (const position of need.slice(0, Math.max(0, SQUAD_TEMPLATE.length - keep.length))) {
+      const p = makePlayer(game, rng, club, `${clubId}y${game.nextId++}`, position, club.foreign!.strength - 3 + rng.normal() * 3);
+      eu.players[p.id] = p;
+      keep.push(p.id);
+    }
+    eu.squads[clubId] = keep;
+  }
 }

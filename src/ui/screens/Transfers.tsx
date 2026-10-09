@@ -5,7 +5,7 @@ import {
   askingPrice, interestIn, isKnown, openInboxItems, ratingRange, transferWindow, wageDemand, type Interest,
 } from '../../engine/transfers/market';
 import type { Player, Position } from '../../engine/types';
-import { divisionOf, squadOf } from '../../engine/world';
+import { leagueNameOf, squadOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { activeChallenge, challengeSigningRule } from '../../engine/club/challenge';
 import { BidCard } from '../components/BidCard';
@@ -64,9 +64,11 @@ export function Transfers() {
     const q = name.trim().toLowerCase();
     const levelOf = new Map(game.divisions.flatMap((d) => d.clubIds.map((id) => [id, d] as const)));
     const out: { p: Player; known: boolean; est: number; fee: number }[] = [];
-    for (const p of Object.values(game.players)) {
+    // Everyone in the pyramid, free agents, and the squads of clubs abroad.
+    for (const p of [...Object.values(game.players), ...Object.values(game.europe?.players ?? {})]) {
       if (p.clubId === club.id) continue;
-      if (division === 'free' ? p.clubId : division !== 'any' && levelOf.get(p.clubId ?? '')?.def.id !== division) continue;
+      const abroad = !!p.clubId && !!game.clubs[p.clubId].foreign;
+      if (division === 'free' ? p.clubId : division === 'abroad' ? !abroad : division !== 'any' && levelOf.get(p.clubId ?? '')?.def.id !== division) continue;
       if (position !== 'ANY' && !p.positions.includes(position)) continue;
       if (!ageTest(p.age)) continue;
       if (maxValue && p.value > maxValue) continue;
@@ -177,6 +179,7 @@ export function Transfers() {
               <select value={division} onChange={(e) => filter(setDivision)(e.target.value)}>
                 <option value="any">All divisions</option>
                 {game.divisions.map((d) => <option key={d.def.id} value={d.def.id}>{d.def.name}</option>)}
+                <option value="abroad">Abroad</option>
                 <option value="free">Free agents</option>
               </select>
             </label>
@@ -212,7 +215,7 @@ export function Transfers() {
                     <span className="who">
                       <strong>{p.firstName} {p.lastName}{p.listed || p.transferRequest ? <small className="warn"> Listed</small> : null}</strong>
                       <small>
-                        {p.age} yrs · {from ? `${from.name} · ${divisionOf(game, from.id).def.name}` : 'Free agent'}
+                        {p.age} yrs · {from ? `${from.name} · ${leagueNameOf(game, from.id)}` : 'Free agent'}
                       </small>
                     </span>
                     <span className="role">

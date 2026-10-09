@@ -23,6 +23,7 @@ export function cannotLoan(game: GameState, p: Player): string | null {
   if (!p.clubId) return 'Free agents sign permanently, not on loan.';
   if (p.clubId === club.id) return 'Already at your club.';
   if (p.loanFrom) return "He's already out on loan.";
+  if (game.clubs[p.clubId].foreign) return "Clubs abroad don't loan players to us.";
   if (!transferWindow(game).open) return 'Loans can only be agreed while the transfer window is open.';
   if (club.playerIds.length >= SQUAD_MAX) return `Your squad is full (${SQUAD_MAX}).`;
   if (loansIn(game).length >= MAX_LOANS) return `You can only have ${MAX_LOANS} players in on loan at once.`;

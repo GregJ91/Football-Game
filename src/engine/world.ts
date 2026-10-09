@@ -291,6 +291,12 @@ export function divisionOf(game: GameState, clubId: string): Division {
   return d;
 }
 
+/** Where a club plays: its division, or its country for a club abroad. */
+export function leagueNameOf(game: GameState, clubId: string): string {
+  const club = game.clubs[clubId];
+  return club.foreign ? club.foreign.nationName : divisionOf(game, clubId).def.name;
+}
+
 export function squadOf(game: GameState, clubId: string): Player[] {
   const club = game.clubs[clubId];
   if (club.foreign) return foreignSquad(game, clubId);

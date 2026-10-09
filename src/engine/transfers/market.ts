@@ -78,7 +78,7 @@ export function transferWindow(game: GameState): WindowStatus {
 
 export function isKnown(game: GameState, club: Club, p: Player): boolean {
   if (p.clubId === club.id || club.scouted?.[p.id]) return true;
-  if (!p.clubId) return false;
+  if (!p.clubId || game.clubs[p.clubId].foreign) return false;
   return divisionOf(game, p.clubId) === divisionOf(game, club.id);
 }
 
@@ -105,8 +105,17 @@ export function potentialStars(p: Player): number {
 
 export type Interest = 'keen' | 'open' | 'reluctant' | 'no';
 
-function levelOf(game: GameState, clubId: string) {
-  return divisionOf(game, clubId).def.level;
+/**
+ * A club's level in the pyramid. A foreign club counts as the level its
+ * strength matches (an elite one as level 0, above the top flight).
+ */
+export function levelOf(game: GameState, clubId: string): number {
+  const club = game.clubs[clubId];
+  if (!club.foreign) return divisionOf(game, clubId).def.level;
+  const s = club.foreign.strength - (game.europe?.shift ?? 0);
+  const divs = [...game.divisions].sort((a, b) => a.def.level - b.def.level);
+  if (s > divs[0].def.quality + 6) return 0;
+  return divs.reduce((best, d) => (Math.abs(d.def.quality + 1.5 - s) < Math.abs(best.def.quality + 1.5 - s) ? d : best)).def.level;
 }
 
 /** How willing a player is to join `buyer`. */
@@ -211,6 +220,13 @@ export function acceptsLowerWage(game: GameState, rng: Rng, buyer: Club, p: Play
 function removeFromClub(game: GameState, p: Player) {
   if (!p.clubId) return;
   const club = game.clubs[p.clubId];
+  if (club.foreign && game.europe) {
+    // Leaving a foreign club: he joins the main player database.
+    game.europe.squads[club.id] = (game.europe.squads[club.id] ?? []).filter((id) => id !== p.id);
+    delete game.europe.players[p.id];
+    game.players[p.id] = p;
+    return;
+  }
   club.playerIds = club.playerIds.filter((id) => id !== p.id);
   if (club.lineup) club.lineup = club.lineup.map((id) => (id === p.id ? null : id));
 }

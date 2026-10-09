@@ -9,7 +9,7 @@ import { addInbox } from '../transfers/market';
 import { pickTeam } from '../match/selection';
 import { attr100 } from '../players/ratings';
 import { newId, squadOf, withRng } from '../world';
-import { createForeignClubs, setForeignStrengths } from './foreign';
+import { createForeignClubs, ensureForeignSquads, rolloverForeignSquads, setForeignStrengths } from './foreign';
 import { applyMatchToPlayers, teamSheet, xiStrength } from './season';
 import { buildTable } from './table';
 
@@ -132,12 +132,12 @@ export function setupEurope(game: GameState) {
   const firstSeason = eu.comps.length === 0;
   eu.entries = eu.next ?? (game.lastSummary ? placesFromSeason(game, game.lastSummary) : initialPlaces(game));
   eu.next = undefined;
-  eu.players = {};
-  eu.squads = {};
   eu.comps = EURO_COMPS.map((def) => ({ id: def.id, season: game.season, rounds: planRounds(game, def) }));
   withRng(game, (rng) => {
     eu.shift = ratingShift(game);
     setForeignStrengths(game, rng, eu.shift, !firstSeason);
+    if (!firstSeason) rolloverForeignSquads(game, rng);
+    ensureForeignSquads(game);
     drawPlayoffs(game, rng);
   });
   const mine = eu.entries.find((e) => e.clubId === game.userClubId);
