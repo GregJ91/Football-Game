@@ -5,7 +5,7 @@ import { pickTeam } from '../match/selection';
 import { generatePlayer, playerName } from '../players/generate';
 import { playerWage, roundMoney } from '../players/ratings';
 import type { Rng } from '../rng';
-import type { Club, GameState, InboxItem, InboxKind, Player, Position } from '../types';
+import type { Club, Division, GameState, InboxItem, InboxKind, Player, Position } from '../types';
 import { divisionOf, domesticClubs, newId, squadOf } from '../world';
 
 export const SQUAD_MAX = 30;
@@ -13,7 +13,7 @@ export const SQUAD_MIN = 16;
 export const SCOUT_REPORTS_PER_WEEK = 5;
 const SUMMER_WEEKS = 6;
 const JANUARY_WEEKS = 4;
-const FREE_AGENT_CAP = 250;
+const FREE_AGENT_CAP = 100;
 
 // ---------------------------------------------------------------- inbox
 
@@ -312,6 +312,37 @@ export function handleContractExpiries(game: GameState, rng: Rng) {
   if (leaving.length) addInbox(game, 'info', `Out of contract and gone: ${leaving.join(', ')}.`, { category: 'transfers', subject: 'Contracts expired' });
 }
 
+/**
+ * Every summer, bigger clubs poach AI players who are clearly too good for
+ * their level: anyone well above his division's standard (and, at a club
+ * that's just been relegated, anyone above the new level) is sold to a club
+ * in the division above. Without this, talent pools in the lower leagues
+ * and the gap between divisions shrinks season by season.
+ */
+export function sellUpStars(game: GameState, rng: Rng, moves: Map<string, { from: Division; to: Division }>) {
+  for (const div of game.divisions) {
+    const above = game.divisions.filter((d) => d.def.level === div.def.level - 1);
+    if (!above.length) continue;
+    for (const clubId of div.clubIds) {
+      const club = game.clubs[clubId];
+      if (club.isUser) continue;
+      const move = moves.get(clubId);
+      const relegated = move && move.to.def.level > move.from.def.level;
+      const limit = div.def.quality + (relegated ? 5 : 8);
+      const stars = squadOf(game, clubId)
+        .filter((p) => p.overall > limit && !p.loanFrom)
+        .sort((a, b) => b.overall - a.overall)
+        .slice(0, relegated ? 5 : 2);
+      for (const p of stars) {
+        const buyers = above.flatMap((d) => d.clubIds).filter((id) => !game.clubs[id].isUser);
+        if (!buyers.length) break;
+        const buyer = game.clubs[rng.pick(buyers)];
+        completeTransfer(game, p, buyer.id, p.value, fairWage(game, buyer, p), rng.int(2, 4));
+      }
+    }
+  }
+}
+
 export function expiringUserContracts(game: GameState): Player[] {
   return squadOf(game, game.userClubId).filter((p) => p.contractEnd <= game.season);
 }
@@ -498,6 +529,8 @@ export function freeAgents(game: GameState): Player[] {
 
 /** Keep the free agent pool a sensible size and spread across levels. */
 export function maintainFreeAgents(game: GameState, rng: Rng) {
+  // Veterans nobody wants hang up their boots.
+  for (const p of freeAgents(game)) if (p.age >= 33) delete game.players[p.id];
   let pool = freeAgents(game);
   if (pool.length > FREE_AGENT_CAP) {
     pool.sort((a, b) => a.overall - b.overall);

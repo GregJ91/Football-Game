@@ -14,7 +14,7 @@ import { rolloverPlayers } from '../players/development';
 import { attr100 } from '../players/ratings';
 import { assignRoles, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
 import {
-  SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
+  SCOUT_REPORTS_PER_WEEK, addInbox, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
 import { Rng } from '../rng';
 import { isEuroId } from '../../data/europe';
@@ -449,6 +449,7 @@ export function startNextSeason(game: GameState) {
   if (divisionOf(game, game.userClubId).def.level !== userLevel) game.clubs[game.userClubId].ticketPrice = undefined;
   withRng(game, (rng) => {
     handleContractExpiries(game, rng);
+    sellUpStars(game, rng, moves);
     rolloverPlayers(game, rng, new Set(moves.keys()));
     trimAiSquads(game);
     maintainFreeAgents(game, rng);

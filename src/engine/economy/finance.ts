@@ -82,7 +82,22 @@ export function weeklyFinances(game: GameState) {
     const l = ledgerOf(club);
     l.tv += tv;
     l.wages += wages;
+    if (!club.isUser) reinvest(game, club);
   }
+}
+
+/**
+ * AI clubs don't sit on cash: above a reserve of about half a season's
+ * income they spend a little of the excess each week on the club (staff,
+ * facilities, the academy), so the rich don't get endlessly richer.
+ */
+function reinvest(game: GameState, club: Club) {
+  const reserve = weeklyIncomeEstimate(game, club) * 26;
+  const excess = club.balance - reserve;
+  if (excess <= 0) return;
+  const spend = Math.round(excess * 0.02);
+  club.balance -= spend;
+  ledgerOf(club).other -= spend;
 }
 
 export function resetLedgers(game: GameState) {
