@@ -203,3 +203,32 @@ export function playingTimeCheck(game: GameState) {
     });
   }
 }
+
+// ---------------------------------------------------------------- injuries
+
+const INJURIES: [number, string[]][] = [
+  [1, ['Knock', 'Dead leg', 'Bruised ankle', 'Tight hamstring']],
+  [3, ['Hamstring strain', 'Ankle sprain', 'Calf strain', 'Groin strain', 'Thigh strain']],
+  [6, ['Torn hamstring', 'Knee ligament strain', 'Damaged ankle ligaments', 'Hip flexor tear']],
+  [99, ['Broken foot', 'Torn knee ligaments', 'Fractured leg', 'Achilles injury']],
+];
+
+/** A name for an injury of this length. */
+export function injuryName(rng: { pick<T>(a: readonly T[]): T }, weeks: number): string {
+  return rng.pick(INJURIES.find(([max]) => weeks <= max)![1]);
+}
+
+/** Note an injury to one of the user's players in the club's medical log. */
+export function logInjury(game: GameState, p: Player, where: string) {
+  const club = game.clubs[game.userClubId];
+  if (p.clubId !== club.id) return;
+  club.injuryLog = [
+    { playerId: p.id, name: playerName(p), injury: p.injuryName ?? 'Injury', weeks: p.injuryWeeks, season: game.season, week: game.week, day: game.day ?? 0, where },
+    ...(club.injuryLog ?? []).filter((r) => r.season === game.season),
+  ].slice(0, 40);
+}
+
+/** Days until a player is back to full fitness, at his daily rate of recovery. */
+export function daysToFull(p: Player): number {
+  return Math.ceil(Math.max(0, 100 - p.fitness) / dailyRecovery(p));
+}

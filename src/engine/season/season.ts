@@ -14,7 +14,7 @@ import { injuryFactor } from '../club/facilities';
 import { checkGrading } from '../club/stadium';
 import { rolloverPlayers } from '../players/development';
 import { attr100 } from '../players/ratings';
-import { assignRoles, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
+import { assignRoles, injuryName, logInjury, playingTimeCheck, recoverTo, restTired, withBench } from '../players/squad';
 import {
   addInbox, sellAbroad, sellUpStars, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
 } from '../transfers/market';
@@ -227,9 +227,11 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
     else if (e.type === 'injury') {
       const club = p.clubId ? game.clubs[p.clubId] : null;
       p.injuryWeeks = Math.max(1, Math.round(rng.int(2, 7) * (club ? injuryFactor(club) : 1)));
+      p.injuryName = injuryName(rng, p.injuryWeeks);
       if (club?.isUser) {
         const opp = club.id === home.id ? away : home;
-        addInbox(game, 'info', `${p.firstName} ${p.lastName} was injured against ${opp.name} and will be out for about ${p.injuryWeeks} weeks.`, {
+        logInjury(game, p, `v ${opp.name}`);
+        addInbox(game, 'info', `${p.firstName} ${p.lastName} was injured against ${opp.name} (${p.injuryName.toLowerCase()}) and will be out for about ${p.injuryWeeks} weeks.`, {
           category: 'medical',
           subject: `${p.lastName} injured`,
         });
@@ -242,7 +244,10 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
 function weeklyRecovery(game: GameState) {
   for (const id in game.players) {
     const p = game.players[id];
-    if (p.injuryWeeks > 0) p.injuryWeeks--;
+    if (p.injuryWeeks > 0) {
+      p.injuryWeeks--;
+      if (!p.injuryWeeks) p.injuryName = undefined;
+    }
   }
 }
 

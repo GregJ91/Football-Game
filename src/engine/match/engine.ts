@@ -14,7 +14,7 @@ export const ENGINE = {
   goalExp: 0.5,
   yellowPerMinute: 0.019,
   redPerMinute: 0.0006,
-  injuryPerMinute: 0.0011,
+  injuryPerMinute: 0.0015,
   maxSubs: 5,
   redCardPenalty: 0.88,
   /** Caps how lopsided a mismatch can get (cup ties across levels). */

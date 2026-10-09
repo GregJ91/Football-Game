@@ -145,3 +145,28 @@ describe('squad roles and happiness', () => {
     expect(key.roleSetByUser && backup.roleSetByUser).toBe(true);
   });
 });
+
+describe('medical', () => {
+  it('injuries have names, are logged for your club and clear when healed', async () => {
+    const { playWeek } = await import('../src/engine/season/season');
+    const { daysToFull } = await import('../src/engine/players/squad');
+    const game = testGame('eng', 172, { topFlight: true });
+    for (let i = 0; i < 20; i++) playWeek(game);
+    const club = userClub(game);
+    const log = club.injuryLog ?? [];
+    expect(log.length).toBeGreaterThan(0);
+    for (const r of log) {
+      expect(r.injury.length).toBeGreaterThan(2);
+      expect(r.weeks).toBeGreaterThan(0);
+    }
+    for (const p of squadOf(game, club.id)) {
+      if (p.injuryWeeks > 0) expect(p.injuryName).toBeDefined();
+      else expect(p.injuryName).toBeUndefined();
+    }
+    const p = squadOf(game, club.id)[0];
+    p.fitness = 70;
+    expect(daysToFull(p)).toBeGreaterThan(5);
+    p.fitness = 100;
+    expect(daysToFull(p)).toBe(0);
+  });
+});

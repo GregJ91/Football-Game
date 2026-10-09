@@ -1,6 +1,6 @@
 import { injuryFactor } from './club/facilities';
 import { physioFactor, scoutDays } from './club/staff';
-import { recoverTo } from './players/squad';
+import { injuryName, logInjury, recoverTo } from './players/squad';
 import { playerName } from './players/generate';
 import type { Rng } from './rng';
 import { playWeek } from './season/season';
@@ -136,7 +136,9 @@ function trainingKnock(game: GameState, rng: Rng) {
   if (!fit.length) return;
   const p = rng.pick(fit);
   p.injuryWeeks = Math.max(1, Math.round(rng.int(1, 3) * injuryFactor(club)));
-  addInbox(game, 'info', `${playerName(p)} picked up a knock in training and will miss about ${p.injuryWeeks} week${p.injuryWeeks === 1 ? '' : 's'}.`, {
+  p.injuryName = injuryName(rng, p.injuryWeeks);
+  logInjury(game, p, 'Training');
+  addInbox(game, 'info', `${playerName(p)} picked up an injury in training (${p.injuryName.toLowerCase()}) and will miss about ${p.injuryWeeks} week${p.injuryWeeks === 1 ? '' : 's'}.`, {
     category: 'medical',
     subject: `${p.lastName} injured in training`,
   });

@@ -84,6 +84,7 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Hard:** less money and an impatient board that can sack you. Below 20 confidence you get a final warning; if it hasn't recovered a month later, or by the end of the season, you're out (and at once if it hits 8). New managers get their first season.
   - **The board** checks your league position against its target every month, and dislikes debt.
   - **Sacked:** you're out of work and the world plays on. Struggling clubs at your level or a step or two down get in touch (two straight away, more as the weeks pass, each open for four weeks). Wait a week, wait for an offer, or accept one and take over that club's squad, ground and finances with a new board. Your career record carries across clubs.
+- **Medical report** (Squad → Medical): injured players with the injury and expected return date, suspensions, everyone's fitness with days until fully fit, a "rest tired players" button, and a log of this season's injuries (matches and training).
 - **Squad depth:**
   - **Fitness:** recovers a little every day (3–5% depending on stamina). One game a week leaves time to recover fully; two a week wears a side down unless you rotate. Tired players show in orange. Auto-pick leaves out badly tired players.
   - **Rotation:** "Rest tired players" on the Tactics and pre-match screens, and an assistant option to rest them in simmed matches.

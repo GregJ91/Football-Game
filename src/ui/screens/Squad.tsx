@@ -6,11 +6,12 @@ import type { Player } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { PlayerSheet } from '../components/PlayerSheet';
+import { MedicalReport } from '../components/MedicalReport';
 import { moneyPw } from '../../engine/economy/finance';
 import { ROLE_LABEL, TIRED, moodOf, roleOf } from '../../engine/players/squad';
 
 function status(p: Player): string | null {
-  if (p.injuryWeeks > 0) return `Injured ${p.injuryWeeks}w`;
+  if (p.injuryWeeks > 0) return `${p.injuryName ?? 'Injured'} ${p.injuryWeeks}w`;
   if (p.suspendedMatches > 0) return 'Suspended';
   return null;
 }
@@ -20,6 +21,7 @@ export function Squad() {
   useGame((s) => s.rev);
   const go = useGame((s) => s.go);
   const [selected, setSelected] = useState<Player | null>(null);
+  const [tab, setTab] = useState<'players' | 'medical'>('players');
   const club = userClub(game);
   const squad = squadOf(game, club.id).sort(
     (a, b) => POSITION_ORDER.indexOf(a.position) - POSITION_ORDER.indexOf(b.position) || b.overall - a.overall,
@@ -32,7 +34,16 @@ export function Squad() {
     <main className="screen squad">
       <header className="screen-head">
         <h1>Squad</h1>
+        <div className="segmented" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
+          <button type="button" role="tab" aria-selected={tab === 'medical'} onClick={() => setTab('medical')}>
+            Medical{squad.some((p) => p.injuryWeeks > 0) ? ` (${squad.filter((p) => p.injuryWeeks > 0).length})` : ''}
+          </button>
+        </div>
       </header>
+
+      {tab === 'medical' && <MedicalReport onOpen={setSelected} />}
+      {tab === 'players' && (<>
 
       <button type="button" className="card link-card" onClick={() => go('tactics')}>
         <span>
@@ -68,6 +79,8 @@ export function Squad() {
           );
         })}
       </ul>
+
+      </>)}
 
       {selected && <PlayerSheet player={selected} onClose={() => setSelected(null)} />}
     </main>

@@ -39,6 +39,8 @@ export interface Player {
   fitness: number; // 0–100
   form: number; // rolling match rating, 1–10
   injuryWeeks: number;
+  /** What the current injury is, e.g. "Hamstring strain". */
+  injuryName?: string;
   suspendedMatches: number;
   ambition: number; // 1–20
   loyalty: number; // 1–20
@@ -120,6 +122,8 @@ export interface Club {
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
+  /** This season's injuries at the user's club, newest first. */
+  injuryLog?: InjuryRecord[];
   /** All-time appearances and goals for the club (user's club). */
   legends?: Record<string, Legend>;
   records?: ClubRecords;
@@ -541,6 +545,18 @@ export interface Legend {
   from: number;
   to: number;
   awards?: string[];
+}
+
+export interface InjuryRecord {
+  playerId: string;
+  name: string;
+  injury: string;
+  weeks: number;
+  season: number;
+  week: number;
+  day: number;
+  /** e.g. "v Bromwood Town" or "Training". */
+  where: string;
 }
 
 export interface ClubRecords {

@@ -545,3 +545,21 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .month-block { padding: 6px 0; border-bottom: 1px solid rgba(44, 66, 52, 0.5); }
 .month-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 2px; }
 .segmented button { padding: 0 2px; }
+
+/* Medical */
+.medical { display: flex; flex-direction: column; gap: 12px; }
+.medical-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; }
+.med-stat b { display: block; font-family: var(--display); font-size: 26px; }
+.med-stat small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.med-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.med-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 0; background: none; border: none; border-bottom: 1px solid rgba(44, 66, 52, 0.5); color: inherit; font: inherit; text-align: left; }
+.med-row .pos { width: 44px; flex: none; font-size: 12px; font-weight: 700; }
+.med-row .grow { min-width: 0; }
+.med-row strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.med-fit { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.med-fit b { font-family: var(--display); font-size: 18px; }
+.fit-bar { display: block; height: 6px; border-radius: 3px; background: var(--panel-2); margin-top: 6px; overflow: hidden; }
+.fit-bar i { display: block; height: 100%; background: var(--good); }
+.fit-bar.mid i { background: var(--accent); }
+.fit-bar.low i { background: var(--warn); }
+.med-log { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(44, 66, 52, 0.5); }

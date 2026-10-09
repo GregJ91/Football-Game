@@ -72,6 +72,7 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
       p.fitness = 100;
       p.injuryWeeks = 0;
+      p.injuryName = undefined;
       p.suspendedMatches = 0;
       p.morale = Math.round((p.morale + 70) / 2);
       if (shouldRetire(rng, p)) removePlayer(game, p);
