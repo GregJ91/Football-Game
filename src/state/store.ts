@@ -5,17 +5,20 @@ import {
 import {
   advanceToUserMatch, completeUserMatch, playWeek, startNextSeason, startUserMatch, userFixtureNext,
 } from '../engine/season/season';
-import type { Fixture, GameState, Tactics } from '../engine/types';
+import type { FacilityKind, Fixture, GameState, Tactics } from '../engine/types';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
 import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
 import { adjustBudgets as adjustBudgetsEngine, moneyPw, wageBudgetProblem } from '../engine/economy/finance';
+import { chooseSponsor, repayLoan, takeLoan } from '../engine/club/chairman';
+import { startFacilityUpgrade } from '../engine/club/facilities';
+import { startStadiumWork, type WorkOption } from '../engine/club/stadium';
 import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
   releasePlayer, renewContract, scoutPlayer, type BidAction, type BidResponse,
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'transfers' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;
@@ -58,6 +61,14 @@ interface Store {
   renew: (playerId: string, wage: number, years: number) => string | null;
   answerBid: (itemId: string, action: BidAction) => string;
   adjustBudgets: (wageDelta: number) => void;
+
+  // Chairman decisions; each returns a problem, or null when done.
+  buildStadium: (opt: WorkOption) => string | null;
+  upgradeFacility: (kind: FacilityKind) => string | null;
+  setTicketPrice: (price: number) => void;
+  pickSponsor: (index: number) => void;
+  borrow: (amount: number) => string | null;
+  repay: () => string | null;
   setAssistantTactics: (on: boolean) => void;
 
   openPreMatch: () => void;
@@ -237,6 +248,53 @@ export const useGame = create<Store>()((set, get) => {
       if (!game) return;
       adjustBudgetsEngine(game, game.clubs[game.userClubId], wageDelta);
       commit();
+    },
+
+    buildStadium: (opt) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = startStadiumWork(game.clubs[game.userClubId], opt);
+      if (!err) addInbox(game, 'info', `Work has started: ${opt.label.toLowerCase()} (${opt.weeks} weeks).`);
+      commit();
+      return err;
+    },
+
+    upgradeFacility: (kind) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = startFacilityUpgrade(game, game.clubs[game.userClubId], kind);
+      commit();
+      return err;
+    },
+
+    setTicketPrice: (price) => {
+      const { game } = get();
+      if (!game) return;
+      game.clubs[game.userClubId].ticketPrice = Math.max(1, Math.round(price));
+      commit();
+    },
+
+    pickSponsor: (index) => {
+      const { game } = get();
+      if (!game) return;
+      chooseSponsor(game, index);
+      commit();
+    },
+
+    borrow: (amount) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = takeLoan(game, amount);
+      commit();
+      return err;
+    },
+
+    repay: () => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = repayLoan(game);
+      commit();
+      return err;
     },
 
     resetLineup: () => {

@@ -2,6 +2,7 @@ import { useGame } from './state/store';
 import { ResultPopup } from './ui/components/ResultPopup';
 import { TabBar } from './ui/components/TabBar';
 import { Toast } from './ui/components/Toast';
+import { Club } from './ui/screens/Club';
 import { CreateClub } from './ui/screens/CreateClub';
 import { Fixtures } from './ui/screens/Fixtures';
 import { Hub } from './ui/screens/Hub';
@@ -31,6 +32,7 @@ export function App() {
         {screen === 'squad' && <Squad />}
         {screen === 'tactics' && <Tactics />}
         {screen === 'transfers' && <Transfers />}
+        {screen === 'club' && <Club />}
         {screen === 'league' && <League />}
         {screen === 'fixtures' && <Fixtures />}
       </div>

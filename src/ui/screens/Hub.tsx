@@ -7,6 +7,7 @@ import { LeagueTable } from '../components/LeagueTable';
 import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
 import { openInboxItems, transferWindow } from '../../engine/transfers/market';
+import { boardOf } from '../../engine/club/chairman';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -33,7 +34,8 @@ export function Hub() {
   const matchday = Math.min(ourFixtures.filter((f) => f.result).length + 1, ourFixtures.length);
 
   const bids = openInboxItems(game);
-  const news = (game.inbox ?? []).filter((i) => i.kind !== 'bid' && i.season === game.season).slice(0, 3);
+  const news = (game.inbox ?? []).filter((i) => i.kind !== 'bid').slice(0, 3);
+  const board = boardOf(club);
   const window = transferWindow(game);
 
   const form = (clubId: string) =>
@@ -64,6 +66,12 @@ export function Hub() {
           <span>Bank</span>
         </div>
       </header>
+
+      <button type="button" className="mood-row" onClick={() => go('club')}>
+        <span>Board <b>{Math.round(board.confidence)}</b><i className="mini"><i style={{ width: `${board.confidence}%` }} /></i></span>
+        <span>Fans <b>{Math.round(board.fans)}</b><i className="mini fans"><i style={{ width: `${board.fans}%` }} /></i></span>
+        {board.target && <span className="target-chip">Target: {board.target.label}</span>}
+      </button>
 
       {next && opponent ? (
         <section className="card fixture">

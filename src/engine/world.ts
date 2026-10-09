@@ -2,7 +2,8 @@ import { COUNTRIES } from '../data/pyramids';
 import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../data/names';
 import { SQUAD_TEMPLATE, generatePlayer } from './players/generate';
 import { Rng } from './rng';
-import { announceBudgets, scheduleSeason } from './season/season';
+import { createStadium, syncCapacity } from './club/stadium';
+import { scheduleSeason, startOfSeasonBusiness } from './season/season';
 import { SCOUT_REPORTS_PER_WEEK, addInbox, maintainFreeAgents } from './transfers/market';
 import type {
   Club, ClubColours, CountryId, Division, DivisionDef, GameState, Player, Region,
@@ -191,9 +192,12 @@ export function createGame(config: NewGameConfig): GameState {
   maintainFreeAgents(game, rng);
   game.rngState = rng.state;
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
+  const user = game.clubs[game.userClubId];
+  user.stadium = createStadium();
+  syncCapacity(user);
   scheduleSeason(game);
-  addInbox(game, 'info', `Welcome to ${config.clubName}. The summer transfer window is open for 6 weeks. Free agents can be signed at any time.`);
-  announceBudgets(game);
+  addInbox(game, 'info', `Welcome to ${config.clubName}. You're chairman and manager. Build the ground, build the squad, and climb.`);
+  startOfSeasonBusiness(game);
   return game;
 }
 

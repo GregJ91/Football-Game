@@ -22,9 +22,31 @@ export function ledgerOf(club: Club): Ledger {
   return club.ledger;
 }
 
-export function ticketPrice(game: GameState, club: Club): number {
+/** The typical price at the club's level. */
+export function guideTicketPrice(game: GameState, club: Club): number {
   const level = divisionOf(game, club.id).def.level;
   return TICKET[game.country][level] ?? 6;
+}
+
+export function ticketPrice(game: GameState, club: Club): number {
+  return club.ticketPrice ?? guideTicketPrice(game, club);
+}
+
+/**
+ * How full the ground tends to be (0–1). Bigger clubs draw more; for the
+ * user's club the ticket price, fan mood and roofs matter too.
+ */
+export function crowdFill(game: GameState, club: Club): number {
+  let fill = 0.3 + club.reputation / 120;
+  if (club.isUser) {
+    const priceFactor = Math.max(0.4, Math.min(1.3, Math.pow(guideTicketPrice(game, club) / ticketPrice(game, club), 0.9)));
+    const fans = club.board?.fans ?? 60;
+    const s = club.stadium;
+    const cap = s ? s.stands.reduce((n, x) => n + x.capacity, 0) : 0;
+    const roofed = s && cap ? s.stands.reduce((n, x) => n + (x.roof ? x.capacity : 0), 0) / cap : 0.5;
+    fill *= priceFactor * (0.85 + (fans / 100) * 0.3) * (0.95 + roofed * 0.08);
+  }
+  return Math.max(0.05, Math.min(1, fill));
 }
 
 export function weeklyTv(game: GameState, club: Club): number {
@@ -38,12 +60,15 @@ export function wageBill(game: GameState, club: Club): number {
 
 /** Rough weekly income: TV every week, a home gate every other week. */
 export function weeklyIncomeEstimate(game: GameState, club: Club): number {
-  const fill = Math.min(1, 0.3 + club.reputation / 120);
-  return weeklyTv(game, club) + (club.capacity * fill * ticketPrice(game, club)) / 2;
+  return weeklyTv(game, club) + (club.capacity * crowdFill(game, club) * ticketPrice(game, club)) / 2;
 }
 
 export function addGate(game: GameState, club: Club, attendance: number) {
-  const gate = Math.round(attendance * ticketPrice(game, club));
+  // Seats sell for a quarter more than terracing.
+  const s = club.stadium;
+  const cap = s ? s.stands.reduce((n, x) => n + x.capacity, 0) : 0;
+  const seatedShare = s && cap ? s.stands.reduce((n, x) => n + x.seats, 0) / cap : 0;
+  const gate = Math.round(attendance * ticketPrice(game, club) * (1 + 0.25 * seatedShare));
   club.balance += gate;
   ledgerOf(club).gate += gate;
 }
@@ -78,8 +103,10 @@ export function setBoardBudgets(game: GameState, club: Club): Budgets {
   const bill = wageBill(game, club);
   const income = weeklyIncomeEstimate(game, club);
   const step = income > 100_000 ? 1000 : income > 10_000 ? 100 : 10;
-  const wage = roundTo(Math.max(bill * 1.15, income * 0.75), step);
-  const transfer = roundTo(Math.max(0, club.balance * 0.6), step * 10);
+  // A confident board is more generous.
+  const confidence = club.board?.confidence ?? 60;
+  const wage = roundTo(Math.max(bill * 1.15, income * 0.75 * (0.88 + confidence / 500)), step);
+  const transfer = roundTo(Math.max(0, club.balance * (0.36 + confidence / 250)), step * 10);
   club.budgets = { transfer, wage };
   return club.budgets;
 }

@@ -1,5 +1,7 @@
 import type { Rng } from '../rng';
 import type { GameState, Player } from '../types';
+import { trainingBonus, youthIntake } from '../club/facilities';
+import { addInbox } from '../transfers/market';
 import { divisionOf, newId } from '../world';
 import { SQUAD_TEMPLATE, generatePlayer } from './generate';
 import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
@@ -7,7 +9,7 @@ import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
 const clamp = (n: number) => Math.max(1, Math.min(99, Math.round(n)));
 
 /** Yearly change towards potential while young, decline from ~28. */
-export function developPlayer(rng: Rng, p: Player) {
+export function developPlayer(rng: Rng, p: Player, trainingBonus = 0) {
   const gap = Math.max(0, p.potential - p.overall);
   let delta: number;
   if (p.age <= 21) delta = gap * 0.35 + rng.normal() * 1.5;
@@ -16,6 +18,7 @@ export function developPlayer(rng: Rng, p: Player) {
   else if (p.age <= 30) delta = -1 + rng.normal();
   else if (p.age <= 32) delta = -2.5 + rng.normal();
   else delta = -4 + rng.normal();
+  if (p.age <= 27 && gap > 0) delta += trainingBonus;
 
   const keys = POSITION_WEIGHTS[p.position];
   for (const key in p.attributes) {
@@ -59,8 +62,9 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
     const quality = divisionOf(game, clubId).def.quality;
     const squad = club.playerIds.map((id) => game.players[id]);
 
+    const bonus = trainingBonus(club);
     for (const p of squad) {
-      developPlayer(rng, p);
+      developPlayer(rng, p, bonus);
       p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
       p.fitness = 100;
       p.injuryWeeks = 0;
@@ -81,6 +85,19 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       const hasKeeper = club.playerIds.some((id) => game.players[id].position === 'GK');
       if (club.playerIds.length >= 22 && (position !== 'GK' || hasKeeper)) continue;
       sign(game, rng, clubId, position, quality - 13 + rng.normal() * 3, rng.int(16, 19));
+    }
+
+    // The user's academy produces its own intake every summer.
+    if (club.isUser) {
+      const intake = youthIntake(club);
+      const names: string[] = [];
+      for (let i = 0; i < intake.count; i++) {
+        const p = sign(game, rng, clubId, rng.pick(SQUAD_TEMPLATE), quality - 13 + intake.qualityBonus + rng.normal() * 3, rng.int(16, 18));
+        p.potential = Math.min(99, p.potential + intake.potentialBonus);
+        p.contractEnd = game.season + 3;
+        names.push(`${p.firstName} ${p.lastName} (${p.position})`);
+      }
+      addInbox(game, 'info', `Youth intake: ${names.join(', ')} join from the academy.`);
     }
 
     // AI clubs that changed division reshape their squad; the user uses the transfer market.

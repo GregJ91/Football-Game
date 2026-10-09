@@ -83,6 +83,17 @@ export interface Club {
   scouted?: Record<string, true>;
   /** Board-set budgets for the season (user club). */
   budgets?: Budgets;
+  // Chairman side (user club).
+  stadium?: Stadium;
+  facilities?: Record<FacilityKind, number>;
+  board?: Board;
+  /** Ticket price for this season (£); unset = the guide price. */
+  ticketPrice?: number;
+  sponsor?: SponsorDeal;
+  sponsorOffers?: SponsorDeal[];
+  loan?: Loan;
+  /** Weekly parachute payment after relegation, and the season it covers. */
+  parachute?: { weekly: number; season: number };
 }
 
 export interface Budgets {
@@ -99,6 +110,72 @@ export interface Ledger {
   transfersOut: number; // fees paid
   wages: number;
   other: number; // pay-offs and the like (negative = cost)
+  sponsor?: number;
+  prize?: number;
+  /** Stadium and facility building costs. */
+  building?: number;
+  /** Facility running costs. */
+  upkeep?: number;
+  /** Loan received (positive) and repayments (negative). */
+  loan?: number;
+}
+
+// ---------------------------------------------------------------- chairman
+
+export interface Stand {
+  name: string;
+  capacity: number;
+  seats: number;
+  roof: boolean;
+}
+
+export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights';
+export type FacilityKind = 'training' | 'youth' | 'medical';
+
+export interface Build {
+  kind: StadiumWork | 'facility';
+  stand?: number;
+  /** Places added, for an extension. */
+  size?: number;
+  facility?: FacilityKind;
+  weeksLeft: number;
+  totalWeeks: number;
+  cost: number;
+}
+
+export interface Stadium {
+  stands: Stand[];
+  floodlights: boolean;
+  builds: Build[];
+}
+
+export interface SeasonTarget {
+  label: string;
+  /** Finish at or above this league position. */
+  position: number;
+}
+
+export interface Board {
+  confidence: number; // 0–100
+  fans: number; // 0–100
+  target?: SeasonTarget;
+  /** Already warned about the ground this season. */
+  gradingWarned?: boolean;
+}
+
+export interface SponsorDeal {
+  name: string;
+  weekly: number;
+  upfront: number;
+  promotionBonus: number;
+  /** Last season the deal covers. */
+  endsSeason: number;
+  style: 'steady' | 'upfront' | 'bonus';
+}
+
+export interface Loan {
+  remaining: number;
+  weekly: number;
 }
 
 export type InboxKind = 'bid' | 'info' | 'contract';
@@ -234,6 +311,8 @@ export interface SeasonSummary {
   relegated: Record<string, string[]>;
   playoffs: PlayoffTie[];
   finalTables: Record<string, TableRow[]>;
+  /** The user won promotion but their ground didn't meet the rules. */
+  deniedPromotion?: { clubId: string; replacementId: string };
 }
 
 export interface Division {

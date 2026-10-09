@@ -26,13 +26,22 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
     ),
   },
   { screen: 'transfers', label: 'Transfers', icon: <path d="M4 8 H18 L14 4 M20 16 H6 L10 20" /> },
-  { screen: 'league', label: 'League', icon: <path d="M4 6 H20 M4 12 H20 M4 18 H20" /> },
+  {
+    screen: 'club',
+    label: 'Club',
+    icon: (
+      <>
+        <path d="M3 20 V10 L12 5 L21 10 V20" />
+        <path d="M8 20 V14 H16 V20" />
+      </>
+    ),
+  },
 ];
 
 export function TabBar() {
   const current = useGame((s) => s.screen);
-  // Fixtures live under the League tab.
-  const screen = current === 'fixtures' ? 'league' : current;
+  // League and fixtures are reached from the Hub.
+  const screen = current === 'fixtures' || current === 'league' ? 'hub' : current;
   const go = useGame((s) => s.go);
   return (
     <nav className="tab-bar" aria-label="Main">

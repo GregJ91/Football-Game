@@ -37,7 +37,16 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Contracts:** renew them, or players leave when they run out. Releasing a player pays off half his remaining wages.
   - **AI market:** AI clubs buy, sell and release players each window and keep their wage bills affordable.
   - **Money:** weekly gate receipts, TV/sponsorship by level, and wages, for every club.
-- **Playable UI:** Hub (with inbox), Squad, Tactics, Transfers, League (table and your fixtures), Pre-match, Live match and a season-review screen.
+- **Chairman side (Club tab):**
+  - **Stadium:** four stands built separately (extend, seat, roof) plus floodlights. Builds take weeks, and a stand being worked on holds half its fans.
+  - **Ground grading:** minimum capacity, seats and floodlights for each level. Win promotion with a ground that fails and the next club goes up instead, with a warning mid-season.
+  - **Tickets:** a price per season against the going rate. Crowds respond to price, fan mood and roofs, and seats earn more.
+  - **Facilities:** training ground (faster development), youth academy (a bigger and better intake each summer) and medical centre (shorter injuries). Five levels each, with build costs and weekly upkeep.
+  - **Board and fans:** confidence and mood meters, plus a season target. Results, prices, new stands and loans move them, and a confident board sets bigger budgets.
+  - **Shirt sponsor:** pick one of three offers each summer (steady, cash up front, or promotion bonus).
+  - **Bank loans:** repaid weekly over two seasons.
+  - **Season money:** prize money for every club, parachute payments after relegation, and a season ledger.
+- **Playable UI:** Hub (inbox, board and fan meters), Squad, Tactics, Transfers, Club, League (table and your fixtures, from the Hub), Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.

@@ -1,7 +1,10 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
 import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
-import { addGate, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
+import { addGate, crowdFill, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
+import { chairmanWeek, gradingWarning, makeSponsorOffers, moodAfterMatch, seasonPayouts, seasonReview, setSeasonTarget } from '../club/chairman';
+import { injuryFactor } from '../club/facilities';
+import { checkGrading } from '../club/stadium';
 import { rolloverPlayers } from '../players/development';
 import {
   SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
@@ -10,7 +13,7 @@ import { Rng } from '../rng';
 import type {
   Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
 } from '../types';
-import { newId, squadOf, withRng } from '../world';
+import { divisionOf, newId, squadOf, withRng } from '../world';
 import { matchdayCount, roundRobin, weekForMatchday } from './fixtures';
 import { buildTable } from './table';
 
@@ -72,9 +75,6 @@ export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { l
   return { selection: userSelection(game).selection, tactics };
 }
 
-function crowdFill(club: Club): number {
-  return Math.min(1, 0.3 + club.reputation / 120);
-}
 
 export function playMatch(
   game: GameState,
@@ -88,7 +88,7 @@ export function playMatch(
   const result = simulateMatch(rng, teamSheet(game, home, away, { home: true }), teamSheet(game, away, home), {
     ...opts,
     capacity: opts.neutral ? Math.max(home.capacity, away.capacity) * 2 : home.capacity,
-    crowdFill: crowdFill(home),
+    crowdFill: crowdFill(game, home),
   });
   applyMatchToPlayers(game, rng, result, home, away);
   if (opts.neutral) {
@@ -119,7 +119,7 @@ export function startUserMatch(game: GameState, fixture: Fixture): LiveMatch {
   const seed = withRng(game, (rng) => rng.int(0, 2 ** 31));
   return createLiveMatch(new Rng(seed), teamSheet(game, home, away, { live: true }), teamSheet(game, away, home, { live: true }), {
     capacity: home.capacity,
-    crowdFill: crowdFill(home),
+    crowdFill: crowdFill(game, home),
     commentary: true,
     manual: { home: home.isUser, away: away.isUser },
   });
@@ -165,7 +165,10 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
       p.seasonStats.goals++;
       if (e.assistId && game.players[e.assistId]) game.players[e.assistId].seasonStats.assists++;
     } else if (e.type === 'red') p.suspendedMatches = 1;
-    else if (e.type === 'injury') p.injuryWeeks = rng.int(2, 7);
+    else if (e.type === 'injury') {
+      const club = p.clubId ? game.clubs[p.clubId] : null;
+      p.injuryWeeks = Math.max(1, Math.round(rng.int(2, 7) * (club ? injuryFactor(club) : 1)));
+    }
   }
 }
 
@@ -190,7 +193,11 @@ export function playWeek(game: GameState): Fixture[] {
   });
   weeklyRecovery(game);
   weeklyFinances(game);
-  withRng(game, (rng) => marketWeek(game, rng));
+  withRng(game, (rng) => {
+    chairmanWeek(game, rng);
+    marketWeek(game, rng);
+  });
+  userMatchMood(game, fixtures);
   const wasOpen = transferWindow(game).open;
   game.week++;
   if (game.week >= game.totalWeeks) endSeason(game);
@@ -204,6 +211,21 @@ export function playWeek(game: GameState): Fixture[] {
     }
   }
   return fixtures;
+}
+
+/** Fans and board react to the user's result this week; ground warning later in the season. */
+function userMatchMood(game: GameState, fixtures: Fixture[]) {
+  const all = [...fixtures, ...fixturesForWeek(game, game.week).filter((f) => f.result && !fixtures.includes(f))];
+  const f = all.find((x) => x.result && (x.homeId === game.userClubId || x.awayId === game.userClubId));
+  if (f?.result) {
+    const home = f.homeId === game.userClubId;
+    moodAfterMatch(game, home ? f.result.homeGoals : f.result.awayGoals, home ? f.result.awayGoals : f.result.homeGoals, home);
+  }
+  if (game.week >= game.totalWeeks * 0.5) {
+    const div = divisionOf(game, game.userClubId);
+    const table = buildTable(div.clubIds, game.fixtures.filter((x) => x.divisionId === div.def.id));
+    gradingWarning(game, table.findIndex((r) => r.clubId === game.userClubId) + 1);
+  }
 }
 
 /** Sim straight to the end of the regular season. */
@@ -253,11 +275,13 @@ export function endSeason(game: GameState) {
     }
   });
 
+  denyPromotionIfGroundFails(game, summary);
+
   for (const div of game.divisions) {
     const id = div.def.id;
     summary.finalTables[id].forEach((row, i) => {
       const outcome =
-        i === 0 && (div.def.level === 1 || summary.promoted[id].includes(row.clubId)) ? 'champions'
+        i === 0 ? 'champions'
           : summary.promoted[id].includes(row.clubId) ? 'promoted'
             : summary.relegated[id].includes(row.clubId) ? 'relegated'
               : 'stayed';
@@ -265,8 +289,28 @@ export function endSeason(game: GameState) {
     });
   }
 
+  seasonPayouts(game, summary);
+  seasonReview(game, summary);
   game.lastSummary = summary;
   game.phase = 'seasonEnd';
+}
+
+/** No promotion without a ground that meets the next level's rules; the next club goes up instead. */
+function denyPromotionIfGroundFails(game: GameState, summary: SeasonSummary) {
+  const user = game.clubs[game.userClubId];
+  const div = divisionOf(game, user.id);
+  const promoted = summary.promoted[div.def.id];
+  if (!promoted.includes(user.id)) return;
+  const check = checkGrading(game, user, div.def.level - 1);
+  if (!check || check.ok) return;
+  const final = summary.playoffs.find((t) => t.divisionId === div.def.id && t.round === 'final');
+  const replacementId =
+    final && final.winnerId === user.id
+      ? final.homeId === user.id ? final.awayId : final.homeId
+      : summary.finalTables[div.def.id].map((r) => r.clubId).find((id) => !promoted.includes(id))!;
+  summary.promoted[div.def.id] = promoted.map((id) => (id === user.id ? replacementId : id));
+  summary.deniedPromotion = { clubId: user.id, replacementId };
+  addInbox(game, 'contract', `Promotion denied: the ground doesn't meet the rules for the next level. ${game.clubs[replacementId].name} go up instead.`);
 }
 
 /** Distribute clubs into divisions, honouring each target's quota and preferring a regional match. */
@@ -317,7 +361,10 @@ export function applyMovements(game: GameState, summary: SeasonSummary) {
 /** Promotion/relegation, player ageing and a fresh fixture list. */
 export function startNextSeason(game: GameState) {
   if (game.phase !== 'seasonEnd' || !game.lastSummary) return;
+  const userLevel = divisionOf(game, game.userClubId).def.level;
   const moves = applyMovements(game, game.lastSummary);
+  // A new level has a different going rate for tickets.
+  if (divisionOf(game, game.userClubId).def.level !== userLevel) game.clubs[game.userClubId].ticketPrice = undefined;
   withRng(game, (rng) => {
     handleContractExpiries(game, rng);
     rolloverPlayers(game, rng, new Set(moves.keys()));
@@ -330,6 +377,13 @@ export function startNextSeason(game: GameState) {
   game.phase = 'season';
   game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   scheduleSeason(game);
+  startOfSeasonBusiness(game);
+}
+
+/** Board target, sponsor offers, budgets and the window opening. */
+export function startOfSeasonBusiness(game: GameState) {
+  setSeasonTarget(game);
+  withRng(game, (rng) => makeSponsorOffers(game, rng));
   announceBudgets(game);
   addInbox(game, 'info', `The summer transfer window is open for ${transferWindow(game).weeksLeft} weeks.`);
 }
