@@ -69,11 +69,14 @@ export function effectiveRating(p: Player, slot: Position, energy = p.fitness): 
 export function playerValue(overall: number, age: number, potential: number): number {
   const ageMult = age <= 21 ? 1.5 : age <= 24 ? 1.3 : age <= 29 ? 1 : age <= 32 ? 0.6 : 0.3;
   const potMult = 1 + Math.max(0, potential - overall) / 40;
-  return roundMoney(300 * Math.exp((overall - 40) / 4.2) * ageMult * potMult);
+  // Exponential through the leagues, flattening out among the elite.
+  const base = 300 * Math.exp((Math.min(overall, 84) - 40) / 4.2) * (1 + Math.max(0, overall - 84) * 0.08);
+  return roundMoney(base * ageMult * potMult);
 }
 
 export function playerWage(overall: number): number {
-  return roundMoney(30 * Math.exp((overall - 40) / 5.5));
+  const base = 30 * Math.exp((Math.min(overall, 80) - 40) / 4.6) * (1 + Math.max(0, overall - 80) * 0.05);
+  return roundMoney(base);
 }
 
 export function roundMoney(n: number): number {

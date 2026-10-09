@@ -3,6 +3,7 @@ import type { Fixture } from '../../engine/types';
 import { userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { ClubDot } from '../components/ClubArt';
+import { LeagueTabs } from '../components/LeagueTabs';
 import { MatchCard } from '../components/MatchCard';
 
 export function Fixtures() {
@@ -17,7 +18,8 @@ export function Fixtures() {
   return (
     <main className="screen fixtures">
       <header className="screen-head">
-        <h1>Fixtures</h1>
+        <h1>League</h1>
+        <LeagueTabs />
       </header>
       <ul className="fixture-list">
         {fixtures.map((f) => {

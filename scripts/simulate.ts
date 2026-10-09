@@ -24,6 +24,9 @@ const game = createGame({
 });
 game.settings = { assistantTactics: assist };
 
+const fmt = (n: number) =>
+  Math.abs(n) >= 1e6 ? `£${(n / 1e6).toFixed(1)}m` : Math.abs(n) >= 1e3 ? `£${Math.round(n / 1e3)}k` : `£${Math.round(n)}`;
+
 const avgOverall = (divId: string) => {
   const div = game.divisions.find((d) => d.def.id === divId)!;
   const xs = div.clubIds.flatMap((c) => game.clubs[c].playerIds.map((p) => game.players[p].overall));
@@ -45,6 +48,20 @@ for (let s = 0; s < seasons; s++) {
       `  | goals/game ${goalsPerGame.toFixed(2)} | players ${Object.keys(game.players).length}` +
       ` | avg OVR top ${avgOverall(game.divisions[0].def.id)} bottom ${avgOverall(game.divisions.at(-1)!.def.id)}` +
       ` | ${(performance.now() - t).toFixed(0)}ms`,
+  );
+  const moneyByLevel = [...new Set(game.divisions.map((d) => d.def.level))].map((level) => {
+    const bal = game.divisions
+      .filter((d) => d.def.level === level)
+      .flatMap((d) => d.clubIds.map((id) => game.clubs[id].balance))
+      .sort((x, y) => x - y);
+    return `L${level} ${fmt(bal[Math.floor(bal.length / 2)])}`;
+  });
+  const broke = Object.values(game.clubs).filter((c) => c.balance < 0).length;
+  const moves = (game.transfers ?? []).filter((t) => t.season === game.season);
+  const free = Object.values(game.players).filter((p) => !p.clubId).length;
+  console.log(
+    `         median bank: ${moneyByLevel.join(' ')} | in debt ${broke} | transfers ${moves.length}` +
+      ` (fees ${fmt(moves.reduce((n, t) => n + t.fee, 0))}) | free agents ${free} | user bank ${fmt(userClub(game).balance)}`,
   );
   startNextSeason(game);
   for (const d of game.divisions) {

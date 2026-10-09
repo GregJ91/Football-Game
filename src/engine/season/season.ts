@@ -1,7 +1,11 @@
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
 import { recommendTactics } from '../match/preview';
 import { isAvailable, pickTeam, remapLineup, selectionFromLineup, type LineupSelection } from '../match/selection';
+import { addGate, moneyPw, resetLedgers, setBoardBudgets, weeklyFinances } from '../economy/finance';
 import { rolloverPlayers } from '../players/development';
+import {
+  SCOUT_REPORTS_PER_WEEK, addInbox, expiringUserContracts, handleContractExpiries, maintainFreeAgents, marketWeek, transferWindow, trimAiSquads,
+} from '../transfers/market';
 import { Rng } from '../rng';
 import type {
   Club, Division, Fixture, Formation, GameState, MatchResult, Mentality, PlayoffTie, Region, SeasonSummary, Tactics,
@@ -87,6 +91,10 @@ export function playMatch(
     crowdFill: crowdFill(home),
   });
   applyMatchToPlayers(game, rng, result, home, away);
+  if (opts.neutral) {
+    addGate(game, home, result.attendance / 2);
+    addGate(game, away, result.attendance / 2);
+  } else addGate(game, home, result.attendance);
   return result;
 }
 
@@ -122,6 +130,7 @@ export function completeUserMatch(game: GameState, fixture: Fixture, live: LiveM
   const result = finishMatch(live);
   fixture.result = result;
   withRng(game, (rng) => applyMatchToPlayers(game, rng, result, game.clubs[fixture.homeId], game.clubs[fixture.awayId]));
+  addGate(game, game.clubs[fixture.homeId], result.attendance);
   playWeek(game);
   return result;
 }
@@ -180,8 +189,20 @@ export function playWeek(game: GameState): Fixture[] {
     for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId);
   });
   weeklyRecovery(game);
+  weeklyFinances(game);
+  withRng(game, (rng) => marketWeek(game, rng));
+  const wasOpen = transferWindow(game).open;
   game.week++;
   if (game.week >= game.totalWeeks) endSeason(game);
+  const now = transferWindow(game);
+  if (!wasOpen && now.open) addInbox(game, 'info', `The ${now.name} transfer window is open for ${now.weeksLeft} weeks.`);
+  if (wasOpen && !now.open && game.phase === 'season') addInbox(game, 'info', 'The transfer window has closed. Free agents can still be signed.');
+  if (game.phase === 'season' && game.week === Math.floor(game.totalWeeks * 0.6)) {
+    const expiring = expiringUserContracts(game);
+    if (expiring.length) {
+      addInbox(game, 'contract', `Contracts ending this summer: ${expiring.map((p) => p.lastName).join(', ')}. Renew them from the Squad screen or they will leave.`);
+    }
+  }
   return fixtures;
 }
 
@@ -297,9 +318,29 @@ export function applyMovements(game: GameState, summary: SeasonSummary) {
 export function startNextSeason(game: GameState) {
   if (game.phase !== 'seasonEnd' || !game.lastSummary) return;
   const moves = applyMovements(game, game.lastSummary);
-  withRng(game, (rng) => rolloverPlayers(game, rng, new Set(moves.keys())));
+  withRng(game, (rng) => {
+    handleContractExpiries(game, rng);
+    rolloverPlayers(game, rng, new Set(moves.keys()));
+    trimAiSquads(game);
+    maintainFreeAgents(game, rng);
+  });
+  resetLedgers(game);
   game.season++;
   game.week = 0;
   game.phase = 'season';
+  game.scoutReportsLeft = SCOUT_REPORTS_PER_WEEK;
   scheduleSeason(game);
+  announceBudgets(game);
+  addInbox(game, 'info', `The summer transfer window is open for ${transferWindow(game).weeksLeft} weeks.`);
+}
+
+/** The board sets the user's budgets for the new season and says so. */
+export function announceBudgets(game: GameState) {
+  const club = game.clubs[game.userClubId];
+  const b = setBoardBudgets(game, club);
+  addInbox(game, 'info', `The board has set your budgets: ${money(b.transfer)} for transfers and ${moneyPw(b.wage)} for wages.`);
+}
+
+function money(n: number) {
+  return n >= 1_000_000 ? `£${(n / 1_000_000).toFixed(1)}m` : n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${n}`;
 }

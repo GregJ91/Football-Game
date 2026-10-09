@@ -4,7 +4,9 @@ import { divisionOf, userClub } from '../../engine/world';
 import { lastUserFixture, nextUserFixture, useGame } from '../../state/store';
 import { ClubDot, Crest } from '../components/ClubArt';
 import { LeagueTable } from '../components/LeagueTable';
+import { BidCard } from '../components/BidCard';
 import { MatchCard } from '../components/MatchCard';
+import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { money, ordinal, seasonLabel } from '../format';
 
 export function Hub() {
@@ -29,6 +31,10 @@ export function Hub() {
   const oppPos = opponent && started ? table.findIndex((r) => r.clubId === opponent.id) + 1 : 0;
   const ourFixtures = game.fixtures.filter((f) => f.homeId === club.id || f.awayId === club.id);
   const matchday = Math.min(ourFixtures.filter((f) => f.result).length + 1, ourFixtures.length);
+
+  const bids = openInboxItems(game);
+  const news = (game.inbox ?? []).filter((i) => i.kind !== 'bid' && i.season === game.season).slice(0, 3);
+  const window = transferWindow(game);
 
   const form = (clubId: string) =>
     game.fixtures
@@ -96,6 +102,19 @@ export function Hub() {
           <button type="button" className="btn primary" disabled={busy} onClick={() => void simToSeasonEnd()}>
             Finish the season
           </button>
+        </section>
+      )}
+
+      {(bids.length > 0 || news.length > 0) && (
+        <section className="inbox">
+          <div className="card-label inbox-label">
+            <span>Inbox</span>
+            <button type="button" className="link-btn" onClick={() => go('transfers')}>{window.label} →</button>
+          </div>
+          {bids.slice(0, 3).map((item) => <BidCard key={item.id} item={item} />)}
+          {news.map((item) => (
+            <p key={item.id} className={`news news-${item.kind}`}>{item.text}</p>
+          ))}
         </section>
       )}
 

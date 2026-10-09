@@ -7,10 +7,15 @@ import {
 } from '../engine/season/season';
 import type { Fixture, GameState, Tactics } from '../engine/types';
 import { assignToSlot, autoLineup, remapLineup } from '../engine/match/selection';
-import { createGame, squadOf, type NewGameConfig } from '../engine/world';
+import { createGame, squadOf, withRng, type NewGameConfig } from '../engine/world';
+import { adjustBudgets as adjustBudgetsEngine, moneyPw, wageBudgetProblem } from '../engine/economy/finance';
+import {
+  acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
+  releasePlayer, renewContract, scoutPlayer, type BidAction, type BidResponse,
+} from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
+export type Screen = 'start' | 'create' | 'hub' | 'squad' | 'tactics' | 'transfers' | 'league' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd';
 
 export interface LiveNote {
   minute: number;
@@ -28,6 +33,9 @@ interface Store {
   liveNotes: LiveNote[];
   /** Fixture whose full-time result should pop up on the hub. */
   resultPopup: Fixture | null;
+  /** A short message shown briefly at the bottom of the screen. */
+  toast: string | null;
+  showToast: (text: string | null) => void;
 
   go: (screen: Screen) => void;
   newGame: (config: Omit<NewGameConfig, 'seed'>) => void;
@@ -37,6 +45,19 @@ interface Store {
   setLineupSlot: (slotIndex: number, playerId: string) => void;
   /** Go back to the automatically picked best XI. */
   resetLineup: () => void;
+
+  scout: (playerId: string) => boolean;
+  /** Submit a fee; the selling club answers straight away. */
+  bid: (playerId: string, fee: number) => BidResponse | { error: string };
+  /** Agree terms and complete a signing. Returns a problem, or null on success. */
+  sign: (playerId: string, fee: number, wage: number, years: number) => string | null;
+  /** Offer less than the player's demand; true if he accepts. */
+  offerLowerWage: (playerId: string) => boolean;
+  toggleListed: (playerId: string) => void;
+  release: (playerId: string) => string | null;
+  renew: (playerId: string, wage: number, years: number) => string | null;
+  answerBid: (itemId: string, action: BidAction) => string;
+  adjustBudgets: (wageDelta: number) => void;
   setAssistantTactics: (on: boolean) => void;
 
   openPreMatch: () => void;
@@ -97,6 +118,8 @@ export const useGame = create<Store>()((set, get) => {
     liveFixture: null,
     liveNotes: [],
     resultPopup: null,
+    toast: null,
+    showToast: (text) => set({ toast: text }),
 
     go: (screen) => set({ screen }),
 
@@ -130,6 +153,89 @@ export const useGame = create<Store>()((set, get) => {
       const club = game.clubs[game.userClubId];
       const base = club.lineup ?? autoLineup(squadOf(game, club.id), club.tactics.formation);
       club.lineup = assignToSlot(base, slotIndex, playerId);
+      commit();
+    },
+
+    scout: (playerId) => {
+      const { game } = get();
+      if (!game) return false;
+      const ok = scoutPlayer(game, playerId);
+      commit();
+      return ok;
+    },
+
+    bid: (playerId, fee) => {
+      const { game } = get();
+      if (!game) return { error: 'No game loaded.' };
+      const p = game.players[playerId];
+      const problem = cannotBuy(game, p) ?? feeProblem(game, fee);
+      if (problem) return { error: problem };
+      return bidFor(game, p, fee);
+    },
+
+    sign: (playerId, fee, wage, years) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const p = game.players[playerId];
+      const club = game.clubs[game.userClubId];
+      const problem = cannotBuy(game, p) ?? (fee ? feeProblem(game, fee) : null) ?? wageBudgetProblem(game, club, wage);
+      if (problem) return problem;
+      const from = p.clubId ? game.clubs[p.clubId].name : null;
+      completeTransfer(game, p, club.id, fee, wage, years);
+      addInbox(game, 'info', `${p.firstName} ${p.lastName} signs ${from ? `from ${from} for ${fee ? `£${fee.toLocaleString('en-GB')}` : 'a nominal fee'}` : 'on a free'}, on ${moneyPw(wage)} until ${p.contractEnd + 1}.`);
+      commit();
+      return null;
+    },
+
+    offerLowerWage: (playerId) => {
+      const { game } = get();
+      if (!game) return false;
+      const p = game.players[playerId];
+      return withRng(game, (rng) => acceptsLowerWage(game, rng, game.clubs[game.userClubId], p));
+    },
+
+    toggleListed: (playerId) => {
+      const { game } = get();
+      if (!game) return;
+      const p = game.players[playerId];
+      p.listed = !p.listed;
+      commit();
+    },
+
+    release: (playerId) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const p = game.players[playerId];
+      const problem = cannotRelease(game, p);
+      if (problem) return problem;
+      releasePlayer(game, p);
+      commit();
+      return null;
+    },
+
+    renew: (playerId, wage, years) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const p = game.players[playerId];
+      const problem = wageBudgetProblem(game, game.clubs[game.userClubId], wage, p.wage);
+      if (problem) return problem;
+      renewContract(game, p, wage, years);
+      commit();
+      return null;
+    },
+
+    answerBid: (itemId, action) => {
+      const { game } = get();
+      if (!game) return '';
+      const msg = withRng(game, (rng) => answerBidEngine(game, rng, itemId, action));
+      commit();
+      return msg;
+    },
+
+    adjustBudgets: (wageDelta) => {
+      const { game } = get();
+      if (!game) return;
+      adjustBudgetsEngine(game, game.clubs[game.userClubId], wageDelta);
       commit();
     },
 

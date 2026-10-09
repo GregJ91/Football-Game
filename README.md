@@ -28,7 +28,16 @@ Phases 1–2 of the plan (the foundation and the season core) are done, plus the
   - **Play match:** live CM-style text commentary at Normal or Fast speed. You can pause, change tactics, make substitutions (players tire as the game goes on) and give a half-time team talk, or skip to full time.
   - **Sim match:** an instant result that pops up.
 - **Pick your starting XI:** the Tactics tab shows your formation on a pitch. Tap a position to choose who plays there; each player's rating is shown for that position, colour-coded by how well it suits them. Your picks stay between matches and carry over when you change formation. If a pick is injured or suspended, the best available player covers and the pre-match screen tells you.
-- **Playable UI:** Hub, Squad, Tactics, League tables, Fixtures, Pre-match, Live match and a season-review screen.
+- **Transfers and contracts, Football Manager style:**
+  - **Board budgets:** each season the board sets a transfer budget and a weekly wage budget. A slider moves money between them (£1 p/w of wages = £30 of transfer budget), and 75% of sale fees come back to spend.
+  - **Windows:** a summer window (first 6 weeks) and a January window (4 weeks). Free agents can be signed at any time.
+  - **Scouting:** players outside your league show a rating range until scouted, with 5 reports a week.
+  - **Signing:** bid, and the club accepts, counters or rejects. Then agree personal terms (agree, offer 15% less, or walk away) and pick a contract length. Players weigh up your level, and good players expect good wages.
+  - **Selling:** transfer-list players to attract bids. AI clubs also bid for your standout players, and you answer from the Hub inbox (accept, ask for more, or reject).
+  - **Contracts:** renew them, or players leave when they run out. Releasing a player pays off half his remaining wages.
+  - **AI market:** AI clubs buy, sell and release players each window and keep their wage bills affordable.
+  - **Money:** weekly gate receipts, TV/sponsorship by level, and wages, for every club.
+- **Playable UI:** Hub (with inbox), Squad, Tactics, Transfers, League (table and your fixtures), Pre-match, Live match and a season-review screen.
 - **Saving:** autosave to IndexedDB, with Continue on the start screen.
 
 All club and player names are fictional and generated. Importing real squads is planned for phase 8.

@@ -1,0 +1,330 @@
+import { useState } from 'react';
+import { WAGE_TO_TRANSFER, budgetsOf, moneyPw, wageBill } from '../../engine/economy/finance';
+import { playerName } from '../../engine/players/generate';
+import { roundMoney } from '../../engine/players/ratings';
+import {
+  SCOUT_REPORTS_PER_WEEK, cannotBuy, interestIn, isKnown, potentialStars, ratingRange,
+  releaseCost, renewalDemand, wageDemand, type Interest,
+} from '../../engine/transfers/market';
+import type { AttributeKey, Player } from '../../engine/types';
+import { divisionOf } from '../../engine/world';
+import { useGame } from '../../state/store';
+import { money } from '../format';
+
+const ATTR_GROUPS: { title: string; keys: AttributeKey[] }[] = [
+  { title: 'Technical', keys: ['finishing', 'passing', 'dribbling', 'tackling', 'heading'] },
+  { title: 'Mental', keys: ['positioning', 'vision', 'workRate', 'composure'] },
+  { title: 'Physical', keys: ['pace', 'strength', 'stamina'] },
+  { title: 'Goalkeeping', keys: ['handling', 'reflexes'] },
+];
+
+const label = (k: string) => k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+
+const INTEREST_LABEL: Record<Interest, string> = {
+  keen: 'Keen to join',
+  open: 'Open to a move',
+  reluctant: 'Reluctant',
+  no: 'Not interested',
+};
+
+type Step =
+  | { kind: 'view' }
+  | { kind: 'fee'; message?: string; counter?: number }
+  | { kind: 'terms'; fee: number; message?: string; lowered?: boolean }
+  | { kind: 'renew'; message?: string }
+  | { kind: 'done'; message: string };
+
+function feeStep(value: number) {
+  if (value >= 1_000_000) return 50_000;
+  if (value >= 100_000) return 5_000;
+  if (value >= 10_000) return 500;
+  return 100;
+}
+
+export function PlayerSheet({ player, onClose }: { player: Player; onClose: () => void }) {
+  const game = useGame((s) => s.game)!;
+  useGame((s) => s.rev);
+  const scout = useGame((s) => s.scout);
+  const bid = useGame((s) => s.bid);
+  const sign = useGame((s) => s.sign);
+  const offerLowerWage = useGame((s) => s.offerLowerWage);
+  const toggleListed = useGame((s) => s.toggleListed);
+  const release = useGame((s) => s.release);
+  const renew = useGame((s) => s.renew);
+  const adjustBudgets = useGame((s) => s.adjustBudgets);
+
+  const p = player;
+  const club = game.clubs[game.userClubId];
+  const own = p.clubId === club.id;
+  const known = isKnown(game, club, p);
+  const [lo, hi] = ratingRange(p);
+  const currentClub = p.clubId ? game.clubs[p.clubId] : null;
+  const level = currentClub ? divisionOf(game, currentClub.id).def : null;
+  const interest = own ? null : interestIn(game, club, p);
+  const budgets = budgetsOf(game, club);
+  const bill = wageBill(game, club);
+
+  const [step, setStep] = useState<Step>({ kind: 'view' });
+  const [fee, setFee] = useState(() => (p.clubId ? Math.round(p.value / feeStep(p.value)) * feeStep(p.value) : 0));
+  const [years, setYears] = useState(p.age >= 30 ? 2 : 3);
+  const [talksOff, setTalksOff] = useState(false);
+  const [confirmRelease, setConfirmRelease] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const blocker = own ? null : cannotBuy(game, p);
+  const demand = own ? 0 : wageDemand(game, club, p);
+  const renewal = own ? renewalDemand(game, p) : null;
+  const stepSize = feeStep(Math.max(p.value, 1000));
+  const lowerWage = roundMoney(demand * 0.85);
+
+  const submitBid = (amount: number) => {
+    const r = bid(p.id, amount);
+    if ('error' in r) return setStep({ kind: 'fee', message: r.error });
+    if (r.result === 'accepted') return setStep({ kind: 'terms', fee: amount, message: `${currentClub?.name} accept ${money(amount)}.` });
+    if (r.result === 'countered') return setStep({ kind: 'fee', counter: r.asking, message: `${currentClub?.name} want ${money(r.asking)}.` });
+    return setStep({ kind: 'fee', message: `Rejected. ${currentClub?.name} would want around ${money(r.asking)}.` });
+  };
+
+  const agree = (feeAmount: number, wage: number) => {
+    const err = sign(p.id, feeAmount, wage, years);
+    if (err) setStep({ kind: 'terms', fee: feeAmount, message: err });
+    else setStep({ kind: 'done', message: `${playerName(p)} has signed on ${moneyPw(wage)} until summer ${game.season + years}.` });
+  };
+
+  const YearsPicker = (
+    <div className="pills compact" role="group" aria-label="Contract length">
+      {[1, 2, 3, 4].map((y) => (
+        <button key={y} type="button" className="pill" aria-pressed={years === y} onClick={() => setYears(y)}>
+          {y} yr{y > 1 ? 's' : ''}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={playerName(p)} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <span className="ovr big">{known ? p.overall : `${lo}–${hi}`}</span>
+          <div className="grow">
+            <strong>{playerName(p)}</strong>
+            <small>
+              {p.position} · {p.age} yrs · {currentClub ? `${currentClub.name} (${level!.name})` : 'Free agent'}
+            </small>
+          </div>
+          <button type="button" className="link-btn" onClick={onClose}>Close</button>
+        </div>
+
+        <div className="facts">
+          {p.clubId && <span>Value {money(p.value)}</span>}
+          <span>Wage {moneyPw(p.wage)}</span>
+          {p.clubId && <span>Contract ends summer {p.contractEnd + 1}</span>}
+          {own && <span>Morale {Math.round(p.morale)}</span>}
+          {own && <span>Form {p.form.toFixed(1)}</span>}
+          {own && p.listed && <span className="warn">Transfer listed</span>}
+          {interest && <span className={`interest interest-${interest}`}>{INTEREST_LABEL[interest]}</span>}
+          {known && !own && <span>Potential {'★'.repeat(potentialStars(p))}{'☆'.repeat(5 - potentialStars(p))}</span>}
+        </div>
+
+        {step.kind === 'view' && (
+          <>
+            {known ? (
+              <div className="attr-groups">
+                {ATTR_GROUPS.filter((g) => g.title !== 'Goalkeeping' || p.position === 'GK').map((g) => (
+                  <div key={g.title}>
+                    <h3>{g.title}</h3>
+                    {g.keys.map((k) => (
+                      <div key={k} className="attr">
+                        <span>{label(k)}</span>
+                        <span className="bar"><i style={{ width: `${p.attributes[k]}%` }} /></span>
+                        <b>{p.attributes[k]}</b>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card inset">
+                <p className="muted">Your scouts haven't watched him yet. A report reveals his exact rating, attributes and potential.</p>
+                <button type="button" className="btn secondary" disabled={(game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK) <= 0} onClick={() => scout(p.id)}>
+                  Scout him ({game.scoutReportsLeft ?? SCOUT_REPORTS_PER_WEEK} reports left this week)
+                </button>
+              </div>
+            )}
+
+            {!own && (
+              <div className="stack">
+                {blocker || talksOff ? (
+                  <p className="note bad"><span aria-hidden="true">▼</span>{talksOff ? `${p.lastName} has walked away from talks.` : blocker}</p>
+                ) : p.clubId ? (
+                  <button type="button" className="btn primary" onClick={() => setStep({ kind: 'fee' })}>Make an offer</button>
+                ) : (
+                  <button type="button" className="btn primary" onClick={() => setStep({ kind: 'terms', fee: 0 })}>Offer a contract</button>
+                )}
+              </div>
+            )}
+
+            {own && (
+              <div className="stack">
+                <div className="grid-2">
+                  <button type="button" className="btn tile" onClick={() => toggleListed(p.id)}>
+                    {p.listed ? 'Take off the list' : 'Transfer list'}
+                  </button>
+                  <button type="button" className="btn tile" onClick={() => setStep({ kind: 'renew' })}>New contract</button>
+                </div>
+                {confirmRelease ? (
+                  <div className="grid-2">
+                    <button
+                      type="button"
+                      className="btn danger"
+                      onClick={() => {
+                        const err = release(p.id);
+                        if (err) setProblem(err);
+                        else onClose();
+                      }}
+                    >
+                      Confirm release
+                    </button>
+                    <button type="button" className="btn tile" onClick={() => setConfirmRelease(false)}>Keep him</button>
+                  </div>
+                ) : (
+                  <button type="button" className="link-btn" onClick={() => setConfirmRelease(true)}>
+                    Release him (pay-off {money(releaseCost(game, p))})
+                  </button>
+                )}
+                {problem && <p className="note bad"><span aria-hidden="true">▼</span>{problem}</p>}
+              </div>
+            )}
+          </>
+        )}
+
+        {step.kind === 'fee' && (
+          <div className="negotiate">
+            <h3>Transfer offer</h3>
+            <p className="muted small">
+              Valued at {money(p.value)}. Your transfer budget is {money(budgets.transfer)}.
+            </p>
+            <div className="stepper">
+              <button type="button" aria-label="Lower the offer" onClick={() => setFee(Math.max(0, fee - stepSize))}>−</button>
+              <label className="visually-hidden" htmlFor="bid-fee">Fee</label>
+              <input id="bid-fee" inputMode="numeric" value={`£${fee.toLocaleString('en-GB')}`} onChange={(e) => setFee(Number(e.target.value.replace(/[^0-9]/g, '')) || 0)} />
+              <button type="button" aria-label="Raise the offer" onClick={() => setFee(fee + stepSize)}>+</button>
+            </div>
+            {step.message && <p className={`note ${step.counter ? 'neutral' : 'bad'}`}><span aria-hidden="true">•</span>{step.message}</p>}
+            <div className="grid-2">
+              {step.counter ? (
+                <button type="button" className="btn primary" onClick={() => { setFee(step.counter!); submitBid(step.counter!); }}>
+                  Pay {money(step.counter)}
+                </button>
+              ) : (
+                <button type="button" className="btn primary" onClick={() => submitBid(fee)}>Submit offer</button>
+              )}
+              <button type="button" className="btn tile" onClick={() => setStep({ kind: 'view' })}>Walk away</button>
+            </div>
+            {step.counter && (
+              <button type="button" className="link-btn" onClick={() => submitBid(fee)}>Or offer {money(fee)} instead</button>
+            )}
+          </div>
+        )}
+
+        {step.kind === 'terms' && (() => {
+          const wage = step.lowered ? lowerWage : demand;
+          return (
+            <div className="negotiate">
+              <h3>Personal terms</h3>
+              {step.message && <p className="note neutral"><span aria-hidden="true">•</span>{step.message}</p>}
+              <p>
+                {p.lastName} wants <strong>{moneyPw(demand)}</strong>.
+              </p>
+              <p className="muted small">
+                Wages would go to {moneyPw(bill + wage)} of your {moneyPw(budgets.wage)} budget.
+              </p>
+              {bill + wage > budgets.wage && (
+                <OverBudget shortfall={bill + wage - budgets.wage} transfer={budgets.transfer} onMove={adjustBudgets} />
+              )}
+              {YearsPicker}
+              <button type="button" className="btn primary" onClick={() => agree(step.fee, wage)}>
+                Agree {moneyPw(wage)} for {years} yr{years > 1 ? 's' : ''}
+              </button>
+              {!step.lowered && (
+                <button
+                  type="button"
+                  className="btn tile"
+                  onClick={() => {
+                    if (offerLowerWage(p.id)) setStep({ ...step, lowered: true, message: `He'll accept ${moneyPw(lowerWage)}.` });
+                    else {
+                      setTalksOff(true);
+                      setStep({ kind: 'view' });
+                    }
+                  }}
+                >
+                  Offer {moneyPw(lowerWage)}
+                </button>
+              )}
+              <button type="button" className="link-btn" onClick={() => setStep({ kind: 'view' })}>Walk away</button>
+            </div>
+          );
+        })()}
+
+        {step.kind === 'renew' && renewal && (
+          <div className="negotiate">
+            <h3>New contract</h3>
+            {renewal.refuses ? (
+              <p className="note bad"><span aria-hidden="true">▼</span>{renewal.refuses}</p>
+            ) : (
+              <>
+                <p>
+                  {p.lastName} wants <strong>{moneyPw(renewal.wage)}</strong> (now {moneyPw(p.wage)}).
+                </p>
+                <p className="muted small">
+                  Wages would go to {moneyPw(bill - p.wage + renewal.wage)} of your {moneyPw(budgets.wage)} budget.
+                </p>
+                {bill - p.wage + renewal.wage > budgets.wage && (
+                  <OverBudget shortfall={bill - p.wage + renewal.wage - budgets.wage} transfer={budgets.transfer} onMove={adjustBudgets} />
+                )}
+                {YearsPicker}
+                {step.message && <p className="note bad"><span aria-hidden="true">▼</span>{step.message}</p>}
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={() => {
+                    const err = renew(p.id, renewal.wage, years);
+                    if (err) setStep({ kind: 'renew', message: err });
+                    else setStep({ kind: 'done', message: `${p.lastName} has signed a new deal until summer ${p.contractEnd + 1}.` });
+                  }}
+                >
+                  Agree {moneyPw(renewal.wage)} for {years} more yr{years > 1 ? 's' : ''}
+                </button>
+              </>
+            )}
+            <button type="button" className="link-btn" onClick={() => setStep({ kind: 'view' })}>Back</button>
+          </div>
+        )}
+
+        {step.kind === 'done' && (
+          <div className="negotiate">
+            <p className="note good"><span aria-hidden="true">▲</span>{step.message}</p>
+            <button type="button" className="btn primary" onClick={onClose}>Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Over the wage budget: offer to move the difference over from the transfer budget. */
+function OverBudget({ shortfall, transfer, onMove }: { shortfall: number; transfer: number; onMove: (wageDelta: number) => void }) {
+  const cost = Math.ceil(shortfall) * WAGE_TO_TRANSFER;
+  return (
+    <div className="over-budget">
+      <p className="note bad"><span aria-hidden="true">▼</span>That's {moneyPw(Math.ceil(shortfall))} over your wage budget.</p>
+      {cost <= transfer ? (
+        <button type="button" className="btn tile" onClick={() => onMove(Math.ceil(shortfall))}>
+          Move {money(cost)} from transfers to wages
+        </button>
+      ) : (
+        <p className="muted small">Sell or release a player to free up wages.</p>
+      )}
+    </div>
+  );
+}

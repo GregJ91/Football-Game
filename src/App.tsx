@@ -1,6 +1,7 @@
 import { useGame } from './state/store';
 import { ResultPopup } from './ui/components/ResultPopup';
 import { TabBar } from './ui/components/TabBar';
+import { Toast } from './ui/components/Toast';
 import { CreateClub } from './ui/screens/CreateClub';
 import { Fixtures } from './ui/screens/Fixtures';
 import { Hub } from './ui/screens/Hub';
@@ -11,6 +12,7 @@ import { SeasonEnd } from './ui/screens/SeasonEnd';
 import { Squad } from './ui/screens/Squad';
 import { Start } from './ui/screens/Start';
 import { Tactics } from './ui/screens/Tactics';
+import { Transfers } from './ui/screens/Transfers';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -28,11 +30,13 @@ export function App() {
         {screen === 'hub' && <Hub />}
         {screen === 'squad' && <Squad />}
         {screen === 'tactics' && <Tactics />}
+        {screen === 'transfers' && <Transfers />}
         {screen === 'league' && <League />}
         {screen === 'fixtures' && <Fixtures />}
       </div>
       <TabBar />
       <ResultPopup />
+      <Toast />
     </div>
   );
 }

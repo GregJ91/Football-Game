@@ -2,19 +2,11 @@ import { useState } from 'react';
 import { userSelection } from '../../engine/season/season';
 import { playerName } from '../../engine/players/generate';
 import { POSITION_ORDER } from '../../engine/players/ratings';
-import type { AttributeKey, Player } from '../../engine/types';
+import type { Player } from '../../engine/types';
 import { squadOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
-import { money } from '../format';
-
-const ATTR_GROUPS: { title: string; keys: AttributeKey[] }[] = [
-  { title: 'Technical', keys: ['finishing', 'passing', 'dribbling', 'tackling', 'heading'] },
-  { title: 'Mental', keys: ['positioning', 'vision', 'workRate', 'composure'] },
-  { title: 'Physical', keys: ['pace', 'strength', 'stamina'] },
-  { title: 'Goalkeeping', keys: ['handling', 'reflexes'] },
-];
-
-const label = (k: string) => k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+import { PlayerSheet } from '../components/PlayerSheet';
+import { moneyPw } from '../../engine/economy/finance';
 
 function status(p: Player): string | null {
   if (p.injuryWeeks > 0) return `Injured ${p.injuryWeeks}w`;
@@ -66,8 +58,9 @@ export function Squad() {
                   </small>
                 </span>
                 <span className="role">
-                  {st ? <em className="warn">{st}</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
-                  <small>Fit {Math.round(p.fitness)}%</small>
+                  {st ? <em className="warn">{st}</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
+                  <small>{moneyPw(p.wage)}</small>
+                  {p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
                 </span>
               </button>
             </li>
@@ -75,47 +68,7 @@ export function Squad() {
         })}
       </ul>
 
-      {selected && (
-        <div className="sheet-backdrop" onClick={() => setSelected(null)}>
-          <div className="sheet" role="dialog" aria-modal="true" aria-label={playerName(selected)} onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-head">
-              <span className="ovr big">{selected.overall}</span>
-              <div className="grow">
-                <strong>{playerName(selected)}</strong>
-                <small>
-                  {selected.position} · {selected.age} yrs · Potential {selected.potential}
-                </small>
-              </div>
-              <button type="button" className="link-btn" onClick={() => setSelected(null)}>
-                Close
-              </button>
-            </div>
-            <div className="facts">
-              <span>Value {money(selected.value)}</span>
-              <span>Wage {money(selected.wage)}/wk</span>
-              <span>Contract to {selected.contractEnd}</span>
-              <span>Morale {Math.round(selected.morale)}</span>
-              <span>Form {selected.form.toFixed(1)}</span>
-            </div>
-            <div className="attr-groups">
-              {ATTR_GROUPS.filter((g) => g.title !== 'Goalkeeping' || selected.position === 'GK').map((g) => (
-                <div key={g.title}>
-                  <h3>{g.title}</h3>
-                  {g.keys.map((k) => (
-                    <div key={k} className="attr">
-                      <span>{label(k)}</span>
-                      <span className="bar">
-                        <i style={{ width: `${selected.attributes[k]}%` }} />
-                      </span>
-                      <b>{selected.attributes[k]}</b>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {selected && <PlayerSheet player={selected} onClose={() => setSelected(null)} />}
     </main>
   );
 }

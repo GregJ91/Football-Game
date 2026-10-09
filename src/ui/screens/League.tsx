@@ -3,6 +3,7 @@ import { buildTable } from '../../engine/season/table';
 import { divisionOf } from '../../engine/world';
 import { useGame } from '../../state/store';
 import { LeagueTable, TableKey } from '../components/LeagueTable';
+import { LeagueTabs } from '../components/LeagueTabs';
 
 export function League() {
   const game = useGame((s) => s.game)!;
@@ -15,6 +16,7 @@ export function League() {
     <main className="screen league">
       <header className="screen-head">
         <h1>League</h1>
+        <LeagueTabs />
         <label className="field">
           <span className="visually-hidden">Division</span>
           <select value={division.def.id} onChange={(e) => setDivId(e.target.value)}>

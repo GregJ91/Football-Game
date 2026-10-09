@@ -25,21 +25,14 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
       </>
     ),
   },
+  { screen: 'transfers', label: 'Transfers', icon: <path d="M4 8 H18 L14 4 M20 16 H6 L10 20" /> },
   { screen: 'league', label: 'League', icon: <path d="M4 6 H20 M4 12 H20 M4 18 H20" /> },
-  {
-    screen: 'fixtures',
-    label: 'Fixtures',
-    icon: (
-      <>
-        <rect x="4" y="5" width="16" height="15" rx="2" />
-        <path d="M4 10 H20 M9 3 V7 M15 3 V7" />
-      </>
-    ),
-  },
 ];
 
 export function TabBar() {
-  const screen = useGame((s) => s.screen);
+  const current = useGame((s) => s.screen);
+  // Fixtures live under the League tab.
+  const screen = current === 'fixtures' ? 'league' : current;
   const go = useGame((s) => s.go);
   return (
     <nav className="tab-bar" aria-label="Main">

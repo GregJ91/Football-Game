@@ -38,7 +38,8 @@ export interface Player {
   clubId: string | null;
   wage: number; // per week, £
   value: number; // £
-  contractEnd: number; // season year the contract expires
+  /** Last season of the contract: it runs out at the end of this season. */
+  contractEnd: number;
   morale: number; // 0–100
   fitness: number; // 0–100
   form: number; // rolling match rating, 1–10
@@ -47,6 +48,8 @@ export interface Player {
   ambition: number; // 1–20
   loyalty: number; // 1–20
   seasonStats: { apps: number; goals: number; assists: number; ratingSum: number };
+  /** Placed on the transfer list by their club. */
+  listed?: boolean;
 }
 
 export type KitPattern = 'plain' | 'stripes' | 'hoops' | 'halves' | 'sash';
@@ -74,6 +77,53 @@ export interface Club {
   /** The user's chosen XI (player ids per formation slot); unset = auto-pick. */
   lineup?: (string | null)[];
   history: SeasonRecord[];
+  /** This season's money in and out. */
+  ledger?: Ledger;
+  /** Players this club has scouted (exact ratings known). */
+  scouted?: Record<string, true>;
+  /** Board-set budgets for the season (user club). */
+  budgets?: Budgets;
+}
+
+export interface Budgets {
+  /** Money available for fees. */
+  transfer: number;
+  /** Maximum total wage bill, per week. */
+  wage: number;
+}
+
+export interface Ledger {
+  gate: number;
+  tv: number;
+  transfersIn: number; // fees received
+  transfersOut: number; // fees paid
+  wages: number;
+  other: number; // pay-offs and the like (negative = cost)
+}
+
+export type InboxKind = 'bid' | 'info' | 'contract';
+
+export interface InboxItem {
+  id: string;
+  season: number;
+  week: number;
+  kind: InboxKind;
+  text: string;
+  /** For bids: the offer on the table. */
+  bid?: { playerId: string; fromClubId: string; fee: number; countered?: boolean };
+  /** Week (in this season) after which an unanswered bid lapses. */
+  expiresWeek?: number;
+  resolved?: boolean;
+}
+
+export interface TransferRecord {
+  season: number;
+  week: number;
+  playerId: string;
+  playerName: string;
+  fromClubId: string | null;
+  toClubId: string | null;
+  fee: number;
 }
 
 export interface SeasonRecord {
@@ -209,6 +259,10 @@ export interface GameState {
   phase: 'season' | 'seasonEnd';
   nextId: number;
   settings?: GameSettings;
+  inbox?: InboxItem[];
+  transfers?: TransferRecord[];
+  /** Scout reports the user can still request this week. */
+  scoutReportsLeft?: number;
 }
 
 export interface GameSettings {

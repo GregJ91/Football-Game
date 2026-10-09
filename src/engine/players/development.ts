@@ -66,7 +66,6 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       p.injuryWeeks = 0;
       p.suspendedMatches = 0;
       p.morale = Math.round((p.morale + 70) / 2);
-      if (p.contractEnd <= game.season) p.contractEnd = game.season + 1 + rng.int(1, 3);
       if (shouldRetire(rng, p)) removePlayer(game, p);
     }
 
@@ -77,9 +76,23 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
       const i = need.indexOf(p.position);
       if (i >= 0) need.splice(i, 1);
     }
-    for (const position of need) sign(game, rng, clubId, position, quality - 13 + rng.normal() * 3, rng.int(16, 19));
+    // Only while the squad is short (or has no keeper at all).
+    for (const position of need) {
+      const hasKeeper = club.playerIds.some((id) => game.players[id].position === 'GK');
+      if (club.playerIds.length >= 22 && (position !== 'GK' || hasKeeper)) continue;
+      sign(game, rng, clubId, position, quality - 13 + rng.normal() * 3, rng.int(16, 19));
+    }
 
-    if (movedClubIds.has(clubId)) rebuildForLevel(game, rng, clubId, quality, club.isUser ? 4 : 6);
+    // AI clubs that changed division reshape their squad; the user uses the transfer market.
+    if (movedClubIds.has(clubId) && !club.isUser) rebuildForLevel(game, rng, clubId, quality, 4);
+  }
+
+  // Free agents age and decline like everyone else.
+  for (const p of Object.values(game.players)) {
+    if (p.clubId) continue;
+    developPlayer(rng, p);
+    p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
+    if (shouldRetire(rng, p)) delete game.players[p.id];
   }
 }
 
