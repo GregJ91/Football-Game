@@ -608,3 +608,9 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .help-bubble.above { transform: translateY(-100%); }
 .help-bubble strong { font-family: var(--display); font-size: 16px; letter-spacing: 0.3px; }
 @keyframes help-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Season and career totals */
+.stat-totals { display: grid; gap: 6px; }
+.stat-totals > div { display: grid; grid-template-columns: 92px repeat(3, 1fr); align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 10px; background: var(--panel-2); font-size: 13px; color: var(--muted); }
+.stat-totals small { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.stat-totals b { font-family: var(--display); font-size: 18px; color: var(--text); margin-right: 3px; font-variant-numeric: tabular-nums; }

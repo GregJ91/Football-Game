@@ -1,7 +1,7 @@
 import { realForeign } from '../../data/realClubs';
 import { CLUB_NAMES, NATIONS, PLAYER_NAMES, type Nation } from '../../data/europe';
 import { KIT_COLOURS, clubSuffixes, townNameParts } from '../../data/names';
-import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from '../players/generate';
+import { SQUAD_TEMPLATE, bankSeasonStats, generatePlayer, makeWonderkid } from '../players/generate';
 import { Rng } from '../rng';
 import { randomAge, stillToGrow } from '../world';
 import { developPlayer } from '../players/development';
@@ -157,7 +157,7 @@ export function rolloverForeignSquads(game: GameState, rng: Rng) {
       const p = eu.players[id];
       if (!p) continue;
       developPlayer(rng, p);
-      p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
+      bankSeasonStats(p);
       p.fitness = 100;
       p.injuryWeeks = 0;
       const retiring = p.age >= 35 || (p.age >= 33 && rng.chance(0.3));

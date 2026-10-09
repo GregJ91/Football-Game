@@ -45,6 +45,8 @@ export interface Player {
   ambition: number; // 1–20
   loyalty: number; // 1–20
   seasonStats: { apps: number; goals: number; assists: number; ratingSum: number };
+  /** Career games, goals and assists before this season. */
+  careerStats?: [number, number, number];
   /** This calendar month's games, for the monthly awards. */
   monthStats?: { apps: number; goals: number; assists: number; ratingSum: number };
   /** Placed on the transfer list by their club. */

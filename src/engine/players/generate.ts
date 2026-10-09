@@ -98,7 +98,42 @@ export function generatePlayer(rng: Rng, opts: GenerateOptions): Player {
     ambition: rng.int(1, 20),
     loyalty: rng.int(1, 20),
     seasonStats: { apps: 0, goals: 0, assists: 0, ratingSum: 0 },
+    careerStats: pastCareer(opts.id, age, opts.position),
   };
+}
+
+/** Goals and assists per game by position, for a believable past career. */
+const PER_GAME: Record<Position, [number, number]> = {
+  GK: [0, 0.005], DC: [0.04, 0.02], DR: [0.03, 0.08], DL: [0.03, 0.08], DMC: [0.05, 0.06],
+  MC: [0.1, 0.12], MR: [0.15, 0.18], ML: [0.15, 0.18], AMC: [0.25, 0.2], ST: [0.38, 0.12],
+};
+
+/**
+ * Games, goals and assists before the game began: about 20–38 games a season
+ * from 18. Seeded from the player's id so it doesn't disturb the random
+ * stream (and so the same player always gets the same past).
+ */
+export function pastCareer(id: string, age: number, position: Position): [number, number, number] {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  const r = (k: number) => ((Math.imul(h ^ k, 2654435761) >>> 0) % 1000) / 1000;
+  const seasons = Math.max(0, age - 18 + r(1));
+  const games = Math.round(seasons * (20 + r(2) * 18));
+  const [g, a] = PER_GAME[position];
+  return [games, Math.round(games * g * (0.6 + r(3) * 0.8)), Math.round(games * a * (0.6 + r(4) * 0.8))];
+}
+
+/** Career games, goals and assists including this season so far. */
+export function careerTotals(p: Player): { games: number; goals: number; assists: number } {
+  const c = p.careerStats ?? pastCareer(p.id, p.age, p.position);
+  return { games: c[0] + p.seasonStats.apps, goals: c[1] + p.seasonStats.goals, assists: c[2] + p.seasonStats.assists };
+}
+
+/** End of season: add the season's games, goals and assists to the career totals. */
+export function bankSeasonStats(p: Player) {
+  const c = p.careerStats ?? pastCareer(p.id, p.age, p.position);
+  p.careerStats = [c[0] + p.seasonStats.apps, c[1] + p.seasonStats.goals, c[2] + p.seasonStats.assists];
+  p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
 }
 
 /**

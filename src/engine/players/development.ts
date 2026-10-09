@@ -3,7 +3,7 @@ import type { GameState, Player } from '../types';
 import { facilitiesOf, trainingBonus, youthIntake } from '../club/facilities';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, newId } from '../world';
-import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from './generate';
+import { SQUAD_TEMPLATE, bankSeasonStats, generatePlayer, makeWonderkid } from './generate';
 import { POSITION_WEIGHTS, computeOverall, playerValue } from './ratings';
 
 
@@ -69,7 +69,7 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
     const bonus = trainingBonus(club);
     for (const p of squad) {
       developPlayer(rng, p, bonus);
-      p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
+      bankSeasonStats(p);
       p.fitness = 100;
       p.injuryWeeks = 0;
       p.injuryName = undefined;
@@ -123,7 +123,7 @@ export function rolloverPlayers(game: GameState, rng: Rng, movedClubIds: Set<str
   for (const p of Object.values(game.players)) {
     if (p.clubId) continue;
     developPlayer(rng, p);
-    p.seasonStats = { apps: 0, goals: 0, assists: 0, ratingSum: 0 };
+    bankSeasonStats(p);
     if (shouldRetire(rng, p)) delete game.players[p.id];
   }
 }

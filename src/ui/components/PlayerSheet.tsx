@@ -15,6 +15,7 @@ import { ROLES, ROLE_LABEL, ROLE_SHARE, happinessText, moodOf, roleOf } from '..
 import { cannotLoan } from '../../engine/transfers/loans';
 import { useGame } from '../../state/store';
 import { money } from '../format';
+import { careerTotals } from '../../engine/players/generate';
 
 // Goalkeepers see goalkeeping in place of the outfield technical column, as in CM.
 const groupsFor = (p: Player): { title: string; keys: readonly AttributeKey[] }[] => [
@@ -164,6 +165,27 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
           {interest && <span className={`interest interest-${interest}`} {...hp('interest')}>{INTEREST_LABEL[interest]}</span>}
           {known && !own && <span {...hp('potential')}>Potential {'★'.repeat(potentialStars(p))}{'☆'.repeat(5 - potentialStars(p))}</span>}
         </div>
+
+        {(() => {
+          const c = careerTotals(p);
+          const s = p.seasonStats;
+          return (
+            <div className="stat-totals">
+              <div {...hp('seasonStats')}>
+                <small>This season</small>
+                <span><b>{s.apps}</b> games</span>
+                <span><b>{s.goals}</b> goals</span>
+                <span><b>{s.assists}</b> assists</span>
+              </div>
+              <div {...hp('careerStats')}>
+                <small>Career</small>
+                <span><b>{c.games}</b> games</span>
+                <span><b>{c.goals}</b> goals</span>
+                <span><b>{c.assists}</b> assists</span>
+              </div>
+            </div>
+          );
+        })()}
 
         {step.kind === 'view' && (
           <>
