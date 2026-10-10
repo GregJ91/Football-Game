@@ -618,7 +618,7 @@ export function Club() {
                     <small className="muted">{about}</small>
                   </label>
                 ))}
-                <p className="muted small">The board sets new budgets every summer. Using the editor turns off achievements for this career.</p>
+                <p className="muted small">The board sets new budgets every summer.</p>
                 <div className="grid-2">
                   <button type="button" className="btn primary" onClick={() => {
                     editClub(draft);

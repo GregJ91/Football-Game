@@ -172,7 +172,7 @@ export const ACHIEVEMENTS: Achievement[] = DEFS.map(({ check: _check, ...a }) =>
 
 /** Testing aids (a top-flight giant, unlimited money, everyone interested) don't earn achievements. */
 export function earnsAchievements(game: GameState): boolean {
-  return !game.testingStart && !game.edited && !game.settings?.unlimitedMoney && !game.settings?.allInterested;
+  return !game.testingStart && !game.settings?.unlimitedMoney && !game.settings?.allInterested;
 }
 
 /** Every achievement this game has earned (ids). */

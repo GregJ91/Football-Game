@@ -28,7 +28,7 @@ export function Achievements() {
       <section className="card achievement-progress">
         <div className="card-label"><span>Unlocked</span><span>{done} of {ACHIEVEMENTS.length}</span></div>
         <span className="track"><i style={{ width: `${pct}%` }} /></span>
-        <p className="muted small">Kept on this device, whichever club or challenge you play. Careers where the game editor has been used don't earn them.</p>
+        <p className="muted small">Kept on this device, whichever club or challenge you play.</p>
       </section>
 
       {CATEGORIES.map((cat) => {

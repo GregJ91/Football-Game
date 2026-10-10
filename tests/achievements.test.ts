@@ -55,10 +55,9 @@ describe('achievements', () => {
 });
 
 describe('game editor', () => {
-  it('a career where the editor has been used earns no achievements', () => {
+  it('a career where the editor has been used still earns achievements', () => {
     const game = testGame('eng', 4321);
-    expect(earnsAchievements(game)).toBe(true);
     game.edited = true;
-    expect(earnsAchievements(game)).toBe(false);
+    expect(earnsAchievements(game)).toBe(true);
   });
 });
