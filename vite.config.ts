@@ -43,12 +43,16 @@ export default defineConfig(({ mode }) => ({
         description: 'Build a club from the bottom of the pyramid to the top of Europe.',
         theme_color: '#0E1A14',
         background_color: '#0E1A14',
+        id: 'fm-journey',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          // Full-bleed versions for Android launchers (Samsung One UI and others shape icons themselves).
+          { src: 'icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

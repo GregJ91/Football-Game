@@ -5,7 +5,7 @@ import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
 import { ACHIEVEMENTS } from '../../engine/achievements';
 import { APP_BUILT_AT, APP_VERSION } from '../../version';
-import { isInstalled, isIos, useInstall, useOfflineReady, useOnline } from '../../offline';
+import { isAndroid, isInstalled, isIos, isSamsungBrowser, useInstall, useOfflineReady, useOnline } from '../../offline';
 
 export function Start() {
   const go = useGame((s) => s.go);
@@ -117,6 +117,16 @@ export function Start() {
               <p className="small">The whole game is stored on this device. Install it to your home screen to play with no signal, on a plane or anywhere.</p>
               {canPrompt ? (
                 <button type="button" className="btn primary" onClick={() => void install()}>Install the app</button>
+              ) : isSamsungBrowser() ? (
+                <p className="small muted">
+                  On Samsung Internet: tap the menu <span aria-hidden="true">☰</span> at the bottom right, then <strong>Add page to</strong> → <strong>Home screen</strong>
+                  {' '}(or tap the install icon <span aria-hidden="true">⤓</span> in the address bar). Open it once with signal before you fly.
+                </p>
+              ) : isAndroid() ? (
+                <p className="small muted">
+                  On Android (Samsung, Pixel and others) in Chrome: tap the menu <span aria-hidden="true">⋮</span> at the top right, then <strong>Install app</strong> or
+                  {' '}<strong>Add to Home screen</strong>. Open it once with signal before you fly.
+                </p>
               ) : isIos() ? (
                 <p className="small muted">On iPhone: tap the Share button <span aria-hidden="true">⎙</span> in Safari, then <strong>Add to Home Screen</strong>. Open it once with signal before you fly.</p>
               ) : (

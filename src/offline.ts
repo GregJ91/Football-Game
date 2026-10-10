@@ -42,6 +42,15 @@ export function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+/** Samsung Internet, the browser that comes on Samsung phones. */
+export function isSamsungBrowser(): boolean {
+  return /SamsungBrowser/i.test(navigator.userAgent);
+}
+
+export function isAndroid(): boolean {
+  return /android/i.test(navigator.userAgent);
+}
+
 export function useOnline(): boolean {
   const [online, setOnline] = useState(() => navigator.onLine);
   useEffect(() => {
