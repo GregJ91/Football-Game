@@ -80,7 +80,7 @@ export function useOfflineReady(): boolean | null {
       if (!reg) return setReady(false);
       if (reg.active) setReady(true);
       else void navigator.serviceWorker.ready.then(() => live && setReady(true));
-    });
+    }).catch(() => live && setReady(false));
     return () => {
       live = false;
     };
