@@ -30,14 +30,12 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       workbox: {
-        // Keep the fonts so the game looks right offline.
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-        ],
+        // Everything the game needs is stored on the phone at install, fonts
+        // and icons included, so it plays with no signal at all.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,webmanifest}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: 'The Journey of a Football Manager',

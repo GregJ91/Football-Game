@@ -5,6 +5,7 @@ import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
 import { ACHIEVEMENTS } from '../../engine/achievements';
 import { APP_BUILT_AT, APP_VERSION } from '../../version';
+import { isInstalled, isIos, useInstall, useOfflineReady, useOnline } from '../../offline';
 
 export function Start() {
   const go = useGame((s) => s.go);
@@ -17,13 +18,21 @@ export function Start() {
   useEffect(() => {
     void loadAchievements();
   }, [loadAchievements]);
+  const online = useOnline();
+  const offlineReady = useOfflineReady();
+  const { canPrompt, install } = useInstall();
+  const installed = isInstalled();
   const [checking, setChecking] = useState(false);
   const [updateNote, setUpdateNote] = useState<string | null>(null);
 
   // Ask for the latest version now rather than waiting for the next launch.
   const checkForUpdates = async () => {
-    setChecking(true);
     setUpdateNote(null);
+    if (!navigator.onLine) {
+      setUpdateNote("No signal, so we can't check for updates. You can still play: everything's saved on this device.");
+      return;
+    }
+    setChecking(true);
     try {
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
       if (!reg) {
@@ -51,6 +60,11 @@ export function Start() {
 
   return (
     <main className="screen start">
+      {!online && (
+        <p className="offline-banner" role="status">
+          ✈ No signal: playing offline. Your game saves on this device as normal.
+        </p>
+      )}
       <div className="start-hero">
         <svg width="96" height="110" viewBox="0 0 84 96" aria-hidden="true">
           <path d="M42 4 L78 14 L78 48 C78 72 60 86 42 92 C24 86 6 72 6 48 L6 14 Z" fill="#B3202A" stroke="#F2B632" strokeWidth="4" />
@@ -89,6 +103,29 @@ export function Start() {
         </button>
         {save && <p className="hint">Starting a new game replaces your current save.</p>}
       </div>
+
+      {offlineReady !== null && (offlineReady === false ? null : (
+        <section className={`card offline-card ${installed ? 'installed' : ''}`}>
+          <div className="card-label">
+            <span>Play offline</span>
+            <span className="good">✓ Ready</span>
+          </div>
+          {installed ? (
+            <p className="small">Installed. The whole game is on this device, so it plays with no signal, on a plane or anywhere. Saves stay on the device.</p>
+          ) : (
+            <>
+              <p className="small">The whole game is stored on this device. Install it to your home screen to play with no signal, on a plane or anywhere.</p>
+              {canPrompt ? (
+                <button type="button" className="btn primary" onClick={() => void install()}>Install the app</button>
+              ) : isIos() ? (
+                <p className="small muted">On iPhone: tap the Share button <span aria-hidden="true">⎙</span> in Safari, then <strong>Add to Home Screen</strong>. Open it once with signal before you fly.</p>
+              ) : (
+                <p className="small muted">Use your browser's menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>. Open it once with signal before you fly.</p>
+              )}
+            </>
+          )}
+        </section>
+      ))}
 
       <footer className="version">
         <span>
