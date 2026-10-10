@@ -24,6 +24,9 @@ import { Tactics } from './ui/screens/Tactics';
 import { Transfers } from './ui/screens/Transfers';
 import { Manager } from './ui/screens/Manager';
 import { Achievements } from './ui/screens/Achievements';
+import { Legends, LegendsSeasonEnd } from './ui/screens/Legends';
+import { LegendsDraft } from './ui/screens/LegendsDraft';
+import { LegendsSetup } from './ui/screens/LegendsSetup';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -35,14 +38,19 @@ export function App() {
     return !!c && (c.status === 'lost' || (c.status === 'won' && !c.continued));
   });
 
+  const legendsDraft = useGame((s) => !!s.game?.legends?.draft);
+  const legends = useGame((s) => s.game?.mode === 'legends');
+
   if (screen === 'challenges') return <Challenges />;
+  if (screen === 'legendsSetup') return <LegendsSetup />;
   if (screen === 'achievements') return <Achievements />;
   if (screen === 'start' || !hasGame) return screen === 'create' ? <CreateClub /> : <Start />;
   if (screen === 'create') return <CreateClub />;
   // Sacked: out of work until you take a job (or start again).
   if (unemployed) return <Unemployed />;
   if (challengeOver && screen !== 'match') return <ChallengeResult />;
-  if (screen === 'seasonEnd') return <SeasonEnd />;
+  if (legends && legendsDraft) return <LegendsDraft />;
+  if (screen === 'seasonEnd') return legends ? <LegendsSeasonEnd /> : <SeasonEnd />;
   if (screen === 'match') return <Match />;
   if (screen === 'prematch') return <PreMatch />;
 
@@ -62,6 +70,7 @@ export function App() {
         {screen === 'europe' && <Europe />}
         {screen === 'awards' && <Awards />}
         {screen === 'manager' && <Manager />}
+        {screen === 'legends' && <Legends />}
       </div>
       <TabBar />
       <ResultPopup />

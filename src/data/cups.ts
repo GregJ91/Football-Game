@@ -105,8 +105,15 @@ export const SHOWPIECES: CupDef[] = [
   { id: 'super-cup', name: 'UEFA Super Cup', short: 'USC', entries: {}, day: 3, window: [0, 0], prize: 4_000_000, neutralSemis: false, showpiece: true },
 ];
 
+/** Legends mode: all 20 clubs in both cups from the first round, and a Super Cup to open each season. */
+export const LEGENDS_CUPS: CupDef[] = [
+  { id: 'legends-fa-cup', name: 'Super FA Cup', short: 'SFA', entries: { 1: 0 }, day: 2, window: [0.12, 0.9], prize: 0, neutralSemis: true },
+  { id: 'legends-league-cup', name: 'Super League Cup', short: 'SLC', entries: { 1: 0 }, day: 3, window: [0.08, 0.7], prize: 0, neutralSemis: false },
+];
+export const LEGENDS_SUPER_CUP: CupDef = { id: 'legends-super-cup', name: 'Super Cup', short: 'SC', entries: {}, day: 3, window: [0, 0], prize: 0, neutralSemis: false, showpiece: true };
+
 export function cupDef(country: CountryId, id: string): CupDef {
-  const def = CUPS[country].find((c) => c.id === id) ?? SHOWPIECES.find((c) => c.id === id);
+  const def = CUPS[country].find((c) => c.id === id) ?? SHOWPIECES.find((c) => c.id === id) ?? [...LEGENDS_CUPS, LEGENDS_SUPER_CUP].find((c) => c.id === id);
   if (!def) throw new Error(`Unknown cup ${id}`);
   return def;
 }

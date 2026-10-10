@@ -676,3 +676,21 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .offline-banner { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--accent); font-size: 14px; text-align: center; }
 .offline-card { margin-top: 16px; }
 .offline-card .btn { width: 100%; margin-top: 8px; }
+
+/* Legends */
+.legends-start { display: flex; flex-direction: column; gap: 4px; }
+.legends-draft .clock { display: flex; align-items: center; gap: 10px; }
+.legends-draft .clock.mine { border-color: var(--accent); }
+.btn.small { min-height: 34px; padding: 4px 10px; font-size: 13px; width: auto; }
+.need-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.need-chips span { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--panel-2); color: var(--muted); }
+.need-chips span b { color: var(--text); }
+.need-chips span.done { background: transparent; border: 1px solid var(--good); }
+.draft-pool { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.draft-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); text-align: left; }
+.draft-row .rating { font-family: var(--display); font-size: 22px; min-width: 32px; color: var(--accent); }
+.draft-confirm { margin: 6px 0 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.standings .mine { color: var(--accent); }
+.release-list { list-style: none; margin: 0; padding: 0; }
+.release-list li { border-top: 1px solid var(--line); padding: 4px 0; }

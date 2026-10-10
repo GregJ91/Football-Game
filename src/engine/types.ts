@@ -672,6 +672,32 @@ export interface Division {
   clubIds: string[];
 }
 
+export type LegendsDifficulty = 'easy' | 'medium' | 'hard';
+
+/** A Legends draft: the order of the first round, and whether it snakes back. */
+export interface LegendsDraft {
+  kind: 'initial' | 'summer';
+  order: string[];
+  rounds: number;
+  snake: boolean;
+  /** Picks made so far (the next pick's index). */
+  pick: number;
+  picks: { clubId: string; playerId: string; round: number; pick: number }[];
+}
+
+export interface LegendsState {
+  difficulty: LegendsDifficulty;
+  /** Clubs run by people (the rest are AI). */
+  humans: string[];
+  draft: LegendsDraft | null;
+  lastDraft?: LegendsDraft;
+  /** Undrafted players. */
+  pool: string[];
+  /** One entry per finished season. */
+  roll: { season: number; champions: string; cups: { id: string; winnerId: string }[]; positions: Record<string, number> }[];
+  finished?: boolean;
+}
+
 export interface GameState {
   version: 1;
   seed: number;
@@ -698,6 +724,9 @@ export interface GameState {
   manager?: ManagerRecord;
   /** Started as a top-flight giant (testing): no achievements. */
   testingStart?: boolean;
+  /** A separate game mode (Legends); normal careers leave this unset. */
+  mode?: 'legends';
+  legends?: LegendsState;
   /** The in-game editor has been used on this career. */
   edited?: boolean;
   /** Points deductions this season, by club. */

@@ -1,3 +1,4 @@
+import { LEGENDS_SEASONS, seasonsPlayed } from '../../engine/legends';
 import { useMemo } from 'react';
 import { divisionTable } from '../../engine/season/table';
 import { divisionOf, squadOf, userClub } from '../../engine/world';
@@ -27,7 +28,8 @@ export function Hub() {
 
   const club = userClub(game);
   const division = divisionOf(game, club.id);
-  const offersCount = jobOffers(game).length;
+  const legends = game.mode === 'legends';
+  const offersCount = legends ? 0 : jobOffers(game).length;
   const grading = game.phase === 'season' ? nextLevelGrading(game) : null;
   // The engine mutates `game` in place, so `rev` is what signals a change.
   const table = useMemo(() => divisionTable(game, division.def.id), [rev, division]);
@@ -72,6 +74,12 @@ export function Hub() {
             {seasonLabel(game.season)} · Game {matchday} of {ourFixtures.length} · {division.def.name}
           </div>
         </div>
+        {legends ? (
+          <button type="button" className="bank" onClick={() => go('legends')}>
+            <strong>{Math.min(seasonsPlayed(game) + 1, LEGENDS_SEASONS)}/{LEGENDS_SEASONS}</strong>
+            <span>Season</span>
+          </button>
+        ) : (<>
         <button type="button" className="manager-btn" onClick={() => go('manager')} {...hp('navManager')}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21 C4 15 20 15 20 21" /></svg>
           <span>Manager</span>
@@ -81,15 +89,16 @@ export function Hub() {
           <strong>{money(club.balance)}</strong>
           <span>Bank</span>
         </div>
+        </>)}
       </header>
 
-      <button type="button" className="mood-row" onClick={() => go('club')}>
+      {!legends && <button type="button" className="mood-row" onClick={() => go('club')}>
         <span {...hp('board')}>Board <b>{Math.round(board.confidence)}</b><i className="mini"><i style={{ width: `${board.confidence}%` }} /></i></span>
         <span {...hp('fans')}>Fans <b>{Math.round(board.fans)}</b><i className="mini fans"><i style={{ width: `${board.fans}%` }} /></i></span>
         {board.warning === 'final' ? (
           <span className="target-chip danger">Final warning</span>
         ) : board.target && <span className="target-chip" {...hp('target')}>Target: {board.target.label}</span>}
-      </button>
+      </button>}
 
       {game.challenge?.status === 'active' && (() => {
         const def = challengeDef(game.challenge.id);
@@ -168,7 +177,7 @@ export function Hub() {
         <section className="inbox">
           <div className="card-label inbox-label">
             <span>Needs your attention</span>
-            <button type="button" className="link-btn" onClick={() => go('transfers')}>{window.label} →</button>
+            {!legends && <button type="button" className="link-btn" onClick={() => go('transfers')}>{window.label} →</button>}
           </div>
           {bids.slice(0, 3).map((item) => <BidCard key={item.id} item={item} />)}
           {unread > 0 && (
@@ -179,7 +188,7 @@ export function Hub() {
         </section>
       )}
 
-      {grading && !grading.ok && division.def.promotion && (
+      {!legends && grading && !grading.ok && division.def.promotion && (
         <button type="button" className="card grading-alert" onClick={() => go('club')} {...hp('gradingAlert')}>
           <strong>Your ground isn't good enough to go up</strong>
           <small>

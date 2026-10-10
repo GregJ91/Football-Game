@@ -1,3 +1,4 @@
+import { autoPick, createLegendsGame, makePick, startSummerDraft, type LegendsConfig } from '../engine/legends';
 import { startPartWork } from '../engine/club/trainingGround';
 import type { TrainingPart } from '../engine/types';
 import { acceptJobOffer, declineJobOffer } from '../engine/club/manager';
@@ -31,11 +32,11 @@ import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
   isKnown, releasePlayer, renewContract, type BidAction, type BidResponse,
 } from '../engine/transfers/market';
-import { loadAchievements, loadGame, saveAchievements, saveGame, type Unlock } from './persistence';
+import { LEGENDS_SLOT, loadAchievements, loadGame, saveAchievements, saveGame, type Unlock } from './persistence';
 import { ACHIEVEMENTS, earnedAchievements } from '../engine/achievements';
 import { addInbox as addInboxItem } from '../engine/transfers/market';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager' | 'achievements';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager' | 'achievements' | 'legendsSetup' | 'legends';
 
 export interface LiveNote {
   minute: number;
@@ -141,6 +142,13 @@ interface Store {
   simToSeasonEnd: () => Promise<void>;
   dismissResult: () => void;
   nextSeason: () => void;
+  /** Legends mode. */
+  newLegends: (config: Omit<LegendsConfig, 'seed'>) => void;
+  continueLegends: () => Promise<boolean>;
+  legendsPick: (playerId: string) => string | null;
+  legendsAutoPick: () => string | null;
+  /** Release the chosen players (or the weakest) and start the summer draft. */
+  legendsSummer: (released: string[]) => void;
 
   kickOff: () => void;
   liveTick: () => void;
@@ -182,7 +190,7 @@ export const useGame = create<Store>()((set, get) => {
     // A pending result popup is shown on the hub first; dismissing it moves on.
     if (game) unlockAchievements(game);
     set((s) => ({ rev: s.rev + 1, screen: game?.phase === 'seasonEnd' && !s.resultPopup ? 'seasonEnd' : s.screen }));
-    if (game) void saveGame(game);
+    if (game) void saveGame(game, game.mode === 'legends' ? LEGENDS_SLOT : 'slot1');
   };
   // Anything newly achieved: kept on the device, and announced.
   const unlockAchievements = (game: GameState) => {
@@ -685,6 +693,45 @@ export const useGame = create<Store>()((set, get) => {
     dismissResult: () => {
       const { game } = get();
       set({ resultPopup: null, screen: game?.phase === 'seasonEnd' ? 'seasonEnd' : get().screen });
+    },
+
+    newLegends: (config) => {
+      const game = createLegendsGame({ ...config, seed: Math.floor(Math.random() * 2 ** 32) });
+      set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null });
+      commit();
+    },
+
+    continueLegends: async () => {
+      const game = await loadGame(LEGENDS_SLOT);
+      if (!game) return false;
+      set((s) => ({ game, rev: s.rev + 1, screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub', live: null, liveFixture: null, resultPopup: null }));
+      return true;
+    },
+
+    legendsPick: (playerId) => {
+      const { game } = get();
+      if (!game?.legends) return 'No Legends game.';
+      const err = makePick(game, game.userClubId, playerId);
+      if (!game.legends.draft) set({ screen: 'hub' });
+      commit();
+      return err;
+    },
+
+    legendsAutoPick: () => {
+      const { game } = get();
+      if (!game?.legends) return 'No Legends game.';
+      const err = autoPick(game, game.userClubId);
+      if (!game.legends.draft) set({ screen: 'hub' });
+      commit();
+      return err;
+    },
+
+    legendsSummer: (released) => {
+      const { game } = get();
+      if (!game?.legends) return;
+      startSummerDraft(game, { [game.userClubId]: released });
+      set({ screen: 'hub' });
+      commit();
     },
 
     nextSeason: () => {

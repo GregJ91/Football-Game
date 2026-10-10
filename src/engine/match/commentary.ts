@@ -102,5 +102,5 @@ export function describeEvent(
 }
 
 export function playerLabel(p: Player | undefined) {
-  return p ? `${p.firstName[0]}. ${p.lastName}` : 'Unknown';
+  return p ? (p.firstName ? `${p.firstName[0]}. ${p.lastName}` : p.lastName) : 'Unknown';
 }

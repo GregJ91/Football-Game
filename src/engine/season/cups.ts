@@ -1,4 +1,4 @@
-import { CUPS, cupDef } from '../../data/cups';
+import { CUPS, LEGENDS_CUPS, cupDef } from '../../data/cups';
 import { euroDef, isEuroId } from '../../data/europe';
 import { dateIn, formatDate } from '../calendar';
 import { crowdFill } from '../economy/finance';
@@ -81,7 +81,7 @@ export function setupCups(game: GameState) {
     if (!euro.has(`${week}:${day}`)) return day;
     return [2, 3, 1, 4, 5].find((d) => !taken.has(`${week}:${d}`)) ?? day;
   };
-  game.cups = CUPS[game.country].map((def) => {
+  game.cups = (game.mode === 'legends' ? LEGENDS_CUPS : CUPS[game.country]).map((def) => {
     const count = roundCount(game, def);
     const start = Math.round(game.totalWeeks * def.window[0]);
     const end = Math.round(game.totalWeeks * def.window[1]);
@@ -114,6 +114,16 @@ function showpieceMatches(game: GameState, previousCups: CupState[]): { id: stri
   const out: { id: string; pair: string[]; week: number }[] = [];
   const summary = game.lastSummary;
   const top = game.divisions.find((d) => d.def.level === 1)!;
+  if (game.mode === 'legends') {
+    // Super Cup: league champions v Super FA Cup winners (the runners-up if one team won both).
+    // Before the first season, the two strongest squads.
+    const table = summary?.finalTables[top.def.id]?.map((r) => r.clubId);
+    const byRep = [...top.clubIds].sort((a, b) => game.clubs[b].reputation - game.clubs[a].reputation);
+    const champions = table?.[0] ?? byRep[0];
+    const cupWinner = previousCups.find((c) => c.id === 'legends-fa-cup')?.winnerId;
+    const opponent = cupWinner && cupWinner !== champions ? cupWinner : (table ?? byRep).find((id) => id !== champions)!;
+    return [{ id: 'legends-super-cup', pair: [champions, opponent], week: 0 }];
+  }
   if (game.country === 'eng') {
     const table = summary?.finalTables[top.def.id]?.map((r) => r.clubId);
     const byRep = [...top.clubIds].sort((a, b) => game.clubs[b].reputation - game.clubs[a].reputation);

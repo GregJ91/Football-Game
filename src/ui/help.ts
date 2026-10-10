@@ -8,6 +8,7 @@ const HELP = {
   navSquad: ['Squad', 'Your players: ratings, fitness, morale and roles, plus the Training and Medical screens.'],
   navTactics: ['Tactics', 'Pick the formation, how attacking to be, how hard to press, and choose the starting XI and bench.'],
   navTransfers: ['Transfers', 'Search every player in the game, send scouts, deal with offers for your players and see the deals done.'],
+  navLegends: ['Legends', 'The ten-season story so far: who won what, the all-time table and your latest draft picks.'],
   navClub: ['Club', "The chairman's office: the ground, staff and facilities, money, the board, and your trophy cabinet."],
   inbox: ['Inbox', 'Messages from your staff, the board and other clubs: scout reports, bids, injuries and news. Unread ones are counted on the badge.'],
   date: ['Date', 'Today in the game. Each press of Continue moves on half a day (morning, then afternoon). League matches are on Saturdays.'],

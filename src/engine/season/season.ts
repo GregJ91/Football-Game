@@ -1,3 +1,4 @@
+import { endLegendsSeason, legendsAiBoost, startSummerDraft } from '../legends';
 import { maybeJobOffer, monthlyJobOffers, recordManagerMatch } from '../club/manager';
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
 import { matchPrepBoost, weeklyTraining } from '../players/training';
@@ -86,7 +87,7 @@ export function autoRotates(game: GameState): boolean {
 export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { live?: boolean; home?: boolean } = {}): TeamSheet {
   if (!club.isUser) {
     const tactics = aiTactics(game, club, opponent);
-    return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics };
+    return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics, boost: game.mode === 'legends' ? legendsAiBoost(game) : undefined };
   }
   // Optionally delegate simmed matches to the assistant manager.
   const rotate = !opts.live && autoRotates(game);
@@ -279,6 +280,7 @@ export function fixturesForWeek(game: GameState, week: number): Fixture[] {
 /** Play every fixture in the current week across the whole pyramid. */
 export function playWeek(game: GameState): Fixture[] {
   if (game.phase !== 'season') return [];
+  if (game.mode === 'legends') return playLegendsWeek(game);
   // Any cup rounds earlier in the week that were skipped over.
   playDueCupRounds(game, game.week, MATCHDAY);
   // It's matchday: messages from today's games and business carry Saturday's date.
@@ -331,6 +333,27 @@ export function playWeek(game: GameState): Fixture[] {
       addInbox(game, 'contract', `Contracts ending this summer: ${expiring.map((p) => p.lastName).join(', ')}. Renew them from the Squad screen or they will leave.`, { category: 'transfers', subject: 'Contracts ending' });
     }
   }
+  return fixtures;
+}
+
+/**
+ * A Legends week: cup rounds, the league games and recovery. No money,
+ * transfers, training growth, board or job offers.
+ */
+function playLegendsWeek(game: GameState): Fixture[] {
+  playDueCupRounds(game, game.week, MATCHDAY);
+  game.day = MATCHDAY;
+  recoverTo(game, game.week * 7 + MATCHDAY);
+  const fixtures = fixturesForWeek(game, game.week).filter((f) => !f.result);
+  withRng(game, (rng) => {
+    for (const f of fixtures) f.result = playMatch(game, rng, f.homeId, f.awayId, { compId: f.divisionId });
+  });
+  weeklyRecovery(game);
+  if (monthEnds(game)) monthlyAwards(game);
+  game.week++;
+  game.day = MATCHDAY - 7;
+  game.half = 'pm';
+  if (game.week >= game.totalWeeks) endLegendsSeason(game);
   return fixtures;
 }
 
@@ -493,6 +516,8 @@ export function applyMovements(game: GameState, summary: SeasonSummary) {
 /** Promotion/relegation, player ageing and a fresh fixture list. */
 export function startNextSeason(game: GameState) {
   if (game.phase !== 'seasonEnd' || !game.lastSummary) return;
+  // Legends seasons roll over through the summer draft instead.
+  if (game.mode === 'legends') return startSummerDraft(game);
   withRng(game, (rng) => deliverScoutReports(game, rng, true));
   // Loans end with the season; deductions don't carry over.
   returnLoans(game);

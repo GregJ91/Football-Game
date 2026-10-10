@@ -39,16 +39,25 @@ const TABS: { screen: Screen; label: string; icon: ReactNode }[] = [
   },
 ];
 
-const NAV_HELP = { hub: 'navHub', squad: 'navSquad', tactics: 'navTactics', transfers: 'navTransfers', club: 'navClub' } as const;
+const LEGENDS_TAB = {
+  screen: 'legends' as Screen,
+  label: 'Legends',
+  icon: <path d="M7 4 H17 V9 A5 5 0 0 1 7 9 Z M12 14 V18 M8 20 H16 M7 6 H4 A3 3 0 0 0 7 11 M17 6 H20 A3 3 0 0 1 17 11" />,
+};
+
+const NAV_HELP = { hub: 'navHub', squad: 'navSquad', tactics: 'navTactics', transfers: 'navTransfers', club: 'navClub', legends: 'navLegends' } as const;
 
 export function TabBar() {
   const current = useGame((s) => s.screen);
   // League and fixtures are reached from the Hub.
   const screen = current === 'fixtures' || current === 'league' || current === 'cups' || current === 'europe' || current === 'awards' || current === 'inbox' || current === 'manager' ? 'hub' : current;
   const go = useGame((s) => s.go);
+  // Legends has no transfers or club business: its own tab instead.
+  const legends = useGame((s) => s.game?.mode === 'legends');
+  const tabs = legends ? [...TABS.filter((t) => t.screen !== 'transfers' && t.screen !== 'club'), LEGENDS_TAB] : TABS;
   return (
     <nav className="tab-bar" aria-label="Main">
-      {TABS.map((t) => (
+      {tabs.map((t) => (
         <button
           key={t.screen}
           type="button"

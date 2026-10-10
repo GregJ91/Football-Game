@@ -38,7 +38,7 @@ export function Squad() {
         <h1>Squad</h1>
         <div className="segmented" role="tablist">
           <button type="button" role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
-          <button type="button" role="tab" aria-selected={tab === 'training'} onClick={() => setTab('training')} {...hp('training')}>Training</button>
+          {game.mode !== 'legends' && <button type="button" role="tab" aria-selected={tab === 'training'} onClick={() => setTab('training')} {...hp('training')}>Training</button>}
           <button type="button" role="tab" aria-selected={tab === 'medical'} onClick={() => setTab('medical')} {...hp('medical')}>
             Medical{squad.some((p) => p.injuryWeeks > 0) ? ` (${squad.filter((p) => p.injuryWeeks > 0).length})` : ''}
           </button>
@@ -75,8 +75,8 @@ export function Squad() {
                 </span>
                 <span className="role">
                   {st ? <em className="warn">{st}</em> : p.loanFrom ? <em>On loan</em> : p.transferRequest ? <em className="warn">Wants away</em> : p.listed ? <em className="warn">Listed</em> : starters.has(p.id) ? 'XI' : bench.has(p.id) ? 'Sub' : ''}
-                  <small {...hp('wage')}>{moneyPw(p.wage)}</small>
-                  {p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
+                  {game.mode !== 'legends' && <small {...hp('wage')}>{moneyPw(p.wage)}</small>}
+                  {game.mode !== 'legends' && p.contractEnd <= game.season && <small className="warn">Contract ends</small>}
                 </span>
               </button>
             </li>

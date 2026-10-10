@@ -77,12 +77,14 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
   const p = player;
   const club = game.clubs[game.userClubId];
   const own = p.clubId === club.id;
-  const known = isKnown(game, club, p);
+  // Legends: no money, contracts or scouting; everyone's ability is known.
+  const legends = game.mode === 'legends';
+  const known = legends || isKnown(game, club, p);
   const shortlisted = isShortlisted(game, p.id);
   const report = own ? undefined : club.scoutReports?.[p.id];
   const [lo, hi] = ratingRange(p);
   const currentClub = p.clubId ? game.clubs[p.clubId] : null;
-  const interest = own ? null : interestIn(game, club, p);
+  const interest = own || legends ? null : interestIn(game, club, p);
   const budgets = budgetsOf(game, club);
   const bill = wageBill(game, club);
 
@@ -138,7 +140,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               {positionsLabel(p)} · {p.age} yrs · {currentClub ? `${currentClub.name} (${leagueNameOf(game, currentClub.id)})` : 'Free agent'}
             </small>
           </div>
-          {!own && (
+          {!own && !legends && (
             <button
               type="button"
               className="star-btn"
@@ -154,9 +156,10 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
         </div>
 
         <div className="facts">
-          {p.clubId && <span {...hp('value')}>Value {money(p.value)}</span>}
-          <span {...hp('wage')}>Wage {moneyPw(p.wage)}</span>
-          {p.clubId && <span {...hp('contract')}>Contract ends summer {p.contractEnd + 1}</span>}
+          {legends && <span>{p.clubId ? game.clubs[p.clubId].name : 'Not drafted'}</span>}
+          {!legends && p.clubId && <span {...hp('value')}>Value {money(p.value)}</span>}
+          {!legends && <span {...hp('wage')}>Wage {moneyPw(p.wage)}</span>}
+          {!legends && p.clubId && <span {...hp('contract')}>Contract ends summer {p.contractEnd + 1}</span>}
           {own && <span {...hp('fitness')}>Fitness {Math.round(p.fitness)}%</span>}
           {own && <span {...hp('morale')}>Morale {Math.round(p.morale)}</span>}
           {own && <span {...hp('form')}>Form {p.form.toFixed(1)}</span>}
@@ -267,7 +270,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               </div>
             )}
 
-            {!own && (
+            {!own && !legends && (
               <div className="stack">
                 {blocker || talksOff ? (
                   <p className="note bad"><span aria-hidden="true">▼</span>{talksOff ? `${p.lastName} has walked away from talks.` : blocker}</p>
@@ -297,7 +300,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               </div>
             )}
 
-            {own && p.loanFrom && (
+            {own && !legends && p.loanFrom && (
               <div className="stack">
                 <button
                   type="button"
@@ -312,7 +315,7 @@ export function PlayerSheet({ player, onClose }: { player: Player; onClose: () =
               </div>
             )}
 
-            {own && !p.loanFrom && (
+            {own && !legends && !p.loanFrom && (
               <div className="stack">
                 <div className="grid-2">
                   <button type="button" className="btn tile" onClick={() => toggleListed(p.id)} {...hp('listed')}>

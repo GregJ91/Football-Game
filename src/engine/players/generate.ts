@@ -150,9 +150,9 @@ export function makeWonderkid(rng: Rng, p: Player): Player {
 }
 
 export function playerName(p: Player): string {
-  return `${p.firstName} ${p.lastName}`;
+  return p.firstName ? `${p.firstName} ${p.lastName}` : p.lastName;
 }
 
 export function shortName(p: Player): string {
-  return `${p.firstName[0]}. ${p.lastName}`;
+  return p.firstName ? `${p.firstName[0]}. ${p.lastName}` : p.lastName;
 }

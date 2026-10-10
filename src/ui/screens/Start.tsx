@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listSaves, type SaveMeta } from '../../state/persistence';
+import { LEGENDS_SLOT, listSaves, type SaveMeta } from '../../state/persistence';
 import { useGame } from '../../state/store';
 import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
@@ -12,6 +12,8 @@ export function Start() {
   const continueGame = useGame((s) => s.continueGame);
   const setChallengeDraft = useGame((s) => s.setChallengeDraft);
   const [save, setSave] = useState<SaveMeta | null>(null);
+  const [legendsSave, setLegendsSave] = useState<SaveMeta | null>(null);
+  const continueLegends = useGame((s) => s.continueLegends);
   const achievements = useGame((s) => s.achievements);
   const loadAchievements = useGame((s) => s.loadAchievements);
   const done = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
@@ -54,7 +56,10 @@ export function Start() {
 
   useEffect(() => {
     listSaves()
-      .then((saves) => setSave(saves[0] ?? null))
+      .then((saves) => {
+        setSave(saves.find((s) => s.slot === 'slot1') ?? null);
+        setLegendsSave(saves.find((s) => s.slot === LEGENDS_SLOT) ?? null);
+      })
       .catch(() => setSave(null));
   }, []);
 
@@ -94,6 +99,17 @@ export function Start() {
         <button type="button" className="btn big secondary" onClick={() => go('challenges')}>
           Challenge mode
         </button>
+        <div className="legends-start">
+          <button type="button" className="btn big secondary" onClick={() => go('legendsSetup')}>
+            Legends
+            <small>Draft the best players of the last 40 years</small>
+          </button>
+          {legendsSave && (
+            <button type="button" className="link-btn center" onClick={() => void continueLegends()}>
+              Continue Legends: {legendsSave.clubName} · season {legendsSave.season - 2025}
+            </button>
+          )}
+        </div>
         <button type="button" className="card achievements-link" onClick={() => go('achievements')}>
           <span className="grow">
             <strong>🏆 Achievements</strong>

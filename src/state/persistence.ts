@@ -122,3 +122,6 @@ export async function saveAchievements(unlocked: Record<string, Unlock>) {
     // Storage unavailable: they stay for this session.
   }
 }
+
+/** Legends games are kept apart from the normal career save. */
+export const LEGENDS_SLOT = 'legends';
