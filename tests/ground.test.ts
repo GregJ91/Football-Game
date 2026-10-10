@@ -4,13 +4,14 @@ import { injuryFactor, trainingBonus } from '../src/engine/club/facilities';
 import { fanVerdict, playerVerdict } from '../src/engine/club/feedback';
 import { weeklyCorporate } from '../src/engine/club/matchday';
 import {
-  MAX_GROUND, completeStadiumWork, groundOptions, groundUpkeep, stadiumOf, standOptions, startCommercialWork, startStadiumWork, totalCapacity,
+  MAX_GROUND, completeStadiumWork, groundFor, groundRule, totalSeats, groundOptions, groundUpkeep, stadiumOf, standOptions, startCommercialWork, startStadiumWork, totalCapacity,
 } from '../src/engine/club/stadium';
 import { partUpgrade, startPartWork, trainingGroundUpkeep } from '../src/engine/club/trainingGround';
 import { crowdFill, spareWeeklyIncome } from '../src/engine/economy/finance';
 import { matchPrepBoost, trainingKnocks, trainingRecovery } from '../src/engine/players/training';
 import { Rng } from '../src/engine/rng';
 import { userClub } from '../src/engine/world';
+import { handOver } from '../src/engine/club/career';
 import { testGame } from './helpers';
 
 function rich() {
@@ -154,5 +155,49 @@ describe('verdicts', () => {
     expect(after.score).toBeGreaterThan(before.score);
     expect(after.stars).toBe(5);
     expect(after.quotes.every((q) => q.good)).toBe(true);
+  });
+});
+
+describe('real-life grounds by level', () => {
+  it('a new club starts with a pitch and a rail: no stands, no seats', () => {
+    const { game, club } = rich();
+    const s = stadiumOf(club);
+    expect(s.stands.filter((x) => !x.corner).every((x) => x.open && x.seats === 0 && !x.roof)).toBe(true);
+    // Building on an open side puts up a real stand.
+    const opt = standOptions(game, club, 0).find((o) => o.kind === 'extend')!;
+    expect(opt.label).toMatch(/Build a .*-seat stand/);
+    expect(standOptions(game, club, 0).some((o) => o.kind === 'seats')).toBe(false);
+    startStadiumWork(club, opt);
+    finishBuilds(game);
+    expect(s.stands[0].open).toBe(false);
+    expect(s.stands[0].seats).toBe(opt.size);
+  });
+
+  it('grounds get bigger and better up the pyramid, and always meet the rules', () => {
+    const top = groundFor('eng', 1, 55_000);
+    expect(totalSeats(top)).toBe(totalCapacity(top));
+    expect(top.stands.filter((x) => x.corner).every((x) => x.capacity > 0)).toBe(true);
+    const nonLeague = groundFor('eng', 6, 2_000);
+    expect(nonLeague.stands.some((x) => x.open)).toBe(true);
+    expect(nonLeague.stands.some((x) => x.seats > 0)).toBe(true);
+    const bottom = groundFor('eng', 7, 600);
+    expect(bottom.stands.filter((x) => !x.corner).every((x) => x.open)).toBe(true);
+    for (const [c, l] of [['eng', 1], ['eng', 3], ['eng', 5], ['eng', 6], ['sco', 1], ['sco', 3]] as const) {
+      const s = groundFor(c, l, 0);
+      const rule = groundRule(c, l)!;
+      expect(totalCapacity(s)).toBeGreaterThanOrEqual(rule.capacity);
+      expect(totalSeats(s)).toBeGreaterThanOrEqual(rule.seats);
+      expect(s.floodlights).toBe(true);
+    }
+  });
+
+  it('taking over a big club comes with the training set-up clubs at that level have', () => {
+    const game = testGame('eng', 78);
+    const big = game.divisions.find((d) => d.def.level === 1)!.clubIds.map((id) => game.clubs[id])[0];
+    handOver(game, big);
+    expect(big.facilities!.training).toBe(5);
+    expect(big.trainingGround?.gym).toBe(3);
+    expect(totalSeats(big.stadium!)).toBe(totalCapacity(big.stadium!));
+    expect(playerVerdict(game, big).stars).toBeGreaterThanOrEqual(3);
   });
 });

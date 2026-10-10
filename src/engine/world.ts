@@ -4,7 +4,8 @@ import { KIT_COLOURS, STADIUM_SUFFIXES, clubSuffixes, townNameParts } from '../d
 import { SQUAD_TEMPLATE, generatePlayer, makeWonderkid } from './players/generate';
 import { Rng } from './rng';
 import { MAX_FACILITY } from './club/facilities';
-import { STAND_NAMES, createStadium, syncCapacity } from './club/stadium';
+import { createStadium, groundFor, syncCapacity } from './club/stadium';
+import { PART_ORDER, TRAINING_PARTS } from './club/trainingGround';
 import { setupCups } from './season/cups';
 import { setupEurope } from './season/europe';
 import { assignRoles } from './players/squad';
@@ -187,13 +188,9 @@ function createClub(
 function makeGiant(game: GameState, rng: Rng, user: Club, def: DivisionDef) {
   const eng = game.country === 'eng';
   createSquad(game, rng, user, def.quality + 6, 3, 99, 2, 1);
-  const stands = eng ? [16000, 12000, 12000, 12000] : [14000, 10000, 10000, 10000];
-  user.stadium = {
-    stands: STAND_NAMES.map((name, i) => ({ name, capacity: stands[i], seats: stands[i], roof: true })),
-    floodlights: true,
-    builds: [],
-  };
+  user.stadium = groundFor(game.country, def.level, eng ? 52_000 : 44_000);
   user.facilities = { training: MAX_FACILITY, youth: MAX_FACILITY, medical: MAX_FACILITY };
+  user.trainingGround = Object.fromEntries(PART_ORDER.map((p) => [p, TRAINING_PARTS[p].levels.length - 1]));
   user.balance = eng ? 60_000_000 : 20_000_000;
   user.reputation = 95;
 }

@@ -335,7 +335,7 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 .ground { display: grid; grid-template-columns: 74px 1fr 74px; grid-template-rows: auto 170px auto; gap: 6px; }
 .stand-corner { min-height: 0; padding: 6px 4px; border-radius: 10px 10px 10px 10px; }
 .stand-corner strong { font-size: 11px; }
-.stand-corner.empty { border-style: dashed; background: transparent; }
+.stand-corner.empty, .stand.open { border-style: dashed; background: transparent; }
 .stand-corner.empty span { color: var(--muted); }
 .stand-nw { grid-column: 1; grid-row: 1; border-top-left-radius: 28px; }
 .stand-ne { grid-column: 3; grid-row: 1; border-top-right-radius: 28px; }

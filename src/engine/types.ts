@@ -229,6 +229,8 @@ export interface Stand {
   roof: boolean;
   /** A corner stand, joining two sides (smaller). */
   corner?: boolean;
+  /** No stand at all: fans stand on hard standing behind the pitch rail. */
+  open?: boolean;
 }
 
 export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights' | 'food' | 'vip' | 'corporate' | 'fullRoof' | 'heating' | 'tg';

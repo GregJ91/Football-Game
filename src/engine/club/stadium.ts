@@ -15,18 +15,79 @@ const CORNER_SIZES = [250, 1000, 2500];
 
 const corners = () => CORNER_NAMES.map((name) => ({ name, capacity: 0, seats: 0, roof: false, corner: true }));
 
+/**
+ * A new club at the bottom of the pyramid, as in real life: no stadium,
+ * just a pitch with a rail round it, hard standing and a clubhouse.
+ */
 export function createStadium(): Stadium {
   return {
     stands: [
-      { name: STAND_NAMES[0], capacity: 200, seats: 60, roof: true },
-      { name: STAND_NAMES[1], capacity: 100, seats: 0, roof: false },
-      { name: STAND_NAMES[2], capacity: 100, seats: 0, roof: false },
-      { name: STAND_NAMES[3], capacity: 100, seats: 0, roof: false },
+      { name: STAND_NAMES[0], capacity: 200, seats: 0, roof: false, open: true },
+      { name: STAND_NAMES[1], capacity: 100, seats: 0, roof: false, open: true },
+      { name: STAND_NAMES[2], capacity: 100, seats: 0, roof: false, open: true },
+      { name: STAND_NAMES[3], capacity: 100, seats: 0, roof: false, open: true },
       ...corners(),
     ],
     floodlights: false,
     builds: [],
   };
+}
+
+/** What a side is called: before stands are built it's the clubhouse side and the east side. */
+export function standLabel(stand: { name: string; open?: boolean }): string {
+  if (!stand.open) return stand.name;
+  return stand.name === STAND_NAMES[0] ? 'Clubhouse side' : stand.name === STAND_NAMES[2] ? 'East Side' : stand.name;
+}
+
+/** How built-up grounds are at a level, roughly as in real life. */
+export type GroundTier = 'top' | 'league' | 'nonleague' | 'grassroots';
+
+export function groundTier(country: CountryId, level: number): GroundTier {
+  if (country === 'eng') return level <= 2 ? 'top' : level <= 4 ? 'league' : level <= 6 ? 'nonleague' : 'grassroots';
+  return level <= 2 ? 'league' : level <= 4 ? 'nonleague' : 'grassroots';
+}
+
+/**
+ * A realistic ground for a club at this level: Premier League and
+ * Championship grounds are all-seater bowls; Football League grounds have
+ * four seated, covered stands; non-league grounds have a small main stand,
+ * covered terraces and an open end; the bottom is a pitch with a rail.
+ */
+export function groundFor(country: CountryId, level: number, capacity: number): Stadium {
+  const rule = groundRule(country, level);
+  const cap = Math.max(capacity, rule?.capacity ?? 0, 400);
+  const tier = groundTier(country, level);
+  const s = createStadium();
+  const st = s.stands;
+  const sides = st.filter((x) => !x.corner);
+  const cornerShare = tier === 'top' ? 0.14 : 0;
+  const cornerCap = Math.min(MAX_CORNER, Math.round((cap * cornerShare) / 4));
+  const sideCaps = [0.31, 0.23, 0.23, 0.23].map((f) => Math.min(MAX_STAND, Math.round((cap - cornerCap * 4) * f)));
+  sides.forEach((x, i) => {
+    x.capacity = sideCaps[i];
+    x.open = tier === 'grassroots';
+    x.roof = tier !== 'grassroots';
+  });
+  if (cornerCap) for (const c of st.filter((x) => x.corner)) Object.assign(c, { capacity: cornerCap, seats: cornerCap, roof: true });
+  if (tier === 'nonleague') {
+    // One end is still open hard standing at the lower non-league levels.
+    const lower = (country === 'eng' && level >= 6) || (country === 'sco' && level >= 4);
+    if (lower) Object.assign(sides[3], { open: true, roof: false });
+  }
+  // Seats: all-seater at the top, mostly seated in the league, a seated main stand below.
+  const total = st.reduce((n, x) => n + x.capacity, 0);
+  let seats = tier === 'top' ? total : tier === 'league' ? Math.max(rule?.seats ?? 0, Math.round(total * 0.75)) : tier === 'nonleague' ? Math.max(rule?.seats ?? 0, Math.round(sides[0].capacity * 0.7)) : 0;
+  for (const x of [...sides, ...st.filter((c) => c.corner)]) {
+    const n = x.open ? 0 : Math.min(x.capacity, seats);
+    x.seats = Math.max(x.seats, n);
+    seats -= n;
+  }
+  s.floodlights = tier !== 'grassroots' || !!rule?.floodlights;
+  s.heating = tier === 'top' || (tier === 'league' && (country === 'sco' ? level === 1 : level === 3));
+  s.food = { top: 4, league: 3, nonleague: 1, grassroots: 0 }[tier];
+  s.vip = { top: 4, league: 2, nonleague: 1, grassroots: 0 }[tier];
+  s.corporate = { top: 3, league: 1, nonleague: 0, grassroots: 0 }[tier];
+  return s;
 }
 
 export function stadiumOf(club: Club): Stadium {
@@ -188,7 +249,7 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
   for (const size of s.corner ? CORNER_SIZES : SIDE_SIZES) {
     if (s.capacity + size > max) continue;
     const perSeat = 60 * (1 + s.capacity / 5000) + 45 * (1 + s.capacity / 10000);
-    const fresh = s.capacity === 0;
+    const fresh = s.capacity === 0 || !!s.open;
     opts.push({
       kind: 'extend',
       stand: i,
@@ -201,7 +262,7 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
     });
   }
   const terrace = s.capacity - s.seats;
-  if (terrace > 0) {
+  if (terrace > 0 && !s.open) {
     opts.push({
       kind: 'seats',
       stand: i,
@@ -216,8 +277,10 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
     opts.push({
       kind: 'roof',
       stand: i,
-      label: 'Add a roof',
-      about: 'Keeps the fans dry: crowds hold up better in bad weather.',
+      label: s.open ? 'Put up a covered terrace' : 'Add a roof',
+      about: s.open
+        ? 'A simple covered standing area behind the rail: the first step from a pitch to a ground. Keeps the fans dry.'
+        : 'Keeps the fans dry: crowds hold up better in bad weather.',
       cost: Math.round(Math.max(5000, s.capacity * 40) * k),
       weeks: Math.min(10, 3 + Math.round(s.capacity / 2000)),
       upkeep: Math.round(s.capacity * UPKEEP.roof * k),
@@ -296,7 +359,8 @@ export function completeStadiumWork(club: Club, b: Build): string {
   const stand = b.stand !== undefined ? s.stands[b.stand] : null;
   switch (b.kind) {
     case 'extend': {
-      const fresh = stand!.capacity === 0;
+      const fresh = stand!.capacity === 0 || !!stand!.open;
+      stand!.open = false;
       stand!.capacity += b.size!;
       stand!.seats += b.size!;
       if (s.fullRoof) stand!.roof = true;
@@ -317,9 +381,12 @@ export function completeStadiumWork(club: Club, b: Build): string {
     case 'seats':
       stand!.seats = stand!.capacity;
       return `The ${stand!.name} is now all-seater.`;
-    case 'roof':
+    case 'roof': {
+      const open = stand!.open;
       stand!.roof = true;
-      return `The ${stand!.name} has its new roof.`;
+      stand!.open = false;
+      return open ? `The ${stand!.name} has a covered terrace at last.` : `The ${stand!.name} has its new roof.`;
+    }
     case 'floodlights':
       s.floodlights = true;
       return 'The floodlights are switched on for the first time.';

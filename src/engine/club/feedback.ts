@@ -24,7 +24,7 @@ export interface Verdict {
 }
 
 /** How much is expected at this level (0 at the bottom, 1 in the top flight). */
-function expectation(game: GameState, club: Club): number {
+export function expectation(game: GameState, club: Club): number {
   const q = divisionOf(game, club.id).def.quality ;
   return Math.max(0, Math.min(1, (q - 47) / 27));
 }
@@ -49,11 +49,13 @@ export function fanVerdict(game: GameState, club: Club): Verdict {
     const roofed = s.stands.reduce((n, x) => n + (x.roof ? x.capacity : 0), 0) / cap;
     if (s.fullRoof) pts.push({ delta: 12, text: 'A full roof! The noise stays in and the rain stays out.' });
     else if (roofed >= 0.8) pts.push({ delta: 6, text: 'Nearly everywhere is covered. No more soakings.' });
+    else if (roofed < 0.4 && exp < 0.1) pts.push({ delta: -3, text: "Bring a brolly: there's no cover anywhere." });
     else if (roofed < 0.4) pts.push({ delta: -10, text: 'Half the ground stands in the rain. Put a roof on it!' });
 
     const seated = s.stands.reduce((n, x) => n + x.seats, 0) / cap;
     if (seated >= 0.9) pts.push({ delta: 4 + 6 * exp, text: 'A seat for everyone. Proper ground, this.' });
     else if (seated < 0.5 && exp > 0.3) pts.push({ delta: -10 * exp, text: 'Still standing on crumbling terraces at this level?' });
+    else if (seated < 0.5 && s.stands.every((x) => x.open || x.capacity === 0)) pts.push({ delta: 3, text: 'Leaning on the rail with a cup of tea. Proper grassroots football.' });
     else if (seated < 0.5) pts.push({ delta: 3, text: 'Love a terrace. Old-school football.' });
 
     const corners = s.stands.filter((x) => x.corner && x.capacity > 0).length;
@@ -95,6 +97,7 @@ export function playerVerdict(game: GameState, club: Club): Verdict {
   // A level-3 complex is decent at the bottom; the top flight expects level 5.
   const wantTraining = 1 + Math.round(exp * 4);
   if (training > wantTraining) pts.push({ delta: 10, text: 'The pitches here are better than at most clubs at this level.' });
+  else if (training === 1 && wantTraining === 1) pts.push({ delta: 1, text: "It's a council pitch two nights a week, but we're just happy to play." });
   else if (training < wantTraining) pts.push({ delta: -8 * (wantTraining - training), text: 'The training pitches are bumpy. Not what you expect at this level.' });
 
   const lines: Record<string, [string, string]> = {

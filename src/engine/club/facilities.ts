@@ -12,6 +12,16 @@ export const FACILITY_INFO: Record<FacilityKind, { name: string; effect: string 
   medical: { name: 'Medical centre', effect: 'Injured players recover sooner.' },
 };
 
+/** What the training ground actually is at each level. */
+export const TRAINING_LEVEL_NAMES = [
+  '',
+  'A council pitch, hired two nights a week',
+  'Our own training pitch',
+  'A proper training ground',
+  'A training centre with several pitches',
+  'An elite training complex',
+];
+
 export function facilitiesOf(club: Club): Record<FacilityKind, number> {
   club.facilities ??= { training: 1, youth: 1, medical: 1 };
   return club.facilities;

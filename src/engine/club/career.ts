@@ -10,7 +10,9 @@ import { divisionOf, withRng } from '../world';
 import { boardOf, difficultyOf, makeSponsorOffers, setSeasonTarget } from './chairman';
 import { loseChallenge } from './challenge';
 import { MAX_FACILITY } from './facilities';
-import { MAX_STAND, STAND_NAMES, groundRule, syncCapacity } from './stadium';
+import { groundFor, syncCapacity } from './stadium';
+import { expectation } from './feedback';
+import { PART_ORDER, TRAINING_PARTS } from './trainingGround';
 
 /** Offers stay open this many weeks. */
 const OFFER_WEEKS = 4;
@@ -138,21 +140,13 @@ export function handOver(game: GameState, club: Club) {
  */
 function takeOver(game: GameState, club: Club) {
   const level = divisionOf(game, club.id).def.level;
-  const rule = groundRule(game.country, level);
-  const cap = Math.max(club.capacity, rule?.capacity ?? 0);
-  const perStand = Math.min(MAX_STAND, Math.ceil(cap / 4));
-  const seatShare = level <= 4 ? 1 : level <= 6 ? 0.5 : 0.2;
-  club.stadium = {
-    stands: STAND_NAMES.map((name) => {
-      const seats = Math.max(Math.round(perStand * seatShare), Math.ceil((rule?.seats ?? 0) / 4));
-      return { name, capacity: perStand, seats: Math.min(perStand, seats), roof: level <= 5 };
-    }),
-    floodlights: level <= 6 || !!rule?.floodlights,
-    builds: [],
-  };
+  club.stadium = groundFor(game.country, level, club.capacity);
   syncCapacity(club);
   const facilityLevel = Math.max(1, Math.min(MAX_FACILITY, 5 - Math.ceil(level / 2)));
-  club.facilities = { training: facilityLevel, youth: facilityLevel, medical: facilityLevel };
+  // The training set-up a club at this level usually has.
+  const exp = expectation(game, club);
+  club.facilities = { training: 1 + Math.round(exp * (MAX_FACILITY - 1)), youth: facilityLevel, medical: facilityLevel };
+  club.trainingGround = Object.fromEntries(PART_ORDER.map((p) => [p, Math.round(exp * (TRAINING_PARTS[p].levels.length - 1))]));
   club.board = { confidence: { easy: 70, normal: 60, hard: 50 }[difficultyOf(game)], fans: 55 };
   delete club.ticketPrice;
   delete club.sponsor;

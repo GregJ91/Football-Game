@@ -81,6 +81,7 @@ const HELP = {
   grading: ['Ground rules', "What the next league up demands of your ground. All three must pass, with the building work finished, by the end of the season or you can't go up."],
   food: ['Food and drink', 'Fans buy food and drink at every home game. Better outlets mean they spend more per head. Each level has a build cost and a weekly running cost.'],
   vip: ['VIP hospitality', 'Places sold to businesses and well-off fans at every home game. Each level adds more places; the bigger ones need a bigger ground.'],
+  openSide: ['Open side', "No stand yet: fans stand behind the rail round the pitch, like most grounds at the bottom of the pyramid. Tap to build a seated stand or put up a covered terrace."],
   corner: ['Corner', 'Fill in a corner between two stands. Corners are smaller than the sides (up to 7,500) but join the ground into a bowl, which the fans love. New places are always seated.'],
   corporate: ['Corporate rooms', 'Meeting rooms, conference halls and banqueting suites hired out every day of the week, match or not. Bigger clubs pull bigger events.'],
   groundExtras: ['Ground improvements', 'Floodlights, a full roof over every stand, and undersoil heating so the pitch never freezes (fewer injuries, happier fans).'],

@@ -1,9 +1,9 @@
 import { hp } from '../help';
 import { useState } from 'react';
 import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
-import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
+import { FACILITY_INFO, MAX_FACILITY, TRAINING_LEVEL_NAMES, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
 import {
-  floodlightOption, groundOptions, groundUpkeep, nextLevelGrading, standBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
+  floodlightOption, groundOptions, standLabel, groundUpkeep, nextLevelGrading, standBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
 } from '../../engine/club/stadium';
 import {
   CORPORATE_LEVELS, FOOD_LEVELS, VIP_LEVELS, commercialUpgrade, corporateLevel, weeklyCorporate, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
@@ -100,9 +100,10 @@ export function Club() {
       );
     }
     return (
-      <button type="button" className={`stand stand-${area} ${work ? 'building' : ''}`} onClick={() => setStandSheet(i)} {...hp('stand')}>
-        <strong>{s.name}</strong>
-        <span>{s.capacity.toLocaleString('en-GB')}{s.seats >= s.capacity ? ' · all seated' : s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}</span>
+      <button type="button" className={`stand stand-${area} ${work ? 'building' : ''} ${s.open ? 'open' : ''}`} onClick={() => setStandSheet(i)} {...hp(s.open ? 'openSide' : 'stand')}>
+        <strong>{standLabel(s)}</strong>
+        <span>{s.open ? `Rail · ${s.capacity.toLocaleString('en-GB')} standing` : `${s.capacity.toLocaleString('en-GB')}${s.seats >= s.capacity ? ' · all seated' : s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}`}</span>
+        {s.open && !work && <em>+ Build</em>}
         {s.roof && <em>Roofed</em>}
         {work && <em className="busy">Building · {work.weeksLeft} wk{work.weeksLeft === 1 ? '' : 's'}</em>}
       </button>
@@ -160,7 +161,10 @@ export function Club() {
     return (
       <section key={kind} className="card facility">
         <div className="facility-head" {...hp('facility')}>
-          <strong>{FACILITY_INFO[kind].name}</strong>
+          <span>
+            <strong>{FACILITY_INFO[kind].name}</strong>
+            {kind === 'training' && <small className="block muted">{TRAINING_LEVEL_NAMES[level]}</small>}
+          </span>
           <span className="pips" aria-label={`Level ${level} of ${MAX_FACILITY}`}>
             {Array.from({ length: MAX_FACILITY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
           </span>
@@ -787,12 +791,14 @@ export function Club() {
         <div className="sheet-backdrop" onClick={() => setStandSheet(null)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label={stadium.stands[standSheet].name} onClick={(e) => e.stopPropagation()}>
             <div className="sheet-head">
-              <strong className="grow">{stadium.stands[standSheet].name}</strong>
+              <strong className="grow">{standLabel(stadium.stands[standSheet])}</strong>
               <button type="button" className="link-btn" onClick={() => setStandSheet(null)}>Close</button>
             </div>
             <p className="muted small">
               {stadium.stands[standSheet].capacity === 0
                 ? 'An empty corner: build seats here to join the stands together.'
+                : stadium.stands[standSheet].open
+                ? `No stand here yet: ${stadium.stands[standSheet].capacity.toLocaleString('en-GB')} fans stand on hard standing behind the pitch rail. Build a stand, or put up a covered terrace.`
                 : `${stadium.stands[standSheet].capacity.toLocaleString('en-GB')} capacity, ${stadium.stands[standSheet].seats.toLocaleString('en-GB')} seated, ${stadium.stands[standSheet].roof ? 'roofed' : 'open to the weather'}.`}{' '}
               Bank {money(club.balance)}.
               {standBusy(club, standSheet) ? ' Builders are already working on this stand; wait for them to finish.' : ' A stand under construction holds half its fans. Other stands can be built at the same time.'}
