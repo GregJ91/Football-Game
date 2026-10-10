@@ -15,7 +15,8 @@ import { squadOf, withRng } from './world';
 
 /**
  * Legends: a separate mode. The best players of the last 40 years, all aged
- * 20 at their peak, are drafted by 20 teams into a Super League. No transfers,
+ * 20 at their peak, are drafted by 20 teams into a Super League. They age a
+ * year each season but stay at their peak. No transfers,
  * no money, no relegation: ten seasons of league, Super League Cup, Super FA
  * Cup and Super Cup, with a two-round draft each summer (champions first).
  */
@@ -405,6 +406,8 @@ function beginLegendsSeason(game: GameState) {
     p.suspendedMatches = 0;
     p.form = 6.5;
     p.morale = 75;
+    // A year older every season, but still at their peak.
+    p.age++;
   }
   game.cleanSheets = {};
   game.deductions = {};

@@ -98,8 +98,9 @@ describe('legends', () => {
         expect(summer.picks.slice(20, 40).map((p) => p.clubId)).toEqual(table);
         for (const c of Object.values(game.clubs)) expect(c.playerIds).toHaveLength(LEGENDS_SQUAD);
         expect(game.phase).toBe('season');
-        // Nobody ages or loses their peak.
-        expect(Object.values(game.players).every((p) => p.age === 20)).toBe(true);
+        // A year older each season, but nobody loses their peak.
+        expect(Object.values(game.players).every((p) => p.age === 21 + s)).toBe(true);
+        expect(game.players.LP0.overall).toBe(game.players.LP0.potential);
       }
     }
     expect(game.legends!.finished).toBe(true);

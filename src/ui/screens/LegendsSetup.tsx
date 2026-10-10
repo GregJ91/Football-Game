@@ -36,7 +36,7 @@ export function LegendsSetup() {
 
       <section className="card">
         <ul className="plain-list">
-          <li>The best players of the last 40 years, every one aged 20 and at their peak.</li>
+          <li>The best players of the last 40 years, every one aged 20 and at their peak. They age a year each season but never lose their powers.</li>
           <li>20 teams draft 23 players each in a snake draft (the order reverses every round).</li>
           <li>A Super League with no relegation, plus the Super League Cup, the Super FA Cup and the Super Cup.</li>
           <li>No transfers. Each summer every team lets two players go, then a two-round draft: the champions pick first.</li>
