@@ -81,11 +81,18 @@ const HELP = {
   grading: ['Ground rules', "What the next league up demands of your ground. All three must pass, with the building work finished, by the end of the season or you can't go up."],
   food: ['Food and drink', 'Fans buy food and drink at every home game. Better outlets mean they spend more per head. Each level has a build cost and a weekly running cost.'],
   vip: ['VIP hospitality', 'Places sold to businesses and well-off fans at every home game. Each level adds more places; the bigger ones need a bigger ground.'],
+  corner: ['Corner', 'Fill in a corner between two stands. Corners are smaller than the sides (up to 7,500) but join the ground into a bowl, which the fans love. New places are always seated.'],
+  corporate: ['Corporate rooms', 'Meeting rooms, conference halls and banqueting suites hired out every day of the week, match or not. Bigger clubs pull bigger events.'],
+  groundExtras: ['Ground improvements', 'Floodlights, a full roof over every stand, and undersoil heating so the pitch never freezes (fewer injuries, happier fans).'],
+  fanVerdict: ["Fans' verdict", 'What the supporters make of the ground: roofs, seats, corners, food, prices, heating and how full it is. Happy fans mean bigger crowds.'],
   groundUpkeep: ['Running costs', 'Paid every week, home game or not: stewarding, repairs, the pitch, power, and running your food outlets and hospitality.'],
 
   // ---------------------------------------------------------------- club: staff
   staffRating: ['Staff rating', 'How good they are, out of 20. 15+ is excellent, 11+ good, 6–10 average, 5 or less poor. Better staff cost more.'],
   facility: ['Facilities', 'Training ground: players improve faster. Youth academy: better youngsters each year. Medical centre: fewer and shorter injuries. Each level costs more to run.'],
+
+  trainingPart: ['Training ground', 'Gym, sports science, rehab, all-weather pitches and video analysis. Each one helps the squad in its own way, and costs a little each week to run.'],
+  playerVerdict: ["Players' verdict", 'What the squad thinks of the training set-up, judged against what clubs at your level usually have. It nudges morale every month.'],
 
   // ---------------------------------------------------------------- club: money
   weekly: ['A normal week', 'What comes in and goes out every week, with no home game. Home games add the gate, food and hospitality on top.'],

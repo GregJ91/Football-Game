@@ -1,6 +1,8 @@
+import { fanCrowdFactor } from '../club/feedback';
+import { trainingGroundUpkeep } from '../club/trainingGround';
 import type { Budgets, Club, CountryId, GameState, Ledger } from '../types';
 import { divisionOf, domesticClubs, squadOf } from '../world';
-import { commercialUpkeep, homeMatchExtras, seasonTicketHolders, weeklyMerchandise } from '../club/matchday';
+import { commercialUpkeep, homeMatchExtras, seasonTicketHolders, weeklyCorporate, weeklyMerchandise } from '../club/matchday';
 import { staffWages } from '../club/staff';
 import { totalUpkeep } from '../club/facilities';
 import { groundUpkeep } from '../club/stadium';
@@ -40,7 +42,7 @@ export function ticketPrice(game: GameState, club: Club): number {
  * How full the ground tends to be (0–1). Bigger clubs draw more; for the
  * user's club the ticket price, fan mood and roofs matter too.
  */
-export function crowdFill(game: GameState, club: Club): number {
+export function crowdFill(game: GameState, club: Club, fanVerdict = true): number {
   let fill = 0.3 + club.reputation / 120;
   if (club.isUser) {
     const priceFactor = Math.max(0.4, Math.min(1.3, Math.pow(guideTicketPrice(game, club) / ticketPrice(game, club), 0.9)));
@@ -48,7 +50,7 @@ export function crowdFill(game: GameState, club: Club): number {
     const s = club.stadium;
     const cap = s ? s.stands.reduce((n, x) => n + x.capacity, 0) : 0;
     const roofed = s && cap ? s.stands.reduce((n, x) => n + (x.roof ? x.capacity : 0), 0) / cap : 0.5;
-    fill *= priceFactor * (0.85 + (fans / 100) * 0.3) * (0.95 + roofed * 0.08);
+    fill *= priceFactor * (0.85 + (fans / 100) * 0.3) * (0.95 + roofed * 0.08) * (fanVerdict ? fanCrowdFactor(game, club) : 1);
   }
   return Math.max(0.05, Math.min(1, fill));
 }
@@ -133,8 +135,8 @@ const roundTo = (n: number, step: number, how: 'nearest' | 'down' = 'nearest') =
  * (some deals pay up front or on promotion), so it's profit on top.
  */
 export function spareWeeklyIncome(game: GameState, club: Club): number {
-  const regular = weeklyTv(game, club) + weeklyMerchandise(game, club);
-  const costs = staffWages(club) + totalUpkeep(club) + groundUpkeep(game, club) + commercialUpkeep(club);
+  const regular = weeklyTv(game, club) + weeklyMerchandise(game, club) + weeklyCorporate(game, club);
+  const costs = staffWages(club) + totalUpkeep(club) + groundUpkeep(game, club) + commercialUpkeep(club) + trainingGroundUpkeep(club);
   return Math.max(0, regular - costs);
 }
 

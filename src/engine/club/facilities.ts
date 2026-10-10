@@ -1,3 +1,4 @@
+import { partDevelopment, partInjuries } from './trainingGround';
 import { ledgerOf } from '../economy/finance';
 import { coachBonus, physioFactor } from './staff';
 import type { Club, FacilityKind, GameState } from '../types';
@@ -52,12 +53,12 @@ export function startFacilityUpgrade(game: GameState, club: Club, kind: Facility
 
 /** Extra yearly development for the user's young players (AI clubs are the baseline). */
 export function trainingBonus(club: Club): number {
-  return club.isUser ? (facilitiesOf(club).training - 1) * 0.35 + coachBonus(club) : 0;
+  return club.isUser ? (facilitiesOf(club).training - 1) * 0.35 + coachBonus(club) + partDevelopment(club) : 0;
 }
 
 /** Fewer weeks out injured with a better medical centre. */
 export function injuryFactor(club: Club): number {
-  return club.isUser ? (1 - (facilitiesOf(club).medical - 1) * 0.12) * physioFactor(club) : 1;
+  return club.isUser ? (1 - (facilitiesOf(club).medical - 1) * 0.12) * physioFactor(club) * partInjuries(club) : 1;
 }
 
 /** Youth intake each summer for the user's club. */

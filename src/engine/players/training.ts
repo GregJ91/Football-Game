@@ -1,3 +1,4 @@
+import { partDevelopment, partKnocks, partMatchEdge, partRecovery } from '../club/trainingGround';
 import type { Rng } from '../rng';
 import { coachBonus } from '../club/staff';
 import { facilitiesOf } from '../club/facilities';
@@ -58,19 +59,19 @@ export function trainingOf(club: Club): TrainingSettings {
 
 /** Match-day boost from match preparation. */
 export function matchPrepBoost(club: Club): number {
-  return club.isUser && trainingOf(club).focus === 'matchPrep' ? 1.02 : 1;
+  return (club.isUser && trainingOf(club).focus === 'matchPrep' ? 1.02 : 1) * partMatchEdge(club);
 }
 
 /** Daily recovery multiplier from the training load (user's club only). */
 export function trainingRecovery(club: Club): number {
   if (!club.isUser) return 1;
   const t = trainingOf(club);
-  return INTENSITY[t.intensity].recovery * (t.focus === 'physical' ? 1.1 : 1);
+  return INTENSITY[t.intensity].recovery * (t.focus === 'physical' ? 1.1 : 1) * partRecovery(club);
 }
 
 /** Training-knock multiplier from the intensity. */
 export function trainingKnocks(club: Club): number {
-  return INTENSITY[trainingOf(club).intensity].knocks;
+  return INTENSITY[trainingOf(club).intensity].knocks * partKnocks(club);
 }
 
 /** The attributes a player works on this week. */
@@ -104,7 +105,7 @@ export function weeklyTraining(game: GameState, rng: Rng) {
   const club = game.clubs[game.userClubId];
   const t = trainingOf(club);
   const intensity = INTENSITY[t.intensity];
-  const support = 1 + coachBonus(club) * 0.5 + (facilitiesOf(club).training - 1) * 0.08;
+  const support = 1 + coachBonus(club) * 0.5 + (facilitiesOf(club).training - 1) * 0.08 + partDevelopment(club) * 0.3;
   const log = club.trainingLog ?? [];
   for (const p of squadOf(game, club.id)) {
     if (p.injuryWeeks > 0) continue;

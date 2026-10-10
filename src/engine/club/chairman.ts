@@ -1,3 +1,5 @@
+import { playerMoraleNudge } from './feedback';
+import { completePartWork, trainingGroundUpkeep } from './trainingGround';
 import { LAST_NAMES } from '../../data/names';
 import { hireInitialStaff, staffWages } from './staff';
 import { guideTicketPrice, ledgerOf, topUpUnlimited, weeklyIncomeEstimate, weeklyTv } from '../economy/finance';
@@ -9,7 +11,7 @@ import { sack } from './career';
 import { addInbox } from '../transfers/market';
 import { divisionOf, domesticClubs, squadOf } from '../world';
 import { FACILITY_INFO, facilitiesOf, totalUpkeep } from './facilities';
-import { commercialUpkeep, weeklyMerchandise } from './matchday';
+import { commercialUpkeep, weeklyCorporate, weeklyMerchandise } from './matchday';
 import { completeStadiumWork, groundUpkeep, nextLevelGrading, stadiumOf, syncCapacity } from './stadium';
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
@@ -271,12 +273,15 @@ export function chairmanWeek(game: GameState, rng: Rng) {
     club.balance += club.sponsor.weekly;
     l.sponsor = (l.sponsor ?? 0) + club.sponsor.weekly;
   }
-  const upkeep = totalUpkeep(club) + commercialUpkeep(club) + groundUpkeep(game, club);
+  const upkeep = totalUpkeep(club) + commercialUpkeep(club) + groundUpkeep(game, club) + trainingGroundUpkeep(club);
   club.balance -= upkeep;
   l.upkeep = (l.upkeep ?? 0) + upkeep;
   const merch = weeklyMerchandise(game, club);
   club.balance += merch;
   l.merch = (l.merch ?? 0) + merch;
+  const corporate = weeklyCorporate(game, club);
+  club.balance += corporate;
+  l.corporate = (l.corporate ?? 0) + corporate;
   // Older saves: a backroom team appropriate to the level.
   if (!club.staff) hireInitialStaff(game, club);
   const staff = staffWages(club);
@@ -297,6 +302,12 @@ export function chairmanWeek(game: GameState, rng: Rng) {
   // Sponsor not chosen by the end of the summer window: the board picks the steady deal.
   if (club.sponsorOffers && game.week >= 5) chooseSponsor(game, 0);
 
+  // Every four weeks the squad's view of the training ground shows in their mood.
+  if (game.week % 4 === 0) {
+    const nudge = playerMoraleNudge(game, club);
+    if (nudge) for (const p of squadOf(game, club.id)) p.morale = clamp(p.morale + nudge);
+  }
+
   const s = stadiumOf(club);
   for (const b of [...s.builds]) {
     b.weeksLeft--;
@@ -306,6 +317,9 @@ export function chairmanWeek(game: GameState, rng: Rng) {
       const f = facilitiesOf(club);
       f[b.facility!]++;
       addInbox(game, 'info', `The ${FACILITY_INFO[b.facility!].name.toLowerCase()} upgrade is complete (level ${f[b.facility!]}).`, { subject: 'Facility upgraded' });
+    } else if (b.kind === 'tg') {
+      addInbox(game, 'info', completePartWork(club, b.part!, b.level!), { subject: 'Training ground' });
+      for (const p of squadOf(game, club.id)) p.morale = Math.min(100, p.morale + 2);
     } else {
       addInbox(game, 'info', completeStadiumWork(club, b), { subject: 'Building work finished' });
       boardOf(club).fans = clamp(boardOf(club).fans + 3);

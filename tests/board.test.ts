@@ -182,7 +182,7 @@ describe('out of work', () => {
     expect(g.unemployed).toBeUndefined();
     expect(club.board!.target).toBeDefined();
     expect(club.budgets).toBeDefined();
-    expect(club.stadium!.stands).toHaveLength(4);
+    expect(club.stadium!.stands).toHaveLength(8);
     expect(club.capacity).toBeGreaterThan(0);
     expect(careerOf(g).map((s) => s.clubId)).toEqual([g.career![0].clubId, club.id]);
     // A new manager gets his first season.

@@ -3,15 +3,17 @@ import { useState } from 'react';
 import { boardOf, difficultyOf, loanOptions } from '../../engine/club/chairman';
 import { FACILITY_INFO, MAX_FACILITY, facilitiesOf, facilityBusy, facilityUpgrade, facilityUpkeep, totalUpkeep } from '../../engine/club/facilities';
 import {
-  floodlightOption, groundUpkeep, nextLevelGrading, standBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
+  floodlightOption, groundOptions, groundUpkeep, nextLevelGrading, standBusy, stadiumOf, standOptions, totalCapacity, totalSeats, type WorkOption,
 } from '../../engine/club/stadium';
 import {
-  FOOD_LEVELS, VIP_LEVELS, commercialUpgrade, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
+  CORPORATE_LEVELS, FOOD_LEVELS, VIP_LEVELS, commercialUpgrade, corporateLevel, weeklyCorporate, commercialUpkeep, foodLevel, foodTakings, seasonTicketHolders, vipLevel, vipPrice, vipTakings,
   weeklyMerchandise, type Commercial,
 } from '../../engine/club/matchday';
 import { crowdFill, guideTicketPrice, ledgerOf, moneyPw, ticketPrice, wageBill, weeklyTv } from '../../engine/economy/finance';
 import { divisionTable } from '../../engine/season/table';
 import type { Build, FacilityKind, Stand, StaffRole } from '../../engine/types';
+import { fanVerdict, playerVerdict, type Verdict } from '../../engine/club/feedback';
+import { PART_ORDER, TRAINING_PARTS, partBusy, partLevel, partUpgrade, trainingGroundUpkeep } from '../../engine/club/trainingGround';
 import { STAFF_INFO, STAFF_ROLES, staffCandidates, staffWages } from '../../engine/club/staff';
 import { divisionOf, userClub } from '../../engine/world';
 import { useGame } from '../../state/store';
@@ -19,9 +21,10 @@ import { ClubCrest, DEFAULT_CREST, awayKitOf } from '../components/ClubArt';
 import { IdentityEditor, type Identity } from '../components/IdentityEditor';
 import { money, ordinal, seasonLabel } from '../format';
 
-type Tab = 'ground' | 'facilities' | 'money' | 'board' | 'honours';
+type Tab = 'ground' | 'training' | 'facilities' | 'money' | 'board' | 'honours';
 const TABS: { t: Tab; label: string }[] = [
   { t: 'ground', label: 'Ground' },
+  { t: 'training', label: 'Training' },
   { t: 'facilities', label: 'Staff' },
   { t: 'money', label: 'Money' },
   { t: 'board', label: 'Board' },
@@ -35,8 +38,12 @@ function buildLabel(b: Build, stands: Stand[]) {
   if (b.kind === 'floodlights') return 'Floodlights';
   if (b.kind === 'food') return `Food and drink: ${FOOD_LEVELS[b.level!].name}`;
   if (b.kind === 'vip') return `Hospitality: ${VIP_LEVELS[b.level!].name}`;
+  if (b.kind === 'corporate') return `Corporate: ${CORPORATE_LEVELS[b.level!].name}`;
+  if (b.kind === 'fullRoof') return 'Full roof';
+  if (b.kind === 'heating') return 'Undersoil heating';
+  if (b.kind === 'tg') return `Training ground: ${TRAINING_PARTS[b.part!].levels[b.level!].name}`;
   const stand = stands[b.stand!].name;
-  if (b.kind === 'extend') return `${stand}: +${b.size!.toLocaleString('en-GB')} places`;
+  if (b.kind === 'extend') return `${stand}: +${b.size!.toLocaleString('en-GB')} seats`;
   if (b.kind === 'seats') return `${stand}: seating`;
   return `${stand}: roof`;
 }
@@ -60,6 +67,7 @@ export function Club() {
   const setIdentity = useGame((s) => s.setIdentity);
   const hire = useGame((s) => s.hireStaff);
   const buildCommercial = useGame((s) => s.buildCommercial);
+  const buildPart = useGame((s) => s.buildTrainingPart);
 
   const club = userClub(game);
   const stadium = stadiumOf(club);
@@ -82,10 +90,19 @@ export function Club() {
   const standButton = (i: number, area: string) => {
     const s = stadium.stands[i];
     const work = stadium.builds.find((b) => b.stand === i);
+    if (s.corner) {
+      return (
+        <button type="button" className={`stand stand-corner stand-${area} ${work ? 'building' : ''} ${s.capacity ? '' : 'empty'}`} onClick={() => setStandSheet(i)} {...hp('corner')}>
+          <strong>{s.name.replace(' Corner', '')}</strong>
+          <span>{s.capacity ? s.capacity.toLocaleString('en-GB') : 'Empty'}</span>
+          {work ? <em className="busy">{work.weeksLeft} wk{work.weeksLeft === 1 ? '' : 's'}</em> : !s.capacity && <em>+ Build</em>}
+        </button>
+      );
+    }
     return (
       <button type="button" className={`stand stand-${area} ${work ? 'building' : ''}`} onClick={() => setStandSheet(i)} {...hp('stand')}>
         <strong>{s.name}</strong>
-        <span>{s.capacity.toLocaleString('en-GB')}{s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}</span>
+        <span>{s.capacity.toLocaleString('en-GB')}{s.seats >= s.capacity ? ' · all seated' : s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}</span>
         {s.roof && <em>Roofed</em>}
         {work && <em className="busy">Building · {work.weeksLeft} wk{work.weeksLeft === 1 ? '' : 's'}</em>}
       </button>
@@ -102,6 +119,7 @@ export function Club() {
     ['Food and drink', ledger.food ?? 0],
     ['Hospitality', ledger.hospitality ?? 0],
     ['Shirts and club shop', ledger.merch ?? 0],
+    ['Corporate rooms', ledger.corporate ?? 0],
     ['TV and prize money', ledger.tv + (ledger.prize ?? 0)],
     ['Sponsorship', ledger.sponsor ?? 0],
     ['Player sales', ledger.transfersIn],
@@ -111,7 +129,7 @@ export function Club() {
     ['Staff wages', ledger.staff ?? 0],
     ['Transfer fees', ledger.transfersOut],
     ['Building work', ledger.building ?? 0],
-    ['Upkeep (ground, facilities, food, VIP)', ledger.upkeep ?? 0],
+    ['Upkeep (ground, facilities, business)', ledger.upkeep ?? 0],
     ['Pay-offs', Math.max(0, -ledger.other)],
   ] as const;
   const totalIn = income.reduce((n, [, v]) => n + v, 0) + Math.max(0, ledger.loan ?? 0);
@@ -122,17 +140,65 @@ export function Club() {
     tv: weeklyTv(game, club),
     sponsor: club.sponsor && club.sponsor.endsSeason >= game.season ? club.sponsor.weekly : 0,
     merch: weeklyMerchandise(game, club),
+    corporate: weeklyCorporate(game, club),
     wages: wageBill(game, club),
     staff: staffWages(club),
-    facilities: totalUpkeep(club),
+    facilities: totalUpkeep(club) + trainingGroundUpkeep(club),
     ground: groundUpkeep(game, club) + commercialUpkeep(club),
     loan: club.loan ? Math.min(club.loan.weekly, club.loan.remaining) : 0,
   };
-  const weeklyNet = weekly.tv + weekly.sponsor + weekly.merch - weekly.wages - weekly.staff - weekly.facilities - weekly.ground - weekly.loan;
+  const weeklyNet = weekly.tv + weekly.sponsor + weekly.merch + weekly.corporate - weekly.wages - weekly.staff - weekly.facilities - weekly.ground - weekly.loan;
   const holders = seasonTicketHolders(game, club);
   const payers = Math.max(0, expectedCrowd - holders);
   const homeGame = { gate: payers * price, food: foodTakings(club, expectedCrowd), vip: vipTakings(game, club) };
   const loanNet = ledger.loan ?? 0;
+
+  const facilityCard = (kind: FacilityKind) => {
+    const level = facilities[kind];
+    const next = level < MAX_FACILITY ? facilityUpgrade(game, level + 1) : null;
+    const inProgress = stadium.builds.find((b) => b.kind === 'facility' && b.facility === kind);
+    return (
+      <section key={kind} className="card facility">
+        <div className="facility-head" {...hp('facility')}>
+          <strong>{FACILITY_INFO[kind].name}</strong>
+          <span className="pips" aria-label={`Level ${level} of ${MAX_FACILITY}`}>
+            {Array.from({ length: MAX_FACILITY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
+          </span>
+        </div>
+        <p className="muted small">{FACILITY_INFO[kind].effect} Running cost {moneyPw(facilityUpkeep(level))}.</p>
+        {inProgress ? (
+          <p className="small">Upgrading to level {level + 1}: {inProgress.weeksLeft} weeks to go.</p>
+        ) : next ? (
+          <button type="button" className="btn tile" disabled={facilityBusy(club, kind)} onClick={() => act(upgrade(kind), `${FACILITY_INFO[kind].name} upgrade started.`)}>
+            Upgrade to level {level + 1} · {money(next.cost)} · {next.weeks} wks · then {moneyPw(next.upkeep)}
+          </button>
+        ) : (
+          <p className="small">Top level.</p>
+        )}
+      </section>
+    );
+  };
+
+  const verdictCard = (title: string, help: 'fanVerdict' | 'playerVerdict', v: Verdict) => (
+    <section className="card verdict-card" {...hp(help)}>
+      <div className="card-label">
+        <span>{title}</span>
+        <span className="stars" aria-label={`${v.stars} out of 5`}>{'★'.repeat(v.stars)}<i>{'★'.repeat(5 - v.stars)}</i></span>
+      </div>
+      {v.quotes.length === 0 ? (
+        <p className="muted small">Nobody has much to say either way.</p>
+      ) : (
+        <ul className="quotes">
+          {v.quotes.map((q) => <li key={q.text} className={q.good ? 'good' : 'bad'}>“{q.text}”</li>)}
+        </ul>
+      )}
+      <p className="muted small">
+        {help === 'fanVerdict'
+          ? 'Happy fans turn up more often: up to 5% bigger crowds, or 5% smaller if they grumble.'
+          : 'Every month the mood in the squad rises or falls with what they think of the set-up.'}
+      </p>
+    </section>
+  );
 
   return (
     <main className="screen club-screen">
@@ -179,11 +245,15 @@ export function Club() {
       {tab === 'ground' && (
         <>
           <section className="ground" aria-label="Stadium">
+            {standButton(4, 'nw')}
             {standButton(1, 'north')}
+            {standButton(5, 'ne')}
             {standButton(0, 'west')}
             <div className="ground-pitch" aria-hidden="true"><i /></div>
             {standButton(2, 'east')}
+            {standButton(7, 'sw')}
             {standButton(3, 'south')}
+            {standButton(6, 'se')}
           </section>
 
           <div className="stat-row">
@@ -192,16 +262,7 @@ export function Club() {
             <div {...hp('floodlights')}><small>Floodlights</small><strong>{stadium.floodlights ? 'Yes' : 'No'}</strong></div>
           </div>
 
-          {!stadium.floodlights && !stadium.builds.some((b) => b.kind === 'floodlights') && (() => {
-            const opt = floodlightOption(game);
-            return (
-              <button type="button" className="work-option" disabled={opt.cost > club.balance} onClick={() => start(opt)}>
-                <strong>Install floodlights</strong>
-                <small>{opt.about}</small>
-                <span>Cost {money(opt.cost)} · {opt.weeks} weeks · upkeep {moneyPw(opt.upkeep)}</span>
-              </button>
-            );
-          })()}
+          {verdictCard('Fans\' verdict', 'fanVerdict', fanVerdict(game, club))}
 
           {stadium.builds.length > 0 && (
             <section className="card">
@@ -232,22 +293,44 @@ export function Club() {
               {!grading.ok && <p className="muted small">You can't be promoted until the ground passes. Builds must be finished by the end of the season.</p>}
             </section>
           )}
-          <p className="hint left">Tap a stand to extend it, add seats or put a roof on. Several stands can be worked on at once, one job per stand.</p>
+          <p className="hint left">Tap a stand or a corner to extend it, seat it or put a roof on. New places are always seated. Several stands can be worked on at once, one job per stand.</p>
+
+          <div className="card-label" {...hp('groundExtras')}><span>Ground improvements</span></div>
+          {[...(!stadium.floodlights ? [floodlightOption(game)] : []), ...groundOptions(game, club)].map((opt) => {
+            const busy = stadium.builds.find((b) => b.kind === opt.kind);
+            return busy ? (
+              <section key={opt.kind} className="card"><p className="small">{opt.label}: being built, {busy.weeksLeft} week{busy.weeksLeft === 1 ? '' : 's'} to go.</p></section>
+            ) : (
+              <button key={opt.kind} type="button" className="work-option" disabled={opt.cost > club.balance} onClick={() => start(opt)}>
+                <strong>{opt.kind === 'floodlights' ? 'Install floodlights' : opt.label}</strong>
+                <small>{opt.about}</small>
+                <span>Cost {money(opt.cost)} · {opt.weeks} weeks · upkeep {moneyPw(opt.upkeep)}</span>
+              </button>
+            );
+          })}
+          {(stadium.floodlights || stadium.fullRoof || stadium.heating) && (
+            <p className="muted small">
+              Already built: {[stadium.floodlights && 'floodlights', stadium.fullRoof && 'full roof', stadium.heating && 'undersoil heating'].filter(Boolean).join(', ')}.
+            </p>
+          )}
 
           <div className="card-label"><span>Matchday business</span></div>
-          {(['food', 'vip'] as Commercial[]).map((kind) => {
-            const level = kind === 'food' ? foodLevel(club) : vipLevel(club);
-            const cur = kind === 'food' ? FOOD_LEVELS[level] : VIP_LEVELS[level];
-            const takings = kind === 'food' ? foodTakings(club, expectedCrowd) : vipTakings(game, club);
+          {(['food', 'vip', 'corporate'] as Commercial[]).map((kind) => {
+            const levels = kind === 'food' ? FOOD_LEVELS : kind === 'vip' ? VIP_LEVELS : CORPORATE_LEVELS;
+            const level = kind === 'food' ? foodLevel(club) : kind === 'vip' ? vipLevel(club) : corporateLevel(club);
+            const cur = levels[level];
+            const takingsAt = (lv?: number) => (kind === 'food' ? foodTakings(club, expectedCrowd, lv) : kind === 'vip' ? vipTakings(game, club, lv) : weeklyCorporate(game, club, lv));
+            const takings = takingsAt();
             const next = commercialUpgrade(game, club, kind);
-            const nextTakings = next ? (kind === 'food' ? foodTakings(club, expectedCrowd, next.level) : vipTakings(game, club, next.level)) : 0;
+            const nextTakings = next ? takingsAt(next.level) : 0;
+            const per = kind === 'corporate' ? 'a week' : 'a home game';
             const building = stadium.builds.find((b) => b.kind === kind);
-            const max = (kind === 'food' ? FOOD_LEVELS : VIP_LEVELS).length - 1;
+            const max = levels.length - 1;
             return (
               <section key={kind} className="card facility">
                 <div className="facility-head" {...hp(kind)}>
                   <span>
-                    <strong>{kind === 'food' ? 'Food and drink' : 'VIP hospitality'}</strong>
+                    <strong>{kind === 'food' ? 'Food and drink' : kind === 'vip' ? 'VIP hospitality' : 'Corporate rooms'}</strong>
                     <small className="block muted">{cur.name}</small>
                   </span>
                   <span className="pips" aria-label={`Level ${level} of ${max}`}>
@@ -258,15 +341,17 @@ export function Club() {
                   {cur.about}{' '}
                   {kind === 'food'
                     ? `Fans spend about £${FOOD_LEVELS[level].spend.toFixed(2)} each: around ${money(takings)} a home game.`
-                    : level > 0 ? `${VIP_LEVELS[level].guests} places at ${money(vipPrice(game, club))}: around ${money(takings)} a home game.` : 'Hospitality sells places to local businesses and well-off fans every home game.'}
+                    : kind === 'corporate'
+                      ? level > 0 ? `Hired out for meetings and events all week, match or not: around ${moneyPw(takings)}.` : 'Rooms hired out to businesses every day of the week, not just on match days.'
+                      : level > 0 ? `${VIP_LEVELS[level].guests} places at ${money(vipPrice(game, club))}: around ${money(takings)} a home game.` : 'Hospitality sells places to local businesses and well-off fans every home game.'}
                   {cur.upkeep ? ` Upkeep ${moneyPw(cur.upkeep)}.` : ''}
                 </p>
                 {building ? (
-                  <p className="small">Building {(kind === 'food' ? FOOD_LEVELS : VIP_LEVELS)[building.level!].name.toLowerCase()}: {building.weeksLeft} weeks to go.</p>
+                  <p className="small">Building {levels[building.level!].name.toLowerCase()}: {building.weeksLeft} weeks to go.</p>
                 ) : next ? (
                   <button type="button" className="work-option" disabled={!!next.blocked || next.cost > club.balance} onClick={() => act(buildCommercial(kind), `Work has started: ${next.name.toLowerCase()}.`)}>
                     <strong>Upgrade to {next.name}</strong>
-                    <small>{next.about} About {money(nextTakings)} a home game ({nextTakings > takings ? `+${money(nextTakings - takings)}` : 'no change'}).</small>
+                    <small>{next.about} About {money(nextTakings)} {per} ({nextTakings > takings ? `+${money(nextTakings - takings)}` : 'no change'}).</small>
                     <span>{next.blocked ?? `Cost ${money(next.cost)} · ${next.weeks} weeks · upkeep ${moneyPw(next.upkeep)}`}</span>
                   </button>
                 ) : (
@@ -282,6 +367,7 @@ export function Club() {
               <div><span>Stands, seats, roofs and floodlights</span><b>{moneyPw(groundUpkeep(game, club))}</b></div>
               <div><span>Food and drink</span><b>{moneyPw(FOOD_LEVELS[foodLevel(club)].upkeep)}</b></div>
               <div><span>Hospitality</span><b>{moneyPw(VIP_LEVELS[vipLevel(club)].upkeep)}</b></div>
+              <div><span>Corporate rooms</span><b>{moneyPw(CORPORATE_LEVELS[corporateLevel(club)].upkeep)}</b></div>
             </div>
             <p className="muted small">Paid every week. Bigger grounds cost more to staff, steward and repair.</p>
           </section>
@@ -308,24 +394,42 @@ export function Club() {
             );
           })}
           <div className="card-label"><span>Facilities</span></div>
-          {(Object.keys(FACILITY_INFO) as FacilityKind[]).map((kind) => {
-            const level = facilities[kind];
-            const next = level < MAX_FACILITY ? facilityUpgrade(game, level + 1) : null;
-            const inProgress = stadium.builds.find((b) => b.kind === 'facility' && b.facility === kind);
+          {(['youth', 'medical'] as FacilityKind[]).map(facilityCard)}
+          <p className="hint left">The training ground has its own tab. Facilities can be upgraded at the same time as each other and the ground. Total running costs {moneyPw(totalUpkeep(club))}.</p>
+        </>
+      )}
+
+      {tab === 'training' && (
+        <>
+          {verdictCard("Players' verdict", 'playerVerdict', playerVerdict(game, club))}
+          <div className="card-label"><span>The main complex</span></div>
+          {facilityCard('training')}
+          <div className="card-label" {...hp('trainingPart')}><span>Around the training ground</span><span>{moneyPw(trainingGroundUpkeep(club))}</span></div>
+          {PART_ORDER.map((part) => {
+            const def = TRAINING_PARTS[part];
+            const level = partLevel(club, part);
+            const max = def.levels.length - 1;
+            const next = partUpgrade(game, club, part);
+            const building = stadium.builds.find((b) => b.kind === 'tg' && b.part === part);
             return (
-              <section key={kind} className="card facility">
-                <div className="facility-head" {...hp('facility')}>
-                  <strong>{FACILITY_INFO[kind].name}</strong>
-                  <span className="pips" aria-label={`Level ${level} of ${MAX_FACILITY}`}>
-                    {Array.from({ length: MAX_FACILITY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
+              <section key={part} className="card facility">
+                <div className="facility-head" {...hp('trainingPart')}>
+                  <span>
+                    <strong>{def.name}</strong>
+                    <small className="block muted">{def.levels[level].name}</small>
+                  </span>
+                  <span className="pips" aria-label={`Level ${level} of ${max}`}>
+                    {Array.from({ length: max }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
                   </span>
                 </div>
-                <p className="muted small">{FACILITY_INFO[kind].effect} Running cost {moneyPw(facilityUpkeep(level))}.</p>
-                {inProgress ? (
-                  <p className="small">Upgrading to level {level + 1}: {inProgress.weeksLeft} weeks to go.</p>
+                <p className="muted small">{def.effect} {def.levels[level].about}{def.levels[level].upkeep ? ` Upkeep ${moneyPw(def.levels[level].upkeep)}.` : ''}</p>
+                {building ? (
+                  <p className="small">Building {def.levels[building.level!].name.toLowerCase()}: {building.weeksLeft} weeks to go.</p>
                 ) : next ? (
-                  <button type="button" className="btn tile" disabled={facilityBusy(club, kind)} onClick={() => act(upgrade(kind), `${FACILITY_INFO[kind].name} upgrade started.`)}>
-                    Upgrade to level {level + 1} · {money(next.cost)} · {next.weeks} wks · then {moneyPw(next.upkeep)}
+                  <button type="button" className="work-option" disabled={partBusy(club, part) || next.cost > club.balance} onClick={() => act(buildPart(part), `Work has started: ${next.name.toLowerCase()}.`)}>
+                    <strong>Build {next.name}</strong>
+                    <small>{next.about}</small>
+                    <span>Cost {money(next.cost)} · {next.weeks} weeks · upkeep {moneyPw(next.upkeep)}</span>
                   </button>
                 ) : (
                   <p className="small">Top level.</p>
@@ -333,7 +437,7 @@ export function Club() {
               </section>
             );
           })}
-          <p className="hint left">Facilities can be upgraded at the same time as each other and the ground. Total running costs {moneyPw(totalUpkeep(club))}.</p>
+          <p className="hint left">Everything here can be built at the same time as the ground and other facilities. Bank {money(club.balance)}.</p>
         </>
       )}
 
@@ -385,11 +489,12 @@ export function Club() {
               <div><span>TV money</span><b>{moneyPw(weekly.tv)}</b></div>
               {weekly.sponsor > 0 && <div><span>Shirt sponsor</span><b>{moneyPw(weekly.sponsor)}</b></div>}
               <div><span>Shirts and club shop</span><b>{moneyPw(weekly.merch)}</b></div>
+              {weekly.corporate > 0 && <div><span>Corporate rooms</span><b>{moneyPw(weekly.corporate)}</b></div>}
               <h3>Money out</h3>
               <div><span>Player wages</span><b>{moneyPw(weekly.wages)}</b></div>
               <div><span>Staff wages</span><b>{moneyPw(weekly.staff)}</b></div>
-              <div><span>Facility upkeep</span><b>{moneyPw(weekly.facilities)}</b></div>
-              <div><span>Ground, food and VIP upkeep</span><b>{moneyPw(weekly.ground)}</b></div>
+              <div><span>Facility and training ground upkeep</span><b>{moneyPw(weekly.facilities)}</b></div>
+              <div><span>Ground and business upkeep</span><b>{moneyPw(weekly.ground)}</b></div>
               {weekly.loan > 0 && <div><span>Loan repayment</span><b>{moneyPw(weekly.loan)}</b></div>}
             </div>
             <p className="muted small">Plus the takings from each home game below. Away games bring in nothing at the gate.</p>
@@ -686,8 +791,10 @@ export function Club() {
               <button type="button" className="link-btn" onClick={() => setStandSheet(null)}>Close</button>
             </div>
             <p className="muted small">
-              {stadium.stands[standSheet].capacity.toLocaleString('en-GB')} capacity, {stadium.stands[standSheet].seats.toLocaleString('en-GB')} seated,
-              {stadium.stands[standSheet].roof ? ' roofed' : ' open to the weather'}. Bank {money(club.balance)}.
+              {stadium.stands[standSheet].capacity === 0
+                ? 'An empty corner: build seats here to join the stands together.'
+                : `${stadium.stands[standSheet].capacity.toLocaleString('en-GB')} capacity, ${stadium.stands[standSheet].seats.toLocaleString('en-GB')} seated, ${stadium.stands[standSheet].roof ? 'roofed' : 'open to the weather'}.`}{' '}
+              Bank {money(club.balance)}.
               {standBusy(club, standSheet) ? ' Builders are already working on this stand; wait for them to finish.' : ' A stand under construction holds half its fans. Other stands can be built at the same time.'}
             </p>
             <div className="stack">

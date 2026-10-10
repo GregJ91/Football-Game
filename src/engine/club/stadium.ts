@@ -1,11 +1,19 @@
 import { ledgerOf } from '../economy/finance';
 import type { Build, Club, CountryId, GameState, Stadium, StadiumWork } from '../types';
 import { divisionOf } from '../world';
-import { FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, costScale, type Commercial } from './matchday';
+import { CORPORATE_LEVELS, FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, costScale, type Commercial } from './matchday';
 
 export const STAND_NAMES = ['Main Stand', 'North End', 'East Terrace', 'South End'];
-export const MAX_STAND = 20_000;
-export const EXTEND_SIZES = [250, 1000, 5000];
+/** Corners, clockwise from the north-west: they join the sides into a bowl. */
+export const CORNER_NAMES = ['North-West Corner', 'North-East Corner', 'South-East Corner', 'South-West Corner'];
+/** Biggest a side stand and a corner can be: 4 × 30,000 + 4 × 7,500 = 150,000. */
+export const MAX_STAND = 30_000;
+export const MAX_CORNER = 7_500;
+export const MAX_GROUND = 4 * MAX_STAND + 4 * MAX_CORNER;
+const SIDE_SIZES = [250, 1000, 5000];
+const CORNER_SIZES = [250, 1000, 2500];
+
+const corners = () => CORNER_NAMES.map((name) => ({ name, capacity: 0, seats: 0, roof: false, corner: true }));
 
 export function createStadium(): Stadium {
   return {
@@ -14,6 +22,7 @@ export function createStadium(): Stadium {
       { name: STAND_NAMES[1], capacity: 100, seats: 0, roof: false },
       { name: STAND_NAMES[2], capacity: 100, seats: 0, roof: false },
       { name: STAND_NAMES[3], capacity: 100, seats: 0, roof: false },
+      ...corners(),
     ],
     floodlights: false,
     builds: [],
@@ -22,6 +31,8 @@ export function createStadium(): Stadium {
 
 export function stadiumOf(club: Club): Stadium {
   club.stadium ??= createStadium();
+  // Grounds from before corners: four empty corners to build on.
+  if (club.stadium.stands.length === 4) club.stadium.stands.push(...corners());
   return club.stadium;
 }
 
@@ -31,7 +42,7 @@ function standUnderWork(stadium: Stadium, i: number) {
 
 /** Stand and floodlight work (food and VIP have their own builders). */
 function isGroundWork(b: Build) {
-  return b.kind !== 'facility' && b.kind !== 'food' && b.kind !== 'vip';
+  return b.kind !== 'facility' && b.kind !== 'food' && b.kind !== 'vip' && b.kind !== 'corporate' && b.kind !== 'tg';
 }
 
 /** Usable capacity: a stand being worked on holds half its fans. */
@@ -132,14 +143,14 @@ export interface WorkOption {
 // ---------------------------------------------------------------- running costs
 
 /** Weekly upkeep per terrace place, per seat, per roofed place, and for floodlights (£). */
-const UPKEEP = { place: 0.04, seat: 0.02, roof: 0.02, floodlights: 40 };
+const UPKEEP = { place: 0.04, seat: 0.02, roof: 0.02, floodlights: 40, heating: 120 };
 
 /** Weekly cost of keeping the ground itself in order (stewarding, repairs, pitch, power). */
 export function groundUpkeep(game: GameState, club: Club): number {
   const s = stadiumOf(club);
   const k = costScale(game.country);
   const roofed = s.stands.reduce((n, x) => n + (x.roof ? x.capacity : 0), 0);
-  return Math.round((totalCapacity(s) * UPKEEP.place + totalSeats(s) * UPKEEP.seat + roofed * UPKEEP.roof + (s.floodlights ? UPKEEP.floodlights : 0)) * k);
+  return Math.round((totalCapacity(s) * UPKEEP.place + totalSeats(s) * UPKEEP.seat + roofed * UPKEEP.roof + (s.floodlights ? UPKEEP.floodlights : 0) + (s.heating ? UPKEEP.heating : 0)) * k);
 }
 
 /** Start building the next level of food outlets or hospitality. */
@@ -147,7 +158,7 @@ export function startCommercialWork(game: GameState, club: Club, kind: Commercia
   const opt = commercialUpgrade(game, club, kind);
   if (!opt) return 'Already at the top level.';
   if (opt.blocked) return opt.blocked;
-  if (commercialBusy(club, kind)) return kind === 'food' ? 'The food outlets are already being built.' : 'The hospitality is already being built.';
+  if (commercialBusy(club, kind)) return `The ${kind === 'food' ? 'food outlets are' : kind === 'vip' ? 'hospitality is' : 'corporate rooms are'} already being built.`;
   const problem = cannotBuild(club, opt.cost);
   if (problem) return problem;
   stadiumOf(club).builds.push({ kind, level: opt.level, weeksLeft: opt.weeks, totalWeeks: opt.weeks, cost: opt.cost });
@@ -161,7 +172,7 @@ export function startCommercialWork(game: GameState, club: Club, kind: Commercia
  * Building costs: non-league builders and second-hand floodlights are much
  * cheaper, so a small club can afford to get its ground up to grade.
  */
-function buildScale(game: GameState): number {
+export function buildScale(game: GameState): number {
   const level = divisionOf(game, game.userClubId).def.level;
   const bottom = Math.max(...game.divisions.map((d) => d.def.level));
   return costScale(game.country) * ([0.45, 0.6, 0.8][bottom - level] ?? 1);
@@ -172,18 +183,21 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
   const s = stadiumOf(club).stands[i];
   const k = buildScale(game);
   const opts: WorkOption[] = [];
-  for (const size of EXTEND_SIZES) {
-    if (s.capacity + size > MAX_STAND) continue;
-    const perPlace = 60 * (1 + s.capacity / 5000);
+  const max = s.corner ? MAX_CORNER : MAX_STAND;
+  // New places are always seats.
+  for (const size of s.corner ? CORNER_SIZES : SIDE_SIZES) {
+    if (s.capacity + size > max) continue;
+    const perSeat = 60 * (1 + s.capacity / 5000) + 45 * (1 + s.capacity / 10000);
+    const fresh = s.capacity === 0;
     opts.push({
       kind: 'extend',
       stand: i,
       size,
-      label: `Extend by ${size.toLocaleString('en-GB')} (terracing)`,
-      about: `Room for ${size.toLocaleString('en-GB')} more standing fans: bigger crowds and gates, and counts towards the ground rules.`,
-      cost: Math.round(size * perPlace * k),
-      weeks: Math.min(20, 3 + Math.round(size / 400)),
-      upkeep: Math.round(size * UPKEEP.place * k),
+      label: fresh ? `Build a ${size.toLocaleString('en-GB')}-seat ${s.corner ? 'corner' : 'stand'}` : `Extend by ${size.toLocaleString('en-GB')} seats`,
+      about: `${size.toLocaleString('en-GB')} more seated places: bigger crowds and gates (seats sell for more than terracing), and it counts towards the ground rules.${s.corner ? ' Corners join the sides into a bowl.' : ''}`,
+      cost: Math.round(size * perSeat * k),
+      weeks: Math.min(24, 3 + Math.round(size / 400)),
+      upkeep: Math.round(size * (UPKEEP.place + UPKEEP.seat) * k),
     });
   }
   const terrace = s.capacity - s.seats;
@@ -198,7 +212,7 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
       upkeep: Math.round(terrace * UPKEEP.seat * k),
     });
   }
-  if (!s.roof) {
+  if (!s.roof && s.capacity > 0) {
     opts.push({
       kind: 'roof',
       stand: i,
@@ -207,6 +221,36 @@ export function standOptions(game: GameState, club: Club, i: number): WorkOption
       cost: Math.round(Math.max(5000, s.capacity * 40) * k),
       weeks: Math.min(10, 3 + Math.round(s.capacity / 2000)),
       upkeep: Math.round(s.capacity * UPKEEP.roof * k),
+    });
+  }
+  return opts;
+}
+
+/** Whole-ground jobs: the full roof and undersoil heating. */
+export function groundOptions(game: GameState, club: Club): WorkOption[] {
+  const s = stadiumOf(club);
+  const k = buildScale(game);
+  const opts: WorkOption[] = [];
+  const open = s.stands.filter((x) => x.capacity > 0 && !x.roof);
+  if (!s.fullRoof) {
+    const cost = open.reduce((n, x) => n + Math.max(5000, x.capacity * 40), 0) * 0.85 + 20_000;
+    opts.push({
+      kind: 'fullRoof',
+      label: 'Full roof',
+      about: `Cover the whole ground in one go, about 15% cheaper than stand by stand${open.length ? ` (${open.length} stand${open.length === 1 ? '' : 's'} still open)` : ''}. Every stand built later comes with a roof. Fans love it, and crowds hold up in any weather.`,
+      cost: Math.round(cost * k),
+      weeks: Math.min(20, 6 + open.length * 2),
+      upkeep: Math.round(open.reduce((n, x) => n + x.capacity, 0) * UPKEEP.roof * k),
+    });
+  }
+  if (!s.heating) {
+    opts.push({
+      kind: 'heating',
+      label: 'Undersoil heating',
+      about: 'A pitch that stays playable all winter: fewer injuries on a frozen, rutted surface, and the fans notice the difference.',
+      cost: Math.round(150_000 * k),
+      weeks: 6,
+      upkeep: Math.round(UPKEEP.heating * costScale(game.country)),
     });
   }
   return opts;
@@ -223,9 +267,9 @@ export function floodlightOption(game: GameState): WorkOption {
   };
 }
 
-/** Builders already on this stand (or on the floodlights, with no stand given). Other jobs can run alongside. */
-export function standBusy(club: Club, stand?: number): boolean {
-  return stadiumOf(club).builds.some((b) => isGroundWork(b) && (stand === undefined ? b.kind === 'floodlights' : b.stand === stand));
+/** Builders already on this stand, or on this whole-ground job. Other jobs can run alongside. */
+export function standBusy(club: Club, stand?: number, kind?: StadiumWork): boolean {
+  return stadiumOf(club).builds.some((b) => isGroundWork(b) && (stand === undefined ? b.kind === (kind ?? 'floodlights') : b.stand === stand));
 }
 
 export function cannotBuild(club: Club, cost: number): string | null {
@@ -234,7 +278,7 @@ export function cannotBuild(club: Club, cost: number): string | null {
 }
 
 export function startStadiumWork(club: Club, opt: WorkOption): string | null {
-  if (standBusy(club, opt.stand)) return opt.stand === undefined ? 'The floodlights are already going up.' : 'Builders are already working on that stand. Pick another stand, or wait for this job to finish.';
+  if (standBusy(club, opt.stand, opt.kind)) return opt.stand === undefined ? `Work on the ${opt.label.toLowerCase()} is already under way.` : 'Builders are already working on that stand. Pick another stand, or wait for this job to finish.';
   const problem = cannotBuild(club, opt.cost);
   if (problem) return problem;
   const build: Build = { kind: opt.kind, stand: opt.stand, size: opt.size, weeksLeft: opt.weeks, totalWeeks: opt.weeks, cost: opt.cost };
@@ -251,9 +295,25 @@ export function completeStadiumWork(club: Club, b: Build): string {
   const s = stadiumOf(club);
   const stand = b.stand !== undefined ? s.stands[b.stand] : null;
   switch (b.kind) {
-    case 'extend':
+    case 'extend': {
+      const fresh = stand!.capacity === 0;
       stand!.capacity += b.size!;
-      return `The ${stand!.name} extension is finished: room for ${b.size!.toLocaleString('en-GB')} more fans.`;
+      stand!.seats += b.size!;
+      if (s.fullRoof) stand!.roof = true;
+      return fresh
+        ? `The new ${stand!.name} is open: ${b.size!.toLocaleString('en-GB')} seats.`
+        : `The ${stand!.name} extension is finished: ${b.size!.toLocaleString('en-GB')} more seats.`;
+    }
+    case 'fullRoof':
+      s.fullRoof = true;
+      for (const x of s.stands) if (x.capacity > 0) x.roof = true;
+      return 'The full roof is finished: the whole ground is covered.';
+    case 'heating':
+      s.heating = true;
+      return 'Undersoil heating is in: the pitch will be playable all winter.';
+    case 'corporate':
+      s.corporate = b.level;
+      return `The ${CORPORATE_LEVELS[b.level!].name.toLowerCase()} is open for business.`;
     case 'seats':
       stand!.seats = stand!.capacity;
       return `The ${stand!.name} is now all-seater.`;

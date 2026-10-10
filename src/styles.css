@@ -333,14 +333,22 @@ input[type='range'] { width: 100%; accent-color: var(--accent); height: 32px; }
 
 /* Club / chairman */
 .ground { display: grid; grid-template-columns: 74px 1fr 74px; grid-template-rows: auto 170px auto; gap: 6px; }
+.stand-corner { min-height: 0; padding: 6px 4px; border-radius: 10px 10px 10px 10px; }
+.stand-corner strong { font-size: 11px; }
+.stand-corner.empty { border-style: dashed; background: transparent; }
+.stand-corner.empty span { color: var(--muted); }
+.stand-nw { grid-column: 1; grid-row: 1; border-top-left-radius: 28px; }
+.stand-ne { grid-column: 3; grid-row: 1; border-top-right-radius: 28px; }
+.stand-sw { grid-column: 1; grid-row: 3; border-bottom-left-radius: 28px; }
+.stand-se { grid-column: 3; grid-row: 3; border-bottom-right-radius: 28px; }
 .stand { border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; min-height: 64px; }
 .stand strong { font-family: var(--display); font-size: 15px; }
 .stand span { font-size: 11px; color: var(--muted); }
 .stand em { font-style: normal; font-size: 11px; color: var(--good); }
 .stand em.busy { color: var(--accent); font-weight: 600; }
 .stand.building { border-color: var(--accent); border-style: dashed; }
-.stand-north { grid-column: 1 / 4; grid-row: 1; }
-.stand-south { grid-column: 1 / 4; grid-row: 3; }
+.stand-north { grid-column: 2; grid-row: 1; }
+.stand-south { grid-column: 2; grid-row: 3; }
 .stand-west { grid-column: 1; grid-row: 2; }
 .stand-east { grid-column: 3; grid-row: 2; }
 .stand-west strong, .stand-east strong { font-size: 13px; }
@@ -465,7 +473,7 @@ details.others summary { cursor: pointer; color: var(--muted); font-size: 14px; 
 .history-list .outcome { width: 80px; text-align: right; font-size: 12px; font-weight: 700; }
 .outcome-champions, .outcome-promoted { color: var(--accent); }
 .outcome-relegated { color: var(--warn); }
-.club-screen .segmented button { font-size: 13px; padding: 0 2px; }
+.club-screen .segmented button { font-size: 12px; padding: 0 1px; }
 
 /* Europe */
 .league-table .club-cell small.tag { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; flex: none; }
@@ -655,3 +663,11 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .achievement-list small.when { color: var(--accent); margin-top: 2px; }
 .achievement-list li.locked { opacity: 0.6; }
 .achievement-list li.locked .badge-icon { filter: grayscale(1); }
+
+/* Fans' and players' verdicts */
+.verdict-card .stars { color: var(--accent); letter-spacing: 1px; }
+.verdict-card .stars i { font-style: normal; color: var(--line); }
+.quotes { list-style: none; margin: 4px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.quotes li { font-size: 13px; font-style: italic; padding: 6px 10px; border-radius: 8px; border-left: 3px solid var(--line); background: var(--panel); }
+.quotes li.good { border-left-color: var(--good); }
+.quotes li.bad { border-left-color: var(--warn); }

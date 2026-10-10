@@ -53,6 +53,30 @@ const VIP_PRICE: Record<CountryId, number[]> = {
   sco: [0, 150, 80, 60, 50, 40],
 };
 
+export interface CorporateLevel extends CommercialLevel {
+  /** Weekly takings from conferences, meetings and events (before the league's pull). */
+  weekly: number;
+  minCapacity: number;
+}
+
+/** Corporate and conference rooms: let out all week, matchday or not. */
+export const CORPORATE_LEVELS: CorporateLevel[] = [
+  { name: 'None', about: 'No rooms to hire out yet.', weekly: 0, minCapacity: 0, cost: 0, weeks: 0, upkeep: 0 },
+  { name: 'Meeting rooms', about: 'A couple of rooms hired out to local businesses through the week.', weekly: 300, minCapacity: 0, cost: 30_000, weeks: 4, upkeep: 60 },
+  { name: 'Conference centre', about: 'A conference hall and breakout rooms: business events, training days and awards nights.', weekly: 1_200, minCapacity: 3_000, cost: 150_000, weeks: 8, upkeep: 250 },
+  { name: 'Events and banqueting suite', about: 'Weddings, gala dinners and big corporate events, every day of the week.', weekly: 4_000, minCapacity: 10_000, cost: 600_000, weeks: 12, upkeep: 800 },
+];
+
+export function corporateLevel(club: Club): number {
+  return club.stadium?.corporate ?? 0;
+}
+
+/** Weekly takings from the corporate rooms: a bigger club draws bigger events. */
+export function weeklyCorporate(game: GameState, club: Club, level = corporateLevel(club)): number {
+  const div = divisionOf(game, club.id).def.level;
+  return Math.round(CORPORATE_LEVELS[level].weekly * (1 + (8 - div) * 0.4) * costScale(game.country));
+}
+
 export function costScale(country: CountryId) {
   return country === 'eng' ? 1 : 0.7;
 }
@@ -85,9 +109,9 @@ export function foodTakings(club: Club, attendance: number, level = foodLevel(cl
   return Math.round(attendance * FOOD_LEVELS[level].spend);
 }
 
-/** Weekly running costs of the food outlets and hospitality. */
+/** Weekly running costs of the food outlets, hospitality and corporate rooms. */
 export function commercialUpkeep(club: Club): number {
-  return FOOD_LEVELS[foodLevel(club)].upkeep + VIP_LEVELS[vipLevel(club)].upkeep;
+  return FOOD_LEVELS[foodLevel(club)].upkeep + VIP_LEVELS[vipLevel(club)].upkeep + CORPORATE_LEVELS[corporateLevel(club)].upkeep;
 }
 
 /** The average home crowd at today's prices. */
@@ -154,7 +178,7 @@ export function weeklyMerchandise(game: GameState, club: Club): number {
 
 // ---------------------------------------------------------------- building
 
-export type Commercial = 'food' | 'vip';
+export type Commercial = 'food' | 'vip' | 'corporate';
 
 export interface CommercialOption {
   kind: Commercial;
@@ -170,12 +194,12 @@ export interface CommercialOption {
 
 /** The next upgrade for food or hospitality, or null at the top level. */
 export function commercialUpgrade(game: GameState, club: Club, kind: Commercial): CommercialOption | null {
-  const levels = kind === 'food' ? FOOD_LEVELS : VIP_LEVELS;
-  const next = (kind === 'food' ? foodLevel(club) : vipLevel(club)) + 1;
+  const levels: CommercialLevel[] = kind === 'food' ? FOOD_LEVELS : kind === 'vip' ? VIP_LEVELS : CORPORATE_LEVELS;
+  const next = (kind === 'food' ? foodLevel(club) : kind === 'vip' ? vipLevel(club) : corporateLevel(club)) + 1;
   if (next >= levels.length) return null;
   const l = levels[next];
   const cap = club.stadium ? club.stadium.stands.reduce((n, s) => n + s.capacity, 0) : club.capacity;
-  const min = kind === 'vip' ? (l as VipLevel).minCapacity : 0;
+  const min = kind === 'food' ? 0 : (l as VipLevel | CorporateLevel).minCapacity;
   return {
     kind,
     level: next,

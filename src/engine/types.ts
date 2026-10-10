@@ -153,6 +153,8 @@ export interface Club {
   sponsor?: SponsorDeal;
   sponsorOffers?: SponsorDeal[];
   loan?: Loan;
+  /** The user's training ground: the parts built so far. */
+  trainingGround?: Partial<Record<TrainingPart, number>>;
   /** The user's training schedule. */
   training?: TrainingSettings;
   /** Recent improvements from training, newest first. */
@@ -206,6 +208,8 @@ export interface Ledger {
   hospitality?: number;
   /** Shirts and the club shop. */
   merch?: number;
+  /** Corporate events and conferences. */
+  corporate?: number;
   /** Stadium and facility building costs. */
   building?: number;
   /** Facility running costs. */
@@ -223,10 +227,15 @@ export interface Stand {
   capacity: number;
   seats: number;
   roof: boolean;
+  /** A corner stand, joining two sides (smaller). */
+  corner?: boolean;
 }
 
-export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights' | 'food' | 'vip';
+export type StadiumWork = 'extend' | 'seats' | 'roof' | 'floodlights' | 'food' | 'vip' | 'corporate' | 'fullRoof' | 'heating' | 'tg';
 export type FacilityKind = 'training' | 'youth' | 'medical';
+
+/** Parts of the training ground, each built up in levels (0 = none). */
+export type TrainingPart = 'gym' | 'science' | 'recovery' | 'dome' | 'analysis';
 
 export interface Build {
   kind: StadiumWork | 'facility';
@@ -234,8 +243,10 @@ export interface Build {
   /** Places added, for an extension. */
   size?: number;
   facility?: FacilityKind;
-  /** Food or VIP level being built. */
+  /** Food, VIP, corporate or training-ground level being built. */
   level?: number;
+  /** Training ground: which part. */
+  part?: TrainingPart;
   weeksLeft: number;
   totalWeeks: number;
   cost: number;
@@ -248,6 +259,12 @@ export interface Stadium {
   food?: number;
   /** VIP hospitality, level 0 (none) to 4. */
   vip?: number;
+  /** Corporate and conference rooms, level 0 (none) to 3: weekly income from events. */
+  corporate?: number;
+  /** Undersoil heating: a pitch that's playable all winter. */
+  heating?: boolean;
+  /** Full roof: every stand covered, new ones included. */
+  fullRoof?: boolean;
   builds: Build[];
 }
 

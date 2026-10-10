@@ -1,3 +1,5 @@
+import { startPartWork } from '../engine/club/trainingGround';
+import type { TrainingPart } from '../engine/types';
 import { acceptJobOffer, declineJobOffer } from '../engine/club/manager';
 import { sendMission, toggleShortlist, type MissionBrief } from '../engine/transfers/scouting';
 import { create } from 'zustand';
@@ -126,6 +128,7 @@ interface Store {
   buildStadium: (opt: WorkOption) => string | null;
   /** Build the next level of food outlets or VIP hospitality. */
   buildCommercial: (kind: Commercial) => string | null;
+  buildTrainingPart: (part: TrainingPart) => string | null;
   upgradeFacility: (kind: FacilityKind) => string | null;
   setTicketPrice: (price: number) => void;
   pickSponsor: (index: number) => void;
@@ -487,6 +490,14 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return 'No game loaded.';
       const err = startCommercialWork(game, game.clubs[game.userClubId], kind);
+      commit();
+      return err;
+    },
+
+    buildTrainingPart: (part) => {
+      const { game } = get();
+      if (!game) return 'No game loaded.';
+      const err = startPartWork(game, game.clubs[game.userClubId], part);
       commit();
       return err;
     },
