@@ -1,5 +1,6 @@
 import { ledgerOf } from '../economy/finance';
-import type { Build, Club, CountryId, GameState, Stadium, StadiumWork } from '../types';
+import { REAL_STADIUMS } from '../../data/realStadiums';
+import type { Build, Club, CountryId, GameState, Stadium, StadiumWork, Stand } from '../types';
 import { divisionOf } from '../world';
 import { CORPORATE_LEVELS, FOOD_LEVELS, VIP_LEVELS, commercialBusy, commercialUpgrade, costScale, type Commercial } from './matchday';
 
@@ -53,10 +54,59 @@ export function groundTier(country: CountryId, level: number): GroundTier {
  * four seated, covered stands; non-league grounds have a small main stand,
  * covered terraces and an open end; the bottom is a pitch with a rail.
  */
-export function groundFor(country: CountryId, level: number, capacity: number): Stadium {
+export function groundFor(country: CountryId, level: number, capacity: number, stadiumName?: string): Stadium {
   const rule = groundRule(country, level);
   const cap = Math.max(capacity, rule?.capacity ?? 0, 400);
   const tier = groundTier(country, level);
+  const real = stadiumName ? REAL_STADIUMS[stadiumName] : undefined;
+  // A real ground keeps its real size, even if it is below the usual rules for its level.
+  const s = real ? realGround(real, Math.max(capacity, 400)) : layoutGround(country, level, cap, tier);
+  s.floodlights = tier !== 'grassroots' || !!rule?.floodlights;
+  s.heating = tier === 'top' || (tier === 'league' && (country === 'sco' ? level === 1 : level === 3));
+  s.food = { top: 4, league: 3, nonleague: 1, grassroots: 0 }[tier];
+  s.vip = { top: 4, league: 2, nonleague: 1, grassroots: 0 }[tier];
+  s.corporate = { top: 3, league: 1, nonleague: 0, grassroots: 0 }[tier];
+  return s;
+}
+
+/** A real ground from its stand-by-stand data, scaled to its real capacity. */
+function realGround(data: string, cap: number): Stadium {
+  const s = createStadium();
+  const [sidePart, cornerPart] = data.split('#');
+  const parse = (x: string) => {
+    const [name, size, flags = ''] = x.split(':');
+    return { name, size: Number(size), flags };
+  };
+  const sides = sidePart.split('|').map(parse);
+  const sideTotal = sides.reduce((n, x) => n + x.size, 0);
+  const corners =
+    cornerPart === 'bowl'
+      ? CORNER_NAMES.map((name) => ({ name, size: sideTotal * 0.035, flags: '' }))
+      : cornerPart
+        ? cornerPart.split('|').map(parse)
+        : [];
+  const total = sideTotal + corners.reduce((n, x) => n + x.size, 0);
+  const place = (stand: Stand, d: { name: string; size: number; flags: string }, max: number) => {
+    const open = d.flags.includes('o');
+    const capacity = Math.min(max, Math.round((d.size / total) * cap));
+    Object.assign(stand, {
+      name: d.name,
+      capacity,
+      seats: open || d.flags.includes('t') ? 0 : capacity,
+      roof: !open && !d.flags.includes('u'),
+      open: open || undefined,
+    });
+  };
+  const sideStands = s.stands.filter((x) => !x.corner);
+  sides.forEach((d, i) => place(sideStands[i], d, MAX_STAND));
+  const cornerStands = s.stands.filter((x) => x.corner);
+  corners.forEach((d, i) => place(cornerStands[i], d, MAX_CORNER));
+  return s;
+}
+
+/** A ground laid out from its capacity and level, for grounds with no stand data. */
+function layoutGround(country: CountryId, level: number, cap: number, tier: GroundTier): Stadium {
+  const rule = groundRule(country, level);
   const s = createStadium();
   const st = s.stands;
   const sides = st.filter((x) => !x.corner);
@@ -82,11 +132,6 @@ export function groundFor(country: CountryId, level: number, capacity: number): 
     x.seats = Math.max(x.seats, n);
     seats -= n;
   }
-  s.floodlights = tier !== 'grassroots' || !!rule?.floodlights;
-  s.heating = tier === 'top' || (tier === 'league' && (country === 'sco' ? level === 1 : level === 3));
-  s.food = { top: 4, league: 3, nonleague: 1, grassroots: 0 }[tier];
-  s.vip = { top: 4, league: 2, nonleague: 1, grassroots: 0 }[tier];
-  s.corporate = { top: 3, league: 1, nonleague: 0, grassroots: 0 }[tier];
   return s;
 }
 

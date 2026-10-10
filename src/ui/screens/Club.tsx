@@ -93,7 +93,7 @@ export function Club() {
     if (s.corner) {
       return (
         <button type="button" className={`stand stand-corner stand-${area} ${work ? 'building' : ''} ${s.capacity ? '' : 'empty'}`} onClick={() => setStandSheet(i)} {...hp('corner')}>
-          <strong>{s.name.replace(' Corner', '')}</strong>
+          <strong>{s.name.replace(/ (Corner|Quadrant)$/, '')}</strong>
           <span>{s.capacity ? s.capacity.toLocaleString('en-GB') : 'Empty'}</span>
           {work ? <em className="busy">{work.weeksLeft} wk{work.weeksLeft === 1 ? '' : 's'}</em> : !s.capacity && <em>+ Build</em>}
         </button>
@@ -102,7 +102,7 @@ export function Club() {
     return (
       <button type="button" className={`stand stand-${area} ${work ? 'building' : ''} ${s.open ? 'open' : ''}`} onClick={() => setStandSheet(i)} {...hp(s.open ? 'openSide' : 'stand')}>
         <strong>{standLabel(s)}</strong>
-        <span>{s.open ? `Rail · ${s.capacity.toLocaleString('en-GB')} standing` : `${s.capacity.toLocaleString('en-GB')}${s.seats >= s.capacity ? ' · all seated' : s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}`}</span>
+        <span>{s.open ? (s.capacity ? `Rail · ${s.capacity.toLocaleString('en-GB')} standing` : 'No stand') : `${s.capacity.toLocaleString('en-GB')}${s.seats >= s.capacity ? ' · all seated' : s.seats ? ` · ${s.seats.toLocaleString('en-GB')} seated` : ' · terrace'}`}</span>
         {s.open && !work && <em>+ Build</em>}
         {s.roof && <em>Roofed</em>}
         {work && <em className="busy">Building · {work.weeksLeft} wk{work.weeksLeft === 1 ? '' : 's'}</em>}

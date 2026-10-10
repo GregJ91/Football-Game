@@ -12,6 +12,8 @@ import { matchPrepBoost, trainingKnocks, trainingRecovery } from '../src/engine/
 import { Rng } from '../src/engine/rng';
 import { userClub } from '../src/engine/world';
 import { handOver } from '../src/engine/club/career';
+import { REAL_DIVISIONS, parseRealClub } from '../src/data/realClubs';
+import { REAL_STADIUMS } from '../src/data/realStadiums';
 import { testGame } from './helpers';
 
 function rich() {
@@ -199,5 +201,34 @@ describe('real-life grounds by level', () => {
     expect(big.trainingGround?.gym).toBe(3);
     expect(totalSeats(big.stadium!)).toBe(totalCapacity(big.stadium!));
     expect(playerVerdict(game, big).stars).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('real stadiums', () => {
+  it('every stadium with stand data is a real club ground, with four sides', () => {
+    const grounds = new Set(Object.values(REAL_DIVISIONS).flat().map((l) => parseRealClub(l).stadium));
+    for (const [name, data] of Object.entries(REAL_STADIUMS)) {
+      expect(grounds.has(name), name).toBe(true);
+      expect(data.split('#')[0].split('|'), name).toHaveLength(4);
+    }
+  });
+
+  it('a real ground has its real stands, at its real size', () => {
+    const s = groundFor('eng', 1, 74_197, 'Old Trafford');
+    expect(s.stands.map((x) => x.name)).toContain('Stretford End');
+    expect(Math.abs(totalCapacity(s) - 74_197)).toBeLessThan(10);
+    expect(totalSeats(s)).toBe(totalCapacity(s));
+    const anfield = groundFor('eng', 1, 61_276, 'Anfield');
+    expect(anfield.stands.find((x) => x.name === 'The Kop')!.capacity).toBeGreaterThan(12_000);
+    // Open ends stay open.
+    const kassam = groundFor('eng', 2, 12_500, 'Kassam Stadium');
+    expect(kassam.stands[3].capacity).toBe(0);
+  });
+
+  it('taking over a real club gives you its real ground', () => {
+    const game = testGame('eng', 79, { realNames: true });
+    const club = Object.values(game.clubs).find((c) => c.stadiumName === 'Villa Park')!;
+    handOver(game, club);
+    expect(club.stadium!.stands.map((x) => x.name)).toContain('Holte End');
   });
 });

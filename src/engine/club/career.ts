@@ -140,7 +140,7 @@ export function handOver(game: GameState, club: Club) {
  */
 function takeOver(game: GameState, club: Club) {
   const level = divisionOf(game, club.id).def.level;
-  club.stadium = groundFor(game.country, level, club.capacity);
+  club.stadium = groundFor(game.country, level, club.capacity, club.stadiumName);
   syncCapacity(club);
   const facilityLevel = Math.max(1, Math.min(MAX_FACILITY, 5 - Math.ceil(level / 2)));
   // The training set-up a club at this level usually has.
