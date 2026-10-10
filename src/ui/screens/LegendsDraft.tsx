@@ -69,7 +69,7 @@ export function LegendsDraft() {
       <section className={`card clock ${onClock === me ? 'mine' : ''}`}>
         <ClubDot colours={game.clubs[onClock ?? me].colours} size={22} />
         <strong className="grow">{onClock === me ? "You're on the clock" : `${game.clubs[onClock ?? me].name} are picking`}</strong>
-        <button type="button" className="btn secondary small" onClick={() => showToast(autoPick() ?? 'Picked for you.')}>Auto pick</button>
+        <button type="button" className="btn secondary small" disabled={onClock !== me} onClick={() => showToast(autoPick() ?? 'Picked for you.')}>Auto pick</button>
       </section>
 
       <section className="card">

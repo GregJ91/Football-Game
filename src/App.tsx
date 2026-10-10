@@ -27,6 +27,7 @@ import { Achievements } from './ui/screens/Achievements';
 import { Legends, LegendsSeasonEnd } from './ui/screens/Legends';
 import { LegendsDraft } from './ui/screens/LegendsDraft';
 import { LegendsSetup } from './ui/screens/LegendsSetup';
+import { LegendsLobby } from './ui/screens/LegendsLobby';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -43,6 +44,7 @@ export function App() {
 
   if (screen === 'challenges') return <Challenges />;
   if (screen === 'legendsSetup') return <LegendsSetup />;
+  if (screen === 'legendsLobby' && !hasGame) return <LegendsLobby />;
   if (screen === 'achievements') return <Achievements />;
   if (screen === 'start' || !hasGame) return screen === 'create' ? <CreateClub /> : <Start />;
   if (screen === 'create') return <CreateClub />;

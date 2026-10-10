@@ -49,6 +49,8 @@ export function Legends() {
   const game = useGame((s) => s.game)!;
   useGame((s) => s.rev);
   const played = seasonsPlayed(game);
+  const online = useGame((s) => s.online);
+  const leaveOnline = useGame((s) => s.leaveOnline);
   const myPicks = [game.legends!.lastDraft, game.legends!.draft].flatMap((d) => d?.picks.filter((p) => p.clubId === game.userClubId) ?? []);
   return (
     <main className="screen legends-home">
@@ -64,6 +66,11 @@ export function Legends() {
         <div className="card-label"><span>All-time table</span><span>trophies, then titles</span></div>
         <Standings game={game} />
       </section>
+      {online && (
+        <button type="button" className="btn secondary" onClick={leaveOnline}>
+          {online.role === 'host' ? 'Stop hosting (the game stays saved)' : 'Leave the online game'}
+        </button>
+      )}
       {myPicks.length > 0 && (
         <section className="card">
           <div className="card-label"><span>Your latest draft</span></div>
@@ -85,6 +92,9 @@ export function LegendsSeasonEnd() {
   const squad = [...squadOf(game, me)].sort((a, b) => a.overall - b.overall);
   const [release, setRelease] = useState<string[]>(() => squad.filter((p) => p.position !== 'GK').slice(0, SUMMER_ROUNDS).map((p) => p.id));
   const finished = !!game.legends!.finished;
+  const online = useGame((s) => s.online);
+  const [sent, setSent] = useState(false);
+  const others = online?.lobby?.seats.filter((s) => s.clubId && s.clubId !== me) ?? [];
   const myCups = roll.cups.filter((c) => c.winnerId === me).map((c) => cupName(game, c.id));
   const pos = roll.positions[me];
   const toggle = (id: string) =>
@@ -138,9 +148,24 @@ export function LegendsSeasonEnd() {
               ))}
             </ul>
           </section>
-          <button type="button" className="btn primary big" disabled={release.length !== SUMMER_ROUNDS} onClick={() => summer(release)}>
-            Release and start the summer draft
-          </button>
+          {online && others.length > 0 && (
+            <section className="card">
+              <div className="card-label"><span>Friends' releases</span></div>
+              <div className="ready-list">
+                {others.map((s) => <span key={s.pid} className={s.released ? 'ready' : ''}>{s.released ? '✓' : '…'} {s.teamName}</span>)}
+              </div>
+              {online.role === 'host' && <p className="muted small">Anyone who hasn't chosen lets their two weakest go.</p>}
+            </section>
+          )}
+          {online?.role === 'guest' ? (
+            <button type="button" className="btn primary big" disabled={release.length !== SUMMER_ROUNDS} onClick={() => { summer(release); setSent(true); }}>
+              {sent ? 'Sent ✓ Waiting for the host' : 'Send my releases to the host'}
+            </button>
+          ) : (
+            <button type="button" className="btn primary big" disabled={release.length !== SUMMER_ROUNDS} onClick={() => summer(release)}>
+              Release and start the summer draft
+            </button>
+          )}
         </>
       )}
     </main>

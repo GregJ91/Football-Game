@@ -10,6 +10,8 @@ export function TopBar() {
   const busy = useGame((s) => s.busy);
   const go = useGame((s) => s.go);
   const continueDay = useGame((s) => s.continueDay);
+  // Online guests: the host moves the game on.
+  const guest = useGame((s) => s.online?.role === 'guest');
 
   const unread = (game.inbox ?? []).filter((i) => !i.read).length;
   const ended = game.phase !== 'season';
@@ -39,11 +41,11 @@ export function TopBar() {
       <button
         type="button"
         className={`continue-btn ${matchday ? 'matchday' : ''}`}
-        disabled={busy}
+        disabled={busy || (guest && !ended)}
         onClick={() => (ended ? go('seasonEnd') : continueDay())}
         {...hp('continue')}
       >
-        {ended ? 'Review' : matchday ? 'Match' : 'Continue'}
+        {ended ? 'Review' : guest ? "Host's turn" : matchday ? 'Match' : 'Continue'}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4 L19 12 L7 20 Z" /></svg>
       </button>
     </header>

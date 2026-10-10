@@ -1,3 +1,4 @@
+import { OnlineCard } from './LegendsLobby';
 import { LEGENDS_SEASONS, seasonsPlayed } from '../../engine/legends';
 import { useMemo } from 'react';
 import { divisionTable } from '../../engine/season/table';
@@ -29,6 +30,7 @@ export function Hub() {
   const club = userClub(game);
   const division = divisionOf(game, club.id);
   const legends = game.mode === 'legends';
+  const guest = useGame((s) => s.online?.role === 'guest');
   const offersCount = legends ? 0 : jobOffers(game).length;
   const grading = game.phase === 'season' ? nextLevelGrading(game) : null;
   // The engine mutates `game` in place, so `rev` is what signals a change.
@@ -124,6 +126,8 @@ export function Hub() {
         );
       })()}
 
+      {legends && <OnlineCard />}
+
       {next && opponent ? (
         <section className="card fixture">
           <div className="card-label">
@@ -143,6 +147,9 @@ export function Hub() {
               <span>{opponent.foreign ? opponent.foreign.nationName : `${oppPos ? ordinal(oppPos) : '–'} · ${form(opponent.id) || 'No games yet'}`}</span>
             </div>
           </div>
+          {guest ? (
+            <p className="muted small center">The host plays the matches. Your team plays with the lineup and tactics you've set.</p>
+          ) : (<>
           <div className="grid-2">
             <button type="button" className="btn primary" disabled={busy} onClick={openPreMatch} {...hp('playMatch')}>
               Play match
@@ -156,6 +163,7 @@ export function Hub() {
           <button type="button" className="link-btn center" disabled={busy} onClick={() => void simToSeasonEnd()} {...hp('simSeason')}>
             Sim to the end of the season
           </button>
+          </>)}
         </section>
       ) : (
         <section className="card">

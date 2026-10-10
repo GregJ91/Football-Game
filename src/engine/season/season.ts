@@ -69,8 +69,14 @@ export function aiTactics(game: GameState, club: Club, opponent: Club): Tactics 
  * one, else the best XI (which already allows for tiredness). With `rotate`,
  * tired picks in a saved lineup are rested for fresher players.
  */
-export function userSelection(game: GameState, formation = game.clubs[game.userClubId].tactics.formation, rotate = false): LineupSelection {
-  const club = game.clubs[game.userClubId];
+export function userSelection(
+  game: GameState,
+  formation?: Formation,
+  rotate = false,
+  clubId = game.userClubId,
+): LineupSelection {
+  const club = game.clubs[clubId];
+  formation ??= club.tactics.formation;
   const squad = squadOf(game, club.id);
   if (!club.lineup) return { selection: withBench(pickTeam(squad, formation), squad, club.bench), covers: [] };
   let lineup = formation === club.tactics.formation ? club.lineup : remapLineup(squad, club.lineup, formation);
@@ -85,6 +91,11 @@ export function autoRotates(game: GameState): boolean {
 }
 
 export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { live?: boolean; home?: boolean } = {}): TeamSheet {
+  // Online Legends: other people's teams play with the lineup and tactics they set on their phones.
+  if (!club.isUser && game.legends?.humans.includes(club.id)) {
+    const tactics = { ...club.tactics, pressing: club.tactics.pressing ?? 'medium' };
+    return { selection: userSelection(game, undefined, !opts.live, club.id).selection, tactics };
+  }
   if (!club.isUser) {
     const tactics = aiTactics(game, club, opponent);
     return { selection: pickTeam(squadOf(game, club.id), tactics.formation), tactics, boost: game.mode === 'legends' ? legendsAiBoost(game) : undefined };

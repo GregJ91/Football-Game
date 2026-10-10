@@ -727,6 +727,8 @@ export interface GameState {
   /** A separate game mode (Legends); normal careers leave this unset. */
   mode?: 'legends';
   legends?: LegendsState;
+  /** Online Legends (live): the room code and who plays which team. Kept by the host. */
+  online?: { code: string; seats: { pid: string; name: string; clubId: string }[] };
   /** The in-game editor has been used on this career. */
   edited?: boolean;
   /** Points deductions this season, by club. */

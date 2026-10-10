@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { LegendsDifficulty } from '../../engine/types';
-import { useGame } from '../../state/store';
+import { lastRoom, useGame } from '../../state/store';
 import { DEFAULT_CREST } from '../components/ClubArt';
 import { IdentityEditor, type Identity } from '../components/IdentityEditor';
 
@@ -14,6 +14,11 @@ const DIFFICULTIES: { d: LegendsDifficulty; label: string; note: string }[] = [
 export function LegendsSetup() {
   const go = useGame((s) => s.go);
   const newLegends = useGame((s) => s.newLegends);
+  const hostLegends = useGame((s) => s.hostLegends);
+  const joinLegends = useGame((s) => s.joinLegends);
+  const [who, setWho] = useState<'solo' | 'host' | 'join'>('solo');
+  const [code, setCode] = useState(lastRoom);
+  const [you, setYou] = useState('');
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [difficulty, setDifficulty] = useState<LegendsDifficulty>('medium');
@@ -24,7 +29,13 @@ export function LegendsSetup() {
   });
   const teamName = name.trim();
   const short = (shortName.trim() || teamName.replace(/[^A-Za-z]/g, '').slice(0, 3)).toUpperCase();
-  const valid = teamName.length >= 3;
+  const valid = teamName.length >= 3 && (who === 'solo' || you.trim().length >= 2) && (who !== 'join' || code.trim().length === 5);
+  const team = { teamName, shortName: short, colours: identity.colours, awayKit: identity.awayKit, crest: identity.crest };
+  const go2 = () => {
+    if (who === 'solo') newLegends({ ...team, difficulty });
+    else if (who === 'host') void hostLegends({ name: you.trim(), team });
+    else void joinLegends(code, { name: you.trim(), team });
+  };
 
   return (
     <main className="screen create legends-setup">
@@ -57,18 +68,40 @@ export function LegendsSetup() {
 
         <fieldset className="field">
           <legend>Who's playing</legend>
-          <div className="grid-2">
-            <button type="button" className="choice" aria-pressed="true">
+          <div className="grid-3">
+            <button type="button" className="choice" aria-pressed={who === 'solo'} onClick={() => setWho('solo')}>
               <strong>On your own</strong>
               <small>You against 19 AI teams</small>
             </button>
-            <button type="button" className="choice" disabled>
-              <strong>Online with friends</strong>
-              <small>Coming in the next update</small>
+            <button type="button" className="choice" aria-pressed={who === 'host'} onClick={() => setWho('host')}>
+              <strong>Host online</strong>
+              <small>Friends join with a code</small>
+            </button>
+            <button type="button" className="choice" aria-pressed={who === 'join'} onClick={() => setWho('join')}>
+              <strong>Join a friend</strong>
+              <small>Enter their code</small>
             </button>
           </div>
         </fieldset>
+        {who !== 'solo' && (
+          <label className="field">
+            <span>Your name</span>
+            <input value={you} maxLength={20} placeholder="So your friends know who's who" onChange={(e) => setYou(e.target.value)} />
+          </label>
+        )}
+        {who === 'join' && (
+          <label className="field">
+            <span>Room code</span>
+            <input value={code} maxLength={5} placeholder="e.g. K7QXM" autoCapitalize="characters" onChange={(e) => setCode(e.target.value.toUpperCase())} />
+          </label>
+        )}
+        {who !== 'solo' && (
+          <p className="muted small">
+            Live online play: everyone needs signal, and the host's phone runs the game, so the host keeps the app open while you play. The host picks the AI difficulty.
+          </p>
+        )}
 
+        {who === 'solo' && (
         <fieldset className="field">
           <legend>AI difficulty</legend>
           <div className="grid-3">
@@ -80,6 +113,7 @@ export function LegendsSetup() {
             ))}
           </div>
         </fieldset>
+        )}
       </div>
 
       <div className="sticky-cta">
@@ -87,9 +121,9 @@ export function LegendsSetup() {
           type="button"
           className="btn primary big"
           disabled={!valid}
-          onClick={() => newLegends({ teamName, shortName: short, colours: identity.colours, awayKit: identity.awayKit, crest: identity.crest, difficulty })}
+          onClick={go2}
         >
-          Start the draft
+          {who === 'solo' ? 'Start the draft' : who === 'host' ? 'Open the room' : 'Join the room'}
         </button>
       </div>
     </main>

@@ -1,6 +1,8 @@
+import { GuestSession, HostSession, type LobbyInfo, type Person } from '../online/session';
+import { newRoomCode, normaliseCode, openTransport, useLocalTransport } from '../online/transport';
 import { autoPick, createLegendsGame, makePick, startSummerDraft, type LegendsConfig } from '../engine/legends';
 import { startPartWork } from '../engine/club/trainingGround';
-import type { TrainingPart } from '../engine/types';
+import type { LegendsDifficulty, TrainingPart } from '../engine/types';
 import { acceptJobOffer, declineJobOffer } from '../engine/club/manager';
 import { sendMission, toggleShortlist, type MissionBrief } from '../engine/transfers/scouting';
 import { create } from 'zustand';
@@ -36,7 +38,7 @@ import { deleteSave, loadAchievements, loadGame, saveAchievements, saveGame, typ
 import { ACHIEVEMENTS, earnedAchievements } from '../engine/achievements';
 import { addInbox as addInboxItem } from '../engine/transfers/market';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager' | 'achievements' | 'legendsSetup' | 'legends';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager' | 'achievements' | 'legendsSetup' | 'legends' | 'legendsLobby';
 
 export interface LiveNote {
   minute: number;
@@ -151,6 +153,13 @@ interface Store {
   nextSeason: () => void;
   /** Legends mode. */
   newLegends: (config: Omit<LegendsConfig, 'seed'>) => void;
+  /** Online Legends (live). */
+  online: OnlineView | null;
+  hostLegends: (me: Omit<Person, 'pid'>) => Promise<void>;
+  joinLegends: (code: string, me: Omit<Person, 'pid'>) => Promise<void>;
+  startOnlineLegends: (difficulty: LegendsDifficulty) => void;
+  setReady: (on: boolean) => void;
+  leaveOnline: () => void;
   legendsPick: (playerId: string) => string | null;
   legendsAutoPick: () => string | null;
   /** Release the chosen players (or the weakest) and start the summer draft. */
@@ -188,6 +197,55 @@ const TALK_REACTION = {
   badly: "The team talk falls flat. The players don't look convinced.",
 } as const;
 
+export interface OnlineView {
+  role: 'host' | 'guest';
+  code: string;
+  lobby: LobbyInfo | null;
+  connected: boolean;
+  allReady: boolean;
+}
+
+let hostSession: HostSession | null = null;
+let guestSession: GuestSession | null = null;
+function leaveSessions() {
+  hostSession?.close();
+  guestSession?.close();
+  hostSession = null;
+  guestSession = null;
+}
+
+/** This phone's id in online games (so you can rejoin as the same person). */
+function myPid(): string {
+  try {
+    // Testing in tabs (?local): each tab is a different person.
+    const store = useLocalTransport() ? sessionStorage : localStorage;
+    let id = store.getItem('fmj-pid');
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 12);
+      store.setItem('fmj-pid', id);
+    }
+    return id;
+  } catch {
+    return Math.random().toString(36).slice(2, 12);
+  }
+}
+
+function rememberRoom(code: string) {
+  try {
+    localStorage.setItem('fmj-last-room', code);
+  } catch {
+    /* not kept */
+  }
+}
+
+export function lastRoom(): string {
+  try {
+    return localStorage.getItem('fmj-last-room') ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export const useGame = create<Store>()((set, get) => {
   const bump = () => set((s) => ({ rev: s.rev + 1 }));
   const commit = () => {
@@ -196,7 +254,21 @@ export const useGame = create<Store>()((set, get) => {
     // A pending result popup is shown on the hub first; dismissing it moves on.
     if (game) unlockAchievements(game);
     set((s) => ({ rev: s.rev + 1, screen: game?.phase === 'seasonEnd' && !s.resultPopup ? 'seasonEnd' : s.screen }));
+    // Online guests don't keep their own copy: their team settings go to the host instead.
+    if (game && guestSession) return guestSession.team(game);
     if (game) void saveGame(game, get().slot);
+    hostSession?.stateChanged();
+  };
+  // Online guests can't move the game on: the host does.
+  const guestBlocked = () => {
+    if (!guestSession) return false;
+    set({ toast: 'The host plays the matches. Set your team and tap Ready.' });
+    return true;
+  };
+  const refreshOnline = () => {
+    if (hostSession) set({ online: { role: 'host', code: hostSession.code, lobby: hostSession.lobby(), connected: true, allReady: hostSession.allReady() } });
+    else if (guestSession) set({ online: { role: 'guest', code: guestSession.code, lobby: guestSession.lobby, connected: guestSession.connected, allReady: false } });
+    else set({ online: null });
   };
   // Anything newly achieved: kept on the device, and announced.
   const unlockAchievements = (game: GameState) => {
@@ -322,10 +394,27 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     slot: 'slot1',
+    online: null,
     chooseSlot: (slot) => set({ slot }),
     loadSlot: async (slot) => {
-      set({ slot, live: null, liveFixture: null, resultPopup: null });
-      return get().continueGame();
+      leaveSessions();
+      set({ slot, live: null, liveFixture: null, resultPopup: null, online: null });
+      const ok = await get().continueGame();
+      // A saved online game: open the same room again so friends can rejoin.
+      const game = get().game;
+      if (ok && game?.online && game.legends) {
+        const t = await openTransport(game.online.code);
+        const host = game.clubs[game.userClubId];
+        hostSession = new HostSession(
+          t,
+          game.online.code,
+          { pid: myPid(), name: game.online.seats[0]?.name ?? 'Host', team: { teamName: host.name, shortName: host.shortName, colours: host.colours } },
+          { game: () => get().game, commit: () => commit(), changed: refreshOnline },
+        );
+        hostSession.resume(game);
+        refreshOnline();
+      }
+      return ok;
     },
     deleteSlot: async (slot) => {
       await deleteSave(slot);
@@ -394,6 +483,7 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     continueDay: () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game || get().busy) return;
       const r = advanceHalfDay(game);
@@ -670,6 +760,7 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     openPreMatch: () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game) return;
       const fixture = advanceToUserMatch(game);
@@ -682,6 +773,7 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     simNextMatch: async () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game || get().busy) return;
       set({ busy: true });
@@ -693,6 +785,7 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     simToSeasonEnd: async () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game || get().busy) return;
       set({ busy: true });
@@ -712,6 +805,51 @@ export const useGame = create<Store>()((set, get) => {
       set({ resultPopup: null, screen: game?.phase === 'seasonEnd' ? 'seasonEnd' : get().screen });
     },
 
+    hostLegends: async (me) => {
+      leaveSessions();
+      const code = newRoomCode();
+      const t = await openTransport(code);
+      hostSession = new HostSession(t, code, { ...me, pid: myPid() }, { game: () => get().game, commit: () => commit(), changed: refreshOnline });
+      set({ game: null, screen: 'legendsLobby' });
+      refreshOnline();
+    },
+
+    joinLegends: async (code, me) => {
+      leaveSessions();
+      const room = normaliseCode(code);
+      rememberRoom(room);
+      const t = await openTransport(room);
+      guestSession = new GuestSession(t, room, { ...me, pid: myPid() }, {
+        onState: (game) => {
+          const first = !get().game;
+          set((s) => ({ game, rev: s.rev + 1, screen: first || s.screen === 'legendsLobby' ? (game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub') : game.phase === 'seasonEnd' && s.screen === 'hub' ? 'seasonEnd' : game.phase === 'season' && s.screen === 'seasonEnd' ? 'hub' : s.screen }));
+          refreshOnline();
+        },
+        changed: refreshOnline,
+        toast: (text) => set({ toast: text }),
+      });
+      set({ game: null, screen: 'legendsLobby' });
+      refreshOnline();
+    },
+
+    startOnlineLegends: (difficulty) => {
+      if (!hostSession) return;
+      const game = hostSession.start(difficulty);
+      set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null });
+      commit();
+      refreshOnline();
+    },
+
+    setReady: (on) => {
+      guestSession?.ready(on);
+    },
+
+    leaveOnline: () => {
+      leaveSessions();
+      set({ online: null, game: null, screen: 'start' });
+    },
+
+
     newLegends: (config) => {
       const game = createLegendsGame({ ...config, seed: Math.floor(Math.random() * 2 ** 32) });
       set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null });
@@ -719,6 +857,10 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     legendsPick: (playerId) => {
+      if (guestSession) {
+        guestSession.pick(playerId);
+        return null;
+      }
       const { game } = get();
       if (!game?.legends) return 'No Legends game.';
       const err = makePick(game, game.userClubId, playerId);
@@ -728,6 +870,10 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     legendsAutoPick: () => {
+      if (guestSession) {
+        guestSession.autoPick();
+        return null;
+      }
       const { game } = get();
       if (!game?.legends) return 'No Legends game.';
       const err = autoPick(game, game.userClubId);
@@ -737,14 +883,20 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     legendsSummer: (released) => {
+      if (guestSession) {
+        guestSession.release(released);
+        set({ toast: 'Sent to the host. The summer draft starts when the host is ready.' });
+        return;
+      }
       const { game } = get();
       if (!game?.legends) return;
-      startSummerDraft(game, { [game.userClubId]: released });
+      startSummerDraft(game, { ...hostSession?.releases(), [game.userClubId]: released });
       set({ screen: 'hub' });
       commit();
     },
 
     nextSeason: () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game) return;
       startNextSeason(game);
@@ -753,6 +905,7 @@ export const useGame = create<Store>()((set, get) => {
     },
 
     kickOff: () => {
+      if (guestBlocked()) return;
       const { game } = get();
       if (!game) return;
       const fixture = advanceToUserMatch(game);

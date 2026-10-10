@@ -59,6 +59,16 @@ export interface LegendsConfig {
   awayKit?: ClubColours;
   crest?: CrestDesign;
   difficulty: LegendsDifficulty;
+  /** Online: the other people's teams (they take the next club ids; AI fills the rest). */
+  others?: LegendsTeam[];
+}
+
+export interface LegendsTeam {
+  teamName: string;
+  shortName: string;
+  colours: ClubColours;
+  awayKit?: ClubColours;
+  crest?: CrestDesign;
 }
 
 /** Parse the real-player list: name, positions (main first) and peak rating. */
@@ -140,10 +150,12 @@ export function createLegendsGame(config: LegendsConfig): GameState {
     settings: { assistantTactics: false, difficulty: 'normal' },
     legends: { difficulty: config.difficulty, humans: ['L0'], draft: null, pool: [], roll: [] },
   };
+  const people: LegendsTeam[] = [config, ...(config.others ?? [])].slice(0, LEGENDS_TEAMS);
   const teams: [string, string, string, string, KitPattern][] = [
-    [config.teamName, config.shortName, config.colours.primary, config.colours.secondary, config.colours.pattern],
+    ...people.map((t): [string, string, string, string, KitPattern] => [t.teamName, t.shortName, t.colours.primary, t.colours.secondary, t.colours.pattern]),
     ...AI_TEAMS,
-  ];
+  ].slice(0, LEGENDS_TEAMS);
+  game.legends!.humans = people.map((_, i) => `L${i}`);
   teams.forEach(([name, short, primary, secondary, pattern], i) => {
     const id = `L${i}`;
     game.clubs[id] = {
@@ -162,8 +174,10 @@ export function createLegendsGame(config: LegendsConfig): GameState {
       history: [],
     };
   });
-  game.clubs.L0.awayKit = config.awayKit;
-  game.clubs.L0.crest = config.crest;
+  people.forEach((t, i) => {
+    game.clubs[`L${i}`].awayKit = t.awayKit;
+    game.clubs[`L${i}`].crest = t.crest;
+  });
   game.divisions.push({
     def: { id: LEGENDS_DIVISION, name: 'Super League', level: 1, size: LEGENDS_TEAMS, rounds: 2, promotion: null, relegation: 0, quality: 90 },
     clubIds: Object.keys(game.clubs),
