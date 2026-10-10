@@ -11,7 +11,14 @@ export interface SaveMeta {
   season: number;
   week: number;
   savedAt: number;
+  /** What kind of game: a career, a challenge (with its name) or Legends. */
+  mode?: 'career' | 'challenge' | 'legends';
+  /** e.g. "Northern Regional League" or "Super League · season 3 of 10". */
+  detail?: string;
 }
+
+/** Three save slots; any slot can hold any kind of game. */
+export const SLOTS = ['slot1', 'slot2', 'slot3'] as const;
 
 interface SaveRecord {
   meta: SaveMeta;
@@ -41,12 +48,19 @@ export async function saveGame(game: GameState, slot = 'slot1'): Promise<SaveMet
 }
 
 async function writeSave(game: GameState, slot: string): Promise<SaveMeta> {
+  const club = game.unemployed ? game.clubs[game.unemployed.fromClubId] : game.clubs[game.userClubId];
+  const division = game.divisions.find((d) => d.clubIds.includes(club.id));
   const meta: SaveMeta = {
     slot,
-    clubName: game.clubs[game.userClubId].name,
+    clubName: club.name,
     season: game.season,
     week: game.week,
     savedAt: Date.now(),
+    mode: game.mode === 'legends' ? 'legends' : game.challenge ? 'challenge' : 'career',
+    detail:
+      game.mode === 'legends'
+        ? `Season ${Math.min((game.legends?.roll.length ?? 0) + 1, 10)} of 10`
+        : game.unemployed ? 'Out of work' : division?.def.name,
   };
   const record: SaveRecord = { meta, game };
   await (await db()).put(STORE, record, slot);
@@ -80,12 +94,22 @@ export async function listSaves(): Promise<SaveMeta[]> {
 
 async function readSaveList(): Promise<SaveMeta[]> {
   const d = await db();
+  // A Legends game from before the three slots moves into the first free one.
+  const old = (await d.get(STORE, LEGENDS_SLOT)) as SaveRecord | undefined;
+  if (old) {
+    for (const slot of SLOTS) {
+      if (await d.get(STORE, slot)) continue;
+      await d.put(STORE, { meta: { ...old.meta, slot }, game: old.game }, slot);
+      await d.delete(STORE, LEGENDS_SLOT);
+      break;
+    }
+  }
   const keys = await d.getAllKeys(STORE);
   const metas: SaveMeta[] = [];
   for (const k of keys) {
     const r = (await d.get(STORE, k)) as SaveRecord | undefined;
     // Only saves (achievements live in the same store under their own key).
-    if (r?.meta) metas.push(r.meta);
+    if (r?.meta && (SLOTS as readonly string[]).includes(String(k))) metas.push({ ...r.meta, mode: r.meta.mode ?? 'career' });
   }
   return metas.sort((a, b) => b.savedAt - a.savedAt);
 }
@@ -123,5 +147,5 @@ export async function saveAchievements(unlocked: Record<string, Unlock>) {
   }
 }
 
-/** Legends games are kept apart from the normal career save. */
-export const LEGENDS_SLOT = 'legends';
+/** Where Legends games were kept before the three save slots. */
+const LEGENDS_SLOT = 'legends';

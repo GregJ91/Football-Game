@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LEGENDS_SLOT, listSaves, type SaveMeta } from '../../state/persistence';
+import { SLOTS, listSaves, type SaveMeta } from '../../state/persistence';
 import { useGame } from '../../state/store';
 import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
@@ -9,11 +9,27 @@ import { isAndroid, isInstalled, isIos, isSamsungBrowser, useInstall, useOffline
 
 export function Start() {
   const go = useGame((s) => s.go);
-  const continueGame = useGame((s) => s.continueGame);
   const setChallengeDraft = useGame((s) => s.setChallengeDraft);
-  const [save, setSave] = useState<SaveMeta | null>(null);
-  const [legendsSave, setLegendsSave] = useState<SaveMeta | null>(null);
-  const continueLegends = useGame((s) => s.continueLegends);
+  const chooseSlot = useGame((s) => s.chooseSlot);
+  const loadSlot = useGame((s) => s.loadSlot);
+  const deleteSlot = useGame((s) => s.deleteSlot);
+  const [saves, setSaves] = useState<SaveMeta[]>([]);
+  const [replaceFor, setReplaceFor] = useState<'create' | 'challenges' | 'legendsSetup' | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const save = saves[0] ?? null;
+  const refresh = () =>
+    listSaves()
+      .then(setSaves)
+      .catch(() => setSaves([]));
+  // A new game goes into the first empty slot; with all three full, you pick one to replace.
+  const begin = (target: 'create' | 'challenges' | 'legendsSetup') => {
+    if (target === 'create') setChallengeDraft(null);
+    const free = SLOTS.find((slot) => !saves.some((s) => s.slot === slot));
+    if (!free) return setReplaceFor(target);
+    chooseSlot(free);
+    go(target);
+  };
+  const MODE_LABEL = { career: 'Career', challenge: 'Challenge', legends: 'Legends' } as const;
   const achievements = useGame((s) => s.achievements);
   const loadAchievements = useGame((s) => s.loadAchievements);
   const done = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
@@ -55,12 +71,7 @@ export function Start() {
   };
 
   useEffect(() => {
-    listSaves()
-      .then((saves) => {
-        setSave(saves.find((s) => s.slot === 'slot1') ?? null);
-        setLegendsSave(saves.find((s) => s.slot === LEGENDS_SLOT) ?? null);
-      })
-      .catch(() => setSave(null));
+    void refresh();
   }, []);
 
   return (
@@ -83,33 +94,53 @@ export function Start() {
       </div>
       <div className="stack">
         {save && (
-          <button type="button" className="btn primary big" onClick={() => void continueGame()}>
+          <button type="button" className="btn primary big" onClick={() => void loadSlot(save.slot)}>
             Continue
             <small>
-              {save.clubName} · {seasonLabel(save.season)}
+              {save.clubName} · {MODE_LABEL[save.mode ?? 'career']} · {seasonLabel(save.season)}
             </small>
           </button>
         )}
-        <button type="button" className={`btn big ${save ? 'secondary' : 'primary'}`} onClick={() => {
-          setChallengeDraft(null);
-          go('create');
-        }}>
+        <button type="button" className={`btn big ${save ? 'secondary' : 'primary'}`} onClick={() => begin('create')}>
           New game
         </button>
-        <button type="button" className="btn big secondary" onClick={() => go('challenges')}>
+        <button type="button" className="btn big secondary" onClick={() => begin('challenges')}>
           Challenge mode
         </button>
-        <div className="legends-start">
-          <button type="button" className="btn big secondary" onClick={() => go('legendsSetup')}>
-            Legends
-            <small>Draft the best players of the last 40 years</small>
-          </button>
-          {legendsSave && (
-            <button type="button" className="link-btn center" onClick={() => void continueLegends()}>
-              Continue Legends: {legendsSave.clubName} · season {legendsSave.season - 2025}
-            </button>
-          )}
-        </div>
+        <button type="button" className="btn big secondary" onClick={() => begin('legendsSetup')}>
+          Legends
+          <small>Draft the best players of the last 40 years</small>
+        </button>
+
+        <section className="card saves-card">
+          <div className="card-label"><span>Saved games</span><span>{saves.length} / {SLOTS.length}</span></div>
+          {SLOTS.map((slot, i) => {
+            const meta = saves.find((s) => s.slot === slot);
+            if (!meta) return <div key={slot} className="save-row empty"><b>{i + 1}</b><span className="grow muted">Empty slot</span></div>;
+            return (
+              <div key={slot} className="save-row">
+                <b>{i + 1}</b>
+                <span className="grow">
+                  <strong>{meta.clubName}</strong>
+                  <small className="block muted">
+                    {MODE_LABEL[meta.mode ?? 'career']}{meta.detail ? ` · ${meta.detail}` : ''} · {seasonLabel(meta.season)} · saved {new Date(meta.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  </small>
+                </span>
+                {confirmDelete === slot ? (
+                  <>
+                    <button type="button" className="btn secondary small danger" onClick={() => void deleteSlot(slot).then(() => { setConfirmDelete(null); void refresh(); })}>Delete</button>
+                    <button type="button" className="link-btn" onClick={() => setConfirmDelete(null)}>Keep</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="btn primary small" onClick={() => void loadSlot(slot)}>Play</button>
+                    <button type="button" className="link-btn" aria-label={`Delete save ${i + 1}`} onClick={() => setConfirmDelete(slot)}>✕</button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </section>
         <button type="button" className="card achievements-link" onClick={() => go('achievements')}>
           <span className="grow">
             <strong>🏆 Achievements</strong>
@@ -117,7 +148,6 @@ export function Start() {
           </span>
           <b>{done} / {ACHIEVEMENTS.length}</b>
         </button>
-        {save && <p className="hint">Starting a new game replaces your current save.</p>}
       </div>
 
       {offlineReady !== null && (offlineReady === false ? null : (
@@ -152,6 +182,34 @@ export function Start() {
           )}
         </section>
       ))}
+
+      {replaceFor && (
+        <div className="sheet-backdrop" onClick={() => setReplaceFor(null)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Choose a slot" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <strong className="grow">All three slots are in use</strong>
+              <button type="button" className="link-btn" onClick={() => setReplaceFor(null)}>Cancel</button>
+            </div>
+            <p className="muted small">Pick a save to replace. It's overwritten once the new game starts.</p>
+            {saves.map((meta) => (
+              <button
+                key={meta.slot}
+                type="button"
+                className="work-option"
+                onClick={() => {
+                  chooseSlot(meta.slot);
+                  const target = replaceFor;
+                  setReplaceFor(null);
+                  go(target);
+                }}
+              >
+                <strong>Replace slot {SLOTS.indexOf(meta.slot as (typeof SLOTS)[number]) + 1}: {meta.clubName}</strong>
+                <small>{MODE_LABEL[meta.mode ?? 'career']}{meta.detail ? ` · ${meta.detail}` : ''} · {seasonLabel(meta.season)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <footer className="version">
         <span>

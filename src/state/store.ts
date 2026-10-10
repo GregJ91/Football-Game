@@ -32,7 +32,7 @@ import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
   isKnown, releasePlayer, renewContract, type BidAction, type BidResponse,
 } from '../engine/transfers/market';
-import { LEGENDS_SLOT, loadAchievements, loadGame, saveAchievements, saveGame, type Unlock } from './persistence';
+import { deleteSave, loadAchievements, loadGame, saveAchievements, saveGame, type Unlock } from './persistence';
 import { ACHIEVEMENTS, earnedAchievements } from '../engine/achievements';
 import { addInbox as addInboxItem } from '../engine/transfers/market';
 
@@ -79,6 +79,13 @@ interface Store {
   go: (screen: Screen) => void;
   newGame: (config: Omit<NewGameConfig, 'seed'>) => void;
   continueGame: () => Promise<boolean>;
+  /** The save slot the current game lives in (slot1–slot3). */
+  slot: string;
+  /** Pick the slot the next new game will save into. */
+  chooseSlot: (slot: string) => void;
+  /** Load the game in a slot and carry on. */
+  loadSlot: (slot: string) => Promise<boolean>;
+  deleteSlot: (slot: string) => Promise<void>;
   setTactics: (tactics: Tactics) => void;
   /** Put a player into a starting slot (swapping if already in the XI). */
   setLineupSlot: (slotIndex: number, playerId: string) => void;
@@ -144,7 +151,6 @@ interface Store {
   nextSeason: () => void;
   /** Legends mode. */
   newLegends: (config: Omit<LegendsConfig, 'seed'>) => void;
-  continueLegends: () => Promise<boolean>;
   legendsPick: (playerId: string) => string | null;
   legendsAutoPick: () => string | null;
   /** Release the chosen players (or the weakest) and start the summer draft. */
@@ -190,7 +196,7 @@ export const useGame = create<Store>()((set, get) => {
     // A pending result popup is shown on the hub first; dismissing it moves on.
     if (game) unlockAchievements(game);
     set((s) => ({ rev: s.rev + 1, screen: game?.phase === 'seasonEnd' && !s.resultPopup ? 'seasonEnd' : s.screen }));
-    if (game) void saveGame(game, game.mode === 'legends' ? LEGENDS_SLOT : 'slot1');
+    if (game) void saveGame(game, get().slot);
   };
   // Anything newly achieved: kept on the device, and announced.
   const unlockAchievements = (game: GameState) => {
@@ -315,8 +321,19 @@ export const useGame = create<Store>()((set, get) => {
       commit();
     },
 
+    slot: 'slot1',
+    chooseSlot: (slot) => set({ slot }),
+    loadSlot: async (slot) => {
+      set({ slot, live: null, liveFixture: null, resultPopup: null });
+      return get().continueGame();
+    },
+    deleteSlot: async (slot) => {
+      await deleteSave(slot);
+      if (get().slot === slot) set({ game: null });
+    },
+
     continueGame: async () => {
-      const game = await loadGame();
+      const game = await loadGame(get().slot);
       if (!game) return false;
       // The old testing switches are gone: turn them off in older saves.
       if (game.settings?.unlimitedMoney) setUnlimitedMoneyEngine(game, false);
@@ -699,13 +716,6 @@ export const useGame = create<Store>()((set, get) => {
       const game = createLegendsGame({ ...config, seed: Math.floor(Math.random() * 2 ** 32) });
       set({ game, screen: 'hub', live: null, liveFixture: null, resultPopup: null });
       commit();
-    },
-
-    continueLegends: async () => {
-      const game = await loadGame(LEGENDS_SLOT);
-      if (!game) return false;
-      set((s) => ({ game, rev: s.rev + 1, screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub', live: null, liveFixture: null, resultPopup: null }));
-      return true;
     },
 
     legendsPick: (playerId) => {
