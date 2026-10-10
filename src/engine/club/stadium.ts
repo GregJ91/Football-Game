@@ -54,11 +54,11 @@ export function groundTier(country: CountryId, level: number): GroundTier {
  * four seated, covered stands; non-league grounds have a small main stand,
  * covered terraces and an open end; the bottom is a pitch with a rail.
  */
-export function groundFor(country: CountryId, level: number, capacity: number, stadiumName?: string): Stadium {
+export function groundFor(country: CountryId, level: number, capacity: number, stadiumName?: string, clubName?: string): Stadium {
   const rule = groundRule(country, level);
   const cap = Math.max(capacity, rule?.capacity ?? 0, 400);
   const tier = groundTier(country, level);
-  const real = stadiumName ? REAL_STADIUMS[stadiumName] : undefined;
+  const real = stadiumName ? (REAL_STADIUMS[`${stadiumName} (${clubName})`] ?? REAL_STADIUMS[stadiumName]) : undefined;
   // A real ground keeps its real size, even if it is below the usual rules for its level.
   const s = real ? realGround(real, Math.max(capacity, 400)) : layoutGround(country, level, cap, tier);
   s.floodlights = tier !== 'grassroots' || !!rule?.floodlights;

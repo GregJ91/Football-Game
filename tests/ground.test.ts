@@ -206,11 +206,24 @@ describe('real-life grounds by level', () => {
 
 describe('real stadiums', () => {
   it('every stadium with stand data is a real club ground, with four sides', () => {
-    const grounds = new Set(Object.values(REAL_DIVISIONS).flat().map((l) => parseRealClub(l).stadium));
+    const clubs = Object.values(REAL_DIVISIONS).flat().map(parseRealClub);
+    const grounds = new Set(clubs.flatMap((c) => [c.stadium, `${c.stadium} (${c.name})`]));
     for (const [name, data] of Object.entries(REAL_STADIUMS)) {
       expect(grounds.has(name), name).toBe(true);
       expect(data.split('#')[0].split('|'), name).toHaveLength(4);
     }
+  });
+
+  it('every real club with a ground has its stands', () => {
+    for (const c of Object.values(REAL_DIVISIONS).flat().map(parseRealClub)) {
+      if (!c.stadium) continue;
+      expect(REAL_STADIUMS[`${c.stadium} (${c.name})`] ?? REAL_STADIUMS[c.stadium], `${c.name}: ${c.stadium}`).toBeDefined();
+      const s = groundFor('eng', 5, c.capacity!, c.stadium, c.name);
+      expect(Math.abs(totalCapacity(s) - c.capacity!), c.name).toBeLessThan(10);
+    }
+    // Same name, different grounds.
+    expect(groundFor('eng', 3, 8714, 'St James Park', 'Exeter City').stands.map((x) => x.name)).toContain('Big Bank');
+    expect(groundFor('sco', 2, 6541, 'Victoria Park', 'Ross County').stands.map((x) => x.name)).toContain('Jail End');
   });
 
   it('a real ground has its real stands, at its real size', () => {
