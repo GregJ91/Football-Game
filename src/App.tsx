@@ -22,6 +22,7 @@ import { Squad } from './ui/screens/Squad';
 import { Start } from './ui/screens/Start';
 import { Tactics } from './ui/screens/Tactics';
 import { Transfers } from './ui/screens/Transfers';
+import { Manager } from './ui/screens/Manager';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -58,6 +59,7 @@ export function App() {
         {screen === 'cups' && <Cups />}
         {screen === 'europe' && <Europe />}
         {screen === 'awards' && <Awards />}
+        {screen === 'manager' && <Manager />}
       </div>
       <TabBar />
       <ResultPopup />

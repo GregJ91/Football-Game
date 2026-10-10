@@ -675,6 +675,8 @@ export interface GameState {
   unemployed?: Unemployed;
   /** The clubs you've managed, in order. */
   career?: CareerSpell[];
+  /** The manager's own record (results, transfers, players, awards, job offers). */
+  manager?: ManagerRecord;
   /** Points deductions this season, by club. */
   deductions?: Record<string, number>;
   /** Monthly awards this season, and the headline awards of past seasons. */
@@ -740,7 +742,52 @@ export interface CareerSpell {
   from: number;
   /** Last season in charge, once you've left. */
   to?: number;
-  left?: 'sacked';
+  left?: 'sacked' | 'moved';
+}
+
+/** A transfer the manager made, for the record book. */
+export interface ManagerDeal {
+  name: string;
+  fee: number;
+  season: number;
+  clubName: string;
+}
+
+/** An individual award: the manager's own, or one of his players'. */
+export interface ManagerHonour {
+  season: number;
+  /** e.g. "Manager of the Month (September)", "Golden Boot". */
+  name: string;
+  kind: 'manager' | 'player';
+  /** The player, for a player award. */
+  who?: string;
+  clubId: string;
+  clubName: string;
+}
+
+/** The manager's career record across every club. */
+export interface ManagerRecord {
+  games: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  /** Games played in each formation and mentality. */
+  formations: Record<string, number>;
+  mentalities: Record<string, number>;
+  feesIn: number;
+  feesOut: number;
+  signings: number;
+  freeSignings: number;
+  biggestSigning?: ManagerDeal;
+  cheapestSigning?: ManagerDeal;
+  biggestSale?: ManagerDeal;
+  /** Everyone who has played for you: apps, goals and the best rating he reached under you. */
+  players: Record<string, { name: string; position: Position; peak: number; apps: number; goals: number; clubName: string }>;
+  honours: ManagerHonour[];
+  /** Clubs that want you while you're in work. */
+  offers?: JobOffer[];
 }
 
 export interface GameSettings {

@@ -9,6 +9,7 @@ import { MatchCard } from '../components/MatchCard';
 import { openInboxItems, transferWindow } from '../../engine/transfers/market';
 import { boardOf } from '../../engine/club/chairman';
 import { nextLevelGrading } from '../../engine/club/stadium';
+import { jobOffers } from '../../engine/club/manager';
 import { competitionLabel, formatDate, matchDate } from '../../engine/calendar';
 import { isCupTie } from '../../engine/season/cups';
 import { challengeDef, seasonsSurvived } from '../../engine/club/challenge';
@@ -26,6 +27,7 @@ export function Hub() {
 
   const club = userClub(game);
   const division = divisionOf(game, club.id);
+  const offersCount = jobOffers(game).length;
   const grading = game.phase === 'season' ? nextLevelGrading(game) : null;
   // The engine mutates `game` in place, so `rev` is what signals a change.
   const table = useMemo(() => divisionTable(game, division.def.id), [rev, division]);
@@ -70,6 +72,11 @@ export function Hub() {
             {seasonLabel(game.season)} · Game {matchday} of {ourFixtures.length} · {division.def.name}
           </div>
         </div>
+        <button type="button" className="manager-btn" onClick={() => go('manager')} {...hp('navManager')}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21 C4 15 20 15 20 21" /></svg>
+          <span>Manager</span>
+          {offersCount > 0 && <b className="badge">{offersCount}</b>}
+        </button>
         <div className="bank" {...hp('bank')}>
           <strong>{money(club.balance)}</strong>
           <span>Bank</span>
@@ -148,6 +155,13 @@ export function Hub() {
             Finish the season
           </button>
         </section>
+      )}
+
+      {offersCount > 0 && (
+        <button type="button" className="card grading-alert job-alert" onClick={() => go('manager')}>
+          <strong>{offersCount === 1 ? 'A club wants you as their manager' : `${offersCount} clubs want you as their manager`}</strong>
+          <small>{jobOffers(game).map((o) => game.clubs[o.clubId].name).join(', ')}. See the offer on your Manager page →</small>
+        </button>
       )}
 
       {(bids.length > 0 || unread > 0) && (

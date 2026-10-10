@@ -1,3 +1,4 @@
+import { maybeJobOffer, monthlyJobOffers, recordManagerMatch } from '../club/manager';
 import { createLiveMatch, finishMatch, simulateMatch, type LiveMatch, type TeamSheet } from '../match/engine';
 import { matchPrepBoost, weeklyTraining } from '../players/training';
 import { monthEnds, monthlyAwards, recordLegends, seasonAwards, updateClubRecords } from './awards';
@@ -198,7 +199,10 @@ export function applyMatchToPlayers(game: GameState, rng: Rng, result: MatchResu
     const keeper = used.map((id) => playerById(game, id)).find((p) => p?.position === 'GK');
     if (keeper) creditCleanSheet(game, keeper, compId);
   }
-  if (!game.unemployed) updateClubRecords(game, home.id, away.id, result);
+  if (!game.unemployed) {
+    updateClubRecords(game, home.id, away.id, result);
+    recordManagerMatch(game, home.id, away.id, result);
+  }
   for (const { club, used, scored, conceded } of sides) {
     club.seasonGames = (club.seasonGames ?? 0) + 1;
     const usedSet = new Set(used);
@@ -301,7 +305,10 @@ export function playWeek(game: GameState): Fixture[] {
   if (!game.unemployed && game.week >= 6 && game.week % 4 === 0) playingTimeCheck(game);
   if (monthEnds(game)) monthlyAwards(game);
   // Once a month the board takes stock; on hard it may sack you.
-  if (game.week >= 8 && game.week % 4 === 2) boardCheck(game);
+  if (game.week >= 8 && game.week % 4 === 2) {
+    boardCheck(game);
+    monthlyJobOffers(game);
+  }
   const wasOpen = transferWindow(game).open;
   game.week++;
   // Saturday evening: day -1 of the new week is the Saturday just gone,
@@ -516,6 +523,9 @@ export function startNextSeason(game: GameState) {
   setupEurope(game);
   setupCups(game);
   startOfSeasonBusiness(game);
+  // A title or promotion gets you noticed over the summer.
+  const last = game.clubs[game.userClubId].history.at(-1);
+  if (last && (last.outcome === 'champions' || last.outcome === 'promoted')) withRng(game, (rng) => maybeJobOffer(game, rng, 0.35));
 }
 
 /** Board target, sponsor offers, budgets and the window opening. */

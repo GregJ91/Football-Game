@@ -44,7 +44,7 @@ const NAV_HELP = { hub: 'navHub', squad: 'navSquad', tactics: 'navTactics', tran
 export function TabBar() {
   const current = useGame((s) => s.screen);
   // League and fixtures are reached from the Hub.
-  const screen = current === 'fixtures' || current === 'league' || current === 'cups' || current === 'europe' || current === 'awards' || current === 'inbox' ? 'hub' : current;
+  const screen = current === 'fixtures' || current === 'league' || current === 'cups' || current === 'europe' || current === 'awards' || current === 'inbox' || current === 'manager' ? 'hub' : current;
   const go = useGame((s) => s.go);
   return (
     <nav className="tab-bar" aria-label="Main">

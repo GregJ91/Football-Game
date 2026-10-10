@@ -1,3 +1,4 @@
+import { addHonour } from '../club/manager';
 import { EURO_COMPS } from '../../data/europe';
 import { MATCHDAY, dateIn } from '../calendar';
 import { boardOf } from '../club/chairman';
@@ -123,6 +124,10 @@ export function monthlyAwards(game: GameState) {
     if (top) entry.manager = { clubId: top[0], clubName: game.clubs[top[0]].name, points: top[1].points, played: top[1].played };
     awards.monthly.push(entry);
 
+    const monthName = month.split(' ')[0];
+    if (entry.manager?.clubId === user && !game.unemployed) addHonour(game, { name: `Manager of the Month (${monthName})`, kind: 'manager' });
+    if (entry.player?.clubId === user) addHonour(game, { name: `Player of the Month (${monthName})`, kind: 'player', who: entry.player.name });
+    if (entry.young?.clubId === user && entry.young.playerId !== entry.player?.playerId) addHonour(game, { name: `Young Player of the Month (${monthName})`, kind: 'player', who: entry.young.name });
     if (entry.manager?.clubId === user && !game.unemployed) {
       news.push(`you're Manager of the Month (${entry.manager.points} points from ${entry.manager.played} games)`);
       const board = boardOf(game.clubs[user]);
@@ -229,6 +234,7 @@ export function seasonAwards(game: GameState, summary: SeasonSummary) {
   const note = (label: string, w?: AwardWinner) => {
     if (w?.clubId !== user) return;
     honours.push(`${w.name}: ${label}`);
+    addHonour(game, { name: label, kind: 'player', who: w.name, season: summary.season });
     const p = game.players[w.playerId];
     if (p) p.morale = Math.min(100, p.morale + 10);
     const legend = game.clubs[user].legends?.[w.playerId];
@@ -239,14 +245,30 @@ export function seasonAwards(game: GameState, summary: SeasonSummary) {
   note('Golden Boot', mine.topScorer);
   note('Golden Glove', mine.goldenGlove);
   for (const [compId, glove] of Object.entries(summary.cupGloves)) {
-    if (glove.clubId === user) honours.push(`${glove.name}: Golden Glove (${competitionName(game, compId)})`);
+    if (glove.clubId !== user) continue;
+    honours.push(`${glove.name}: Golden Glove (${competitionName(game, compId)})`);
+    addHonour(game, { name: `Golden Glove (${competitionName(game, compId)})`, kind: 'player', who: glove.name, season: summary.season });
   }
-  for (const t of mine.team) if (t.clubId === user) honours.push(`${t.name}: Team of the Season`);
+  for (const t of mine.team) {
+    if (t.clubId !== user) continue;
+    honours.push(`${t.name}: Team of the Season`);
+    addHonour(game, { name: 'Team of the Season', kind: 'player', who: t.name, season: summary.season });
+  }
+  // Win the league and you're its Manager of the Season.
+  const myDiv = game.divisions.find((d) => d.clubIds.includes(user))!;
+  if (summary.champions[myDiv.def.id] === user) {
+    honours.push(`Manager of the Season (${myDiv.def.name})`);
+    addHonour(game, { name: `Manager of the Season (${myDiv.def.name})`, kind: 'manager', season: summary.season });
+  }
   const year = yearAwards(game, summary);
   awardsOf(game).history.push(year);
   const yearNote = (label: string, w?: AwardWinner) => {
-    if (w?.clubId === user) honours.push(`${w.name}: ${label}`);
+    if (w?.clubId !== user) return;
+    honours.push(`${w.name}: ${label}`);
+    addHonour(game, { name: label, kind: 'player', who: w.name, season: summary.season });
   };
+  const ballon = year.ballonDor[0];
+  if (ballon?.clubId === user) yearNote("Ballon d'Or", { playerId: ballon.playerId, name: ballon.name, clubId: user, value: 0 });
   yearNote("Players' Player of the Year", year.playerOfYear);
   yearNote("Young Players' Player of the Year", year.youngPlayerOfYear);
   if (honours.length) addInbox(game, 'info', `Awards for our players: ${honours.join('; ')}.`, { category: 'club', subject: 'Season awards' });

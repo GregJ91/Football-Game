@@ -1,3 +1,4 @@
+import { recordManagerTransfer } from '../club/manager';
 import { SALE_REINVEST, budgetsOf, ledgerOf, wageBill, weeklyIncomeEstimate } from '../economy/finance';
 import { scoutReportsPerWeek } from '../club/staff';
 import { activeChallenge, challengeFeeRule, challengeSigningRule } from '../club/challenge';
@@ -235,6 +236,7 @@ function removeFromClub(game: GameState, p: Player) {
 export function completeTransfer(game: GameState, p: Player, toClubId: string, fee: number, wage: number, years: number) {
   const fromId = p.clubId;
   const buyer = game.clubs[toClubId];
+  recordManagerTransfer(game, p, fromId, toClubId, fee);
   if (fromId) {
     const seller = game.clubs[fromId];
     seller.balance += fee;

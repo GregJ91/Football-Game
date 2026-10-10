@@ -1,3 +1,4 @@
+import { acceptJobOffer, declineJobOffer } from '../engine/club/manager';
 import { sendMission, toggleShortlist, type MissionBrief } from '../engine/transfers/scouting';
 import { create } from 'zustand';
 import { assignToBench, restTired, setRole } from '../engine/players/squad';
@@ -30,7 +31,7 @@ import {
 } from '../engine/transfers/market';
 import { loadGame, saveGame } from './persistence';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager';
 
 export interface LiveNote {
   minute: number;
@@ -88,6 +89,9 @@ interface Store {
   /** Out of work: wait until a club gets in touch. */
   waitForOffer: () => Promise<void>;
   takeJob: (clubId: string) => void;
+  /** A job offer while in work: move to the new club, or turn it down. */
+  acceptJobOffer: (clubId: string) => void;
+  declineJobOffer: (clubId: string) => void;
 
   /** Send a scout; the report lands in the inbox a few days later. */
   scout: (playerId: string) => ScoutResult;
@@ -559,6 +563,22 @@ export const useGame = create<Store>()((set, get) => {
       await new Promise((r) => setTimeout(r, 0));
       waitForOffer(game);
       set({ busy: false });
+      commit();
+    },
+
+    acceptJobOffer: (clubId) => {
+      const { game } = get();
+      if (!game) return;
+      const err = acceptJobOffer(game, clubId);
+      if (err) get().showToast(err);
+      else set({ screen: 'hub', live: null, liveFixture: null, resultPopup: null });
+      commit();
+    },
+
+    declineJobOffer: (clubId) => {
+      const { game } = get();
+      if (!game) return;
+      declineJobOffer(game, clubId);
       commit();
     },
 
