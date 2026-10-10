@@ -3,6 +3,7 @@ import { listSaves, type SaveMeta } from '../../state/persistence';
 import { useGame } from '../../state/store';
 import { seasonLabel } from '../format';
 import { formatDate } from '../../engine/calendar';
+import { ACHIEVEMENTS } from '../../engine/achievements';
 import { APP_BUILT_AT, APP_VERSION } from '../../version';
 
 export function Start() {
@@ -10,6 +11,12 @@ export function Start() {
   const continueGame = useGame((s) => s.continueGame);
   const setChallengeDraft = useGame((s) => s.setChallengeDraft);
   const [save, setSave] = useState<SaveMeta | null>(null);
+  const achievements = useGame((s) => s.achievements);
+  const loadAchievements = useGame((s) => s.loadAchievements);
+  const done = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
+  useEffect(() => {
+    void loadAchievements();
+  }, [loadAchievements]);
   const [checking, setChecking] = useState(false);
   const [updateNote, setUpdateNote] = useState<string | null>(null);
 
@@ -72,6 +79,13 @@ export function Start() {
         </button>
         <button type="button" className="btn big secondary" onClick={() => go('challenges')}>
           Challenge mode
+        </button>
+        <button type="button" className="card achievements-link" onClick={() => go('achievements')}>
+          <span className="grow">
+            <strong>🏆 Achievements</strong>
+            <span className="track"><i style={{ width: `${Math.round((done / ACHIEVEMENTS.length) * 100)}%` }} /></span>
+          </span>
+          <b>{done} / {ACHIEVEMENTS.length}</b>
         </button>
         {save && <p className="hint">Starting a new game replaces your current save.</p>}
       </div>

@@ -23,6 +23,7 @@ import { Start } from './ui/screens/Start';
 import { Tactics } from './ui/screens/Tactics';
 import { Transfers } from './ui/screens/Transfers';
 import { Manager } from './ui/screens/Manager';
+import { Achievements } from './ui/screens/Achievements';
 
 export function App() {
   const screen = useGame((s) => s.screen);
@@ -35,6 +36,7 @@ export function App() {
   });
 
   if (screen === 'challenges') return <Challenges />;
+  if (screen === 'achievements') return <Achievements />;
   if (screen === 'start' || !hasGame) return screen === 'create' ? <CreateClub /> : <Start />;
   if (screen === 'create') return <CreateClub />;
   // Sacked: out of work until you take a job (or start again).

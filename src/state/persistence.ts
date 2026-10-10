@@ -84,11 +84,41 @@ async function readSaveList(): Promise<SaveMeta[]> {
   const metas: SaveMeta[] = [];
   for (const k of keys) {
     const r = (await d.get(STORE, k)) as SaveRecord | undefined;
-    if (r) metas.push(r.meta);
+    // Only saves (achievements live in the same store under their own key).
+    if (r?.meta) metas.push(r.meta);
   }
   return metas.sort((a, b) => b.savedAt - a.savedAt);
 }
 
 export async function deleteSave(slot = 'slot1') {
   await (await db()).delete(STORE, slot);
+}
+
+// ---------------------------------------------------------------- achievements
+
+/** When and where an achievement was unlocked. */
+export interface Unlock {
+  at: number;
+  clubName: string;
+  season: number;
+}
+
+const ACHIEVEMENTS_KEY = 'achievements';
+
+/** Achievements are kept on the device across every career, apart from the save. */
+export async function loadAchievements(): Promise<Record<string, Unlock>> {
+  try {
+    const r = (await (await db()).get(STORE, ACHIEVEMENTS_KEY)) as { unlocked?: Record<string, Unlock> } | undefined;
+    return r?.unlocked ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export async function saveAchievements(unlocked: Record<string, Unlock>) {
+  try {
+    await (await db()).put(STORE, { unlocked }, ACHIEVEMENTS_KEY);
+  } catch {
+    // Storage unavailable: they stay for this session.
+  }
 }

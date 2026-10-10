@@ -677,6 +677,8 @@ export interface GameState {
   career?: CareerSpell[];
   /** The manager's own record (results, transfers, players, awards, job offers). */
   manager?: ManagerRecord;
+  /** Started as a top-flight giant (testing): no achievements. */
+  testingStart?: boolean;
   /** Points deductions this season, by club. */
   deductions?: Record<string, number>;
   /** Monthly awards this season, and the headline awards of past seasons. */

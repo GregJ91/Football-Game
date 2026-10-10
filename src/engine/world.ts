@@ -276,7 +276,10 @@ export function createGame(config: NewGameConfig): GameState {
       };
       game.clubs[user.id] = user;
       game.userClubId = user.id;
-      if (config.topFlight) makeGiant(game, rng, user, def);
+      if (config.topFlight) {
+        makeGiant(game, rng, user, def);
+        game.testingStart = true;
+      }
       // Kids: a squad of under-22s, a little stronger than their age suggests.
       else if (config.challenge === 'kids') createSquad(game, rng, user, def.quality + 4, 0, 21);
       // Old But Gold: thirty-somethings at about the level's standard (and its wages), declining from here.

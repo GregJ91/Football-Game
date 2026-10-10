@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ACHIEVEMENTS } from '../../engine/achievements';
 import { careerOf, spellTrophies } from '../../engine/club/career';
 import { bestXI, careerBlurb, jobOffers, managerOf, preferredTactic, teamTrophies } from '../../engine/club/manager';
 import { divisionTable } from '../../engine/season/table';
@@ -23,6 +24,9 @@ export function Manager() {
   useGame((s) => s.rev);
   const accept = useGame((s) => s.acceptJobOffer);
   const decline = useGame((s) => s.declineJobOffer);
+  const go = useGame((s) => s.go);
+  const achievements = useGame((s) => s.achievements);
+  const done = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
   const offers = jobOffers(game);
   const [tab, setTab] = useState<Tab>(offers.length ? 'offers' : 'profile');
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -46,6 +50,14 @@ export function Manager() {
         <div className="eyebrow">The manager</div>
         <h1>Your career</h1>
       </header>
+
+      <button type="button" className="card achievements-link" onClick={() => go('achievements')}>
+        <span className="grow">
+          <strong>🏆 Achievements</strong>
+          <span className="track"><i style={{ width: `${Math.round((done / ACHIEVEMENTS.length) * 100)}%` }} /></span>
+        </span>
+        <b>{done} / {ACHIEVEMENTS.length}</b>
+      </button>
 
       <div className="segmented" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'profile'} onClick={() => setTab('profile')}>Profile</button>

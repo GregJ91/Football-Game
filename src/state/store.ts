@@ -29,9 +29,11 @@ import {
   acceptsLowerWage, addInbox, answerBid as answerBidEngine, bidFor, cannotBuy, cannotRelease, completeTransfer, feeProblem,
   isKnown, releasePlayer, renewContract, type BidAction, type BidResponse,
 } from '../engine/transfers/market';
-import { loadGame, saveGame } from './persistence';
+import { loadAchievements, loadGame, saveAchievements, saveGame, type Unlock } from './persistence';
+import { ACHIEVEMENTS, earnedAchievements } from '../engine/achievements';
+import { addInbox as addInboxItem } from '../engine/transfers/market';
 
-export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager';
+export type Screen = 'start' | 'create' | 'hub' | 'inbox' | 'squad' | 'tactics' | 'transfers' | 'club' | 'league' | 'cups' | 'europe' | 'awards' | 'fixtures' | 'prematch' | 'match' | 'seasonEnd' | 'challenges' | 'manager' | 'achievements';
 
 export interface LiveNote {
   minute: number;
@@ -51,6 +53,9 @@ interface Store {
   resultPopup: Fixture | null;
   /** A short message shown briefly at the bottom of the screen. */
   toast: string | null;
+  /** Achievements unlocked on this device, across every career. */
+  achievements: Record<string, Unlock>;
+  loadAchievements: () => Promise<void>;
   /** Challenge picked on the challenge screen, waiting for the club to be created. */
   challengeDraft: ChallengeId | null;
   setChallengeDraft: (id: ChallengeId | null) => void;
@@ -172,8 +177,25 @@ export const useGame = create<Store>()((set, get) => {
     const { game } = get();
     if (game) topUpUnlimited(game);
     // A pending result popup is shown on the hub first; dismissing it moves on.
+    if (game) unlockAchievements(game);
     set((s) => ({ rev: s.rev + 1, screen: game?.phase === 'seasonEnd' && !s.resultPopup ? 'seasonEnd' : s.screen }));
     if (game) void saveGame(game);
+  };
+  // Anything newly achieved: kept on the device, and announced.
+  const unlockAchievements = (game: GameState) => {
+    const have = get().achievements;
+    const fresh = earnedAchievements(game).filter((id) => !have[id]);
+    if (!fresh.length) return;
+    const club = game.unemployed ? game.clubs[game.unemployed.fromClubId] : game.clubs[game.userClubId];
+    const unlocked = { ...have };
+    for (const id of fresh) {
+      unlocked[id] = { at: Date.now(), clubName: club.name, season: game.season };
+      const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+      addInboxItem(game, 'info', `Achievement unlocked: ${a.name}. ${a.description}`, { category: 'club', subject: `Achievement: ${a.name}` });
+    }
+    const first = ACHIEVEMENTS.find((x) => x.id === fresh[0])!;
+    set({ achievements: unlocked, toast: `🏆 Achievement unlocked: ${first.name}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}` });
+    void saveAchievements(unlocked);
   };
   const liveSideName = (): SideName | null => {
     const { game, liveFixture } = get();
@@ -191,6 +213,11 @@ export const useGame = create<Store>()((set, get) => {
     liveNotes: [],
     resultPopup: null,
     toast: null,
+    achievements: {},
+    loadAchievements: async () => {
+      const unlocked = await loadAchievements();
+      set((s) => ({ achievements: { ...unlocked, ...s.achievements } }));
+    },
     showToast: (text) => set({ toast: text }),
 
     go: (screen) => set({ screen }),

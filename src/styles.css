@@ -638,3 +638,20 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .awards-list .medal { width: 22px; text-align: center; color: #e0a800; font-size: 16px; }
 .job-alert { border-color: var(--accent); background: var(--panel-2); }
 .job-alert strong { color: var(--accent); }
+
+/* Achievements */
+.achievements-link { display: flex; align-items: center; gap: 12px; text-align: left; color: var(--text); width: 100%; }
+.achievements-link .grow { display: flex; flex-direction: column; gap: 8px; }
+.achievements-link strong { font-size: 16px; text-transform: none; letter-spacing: 0; }
+.achievements-link b { font-family: var(--display); font-size: 20px; }
+.achievements-link .track, .achievement-progress .track { flex: none; display: block; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.achievements-link .track i, .achievement-progress .track i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.achievement-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.achievement-list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.achievement-list li:last-child { border-bottom: none; }
+.achievement-list .badge-icon { font-size: 22px; width: 28px; text-align: center; line-height: 1.2; }
+.achievement-list strong { display: block; font-size: 15px; }
+.achievement-list small { display: block; font-size: 13px; color: var(--muted); line-height: 1.35; }
+.achievement-list small.when { color: var(--accent); margin-top: 2px; }
+.achievement-list li.locked { opacity: 0.6; }
+.achievement-list li.locked .badge-icon { filter: grayscale(1); }
