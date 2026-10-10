@@ -674,6 +674,14 @@ export interface Division {
 
 export type LegendsDifficulty = 'easy' | 'medium' | 'hard';
 
+/** Which players a draft pick must be: keepers, defenders, midfielders, attackers, or anyone (summer). */
+export type DraftGroup = 'GK' | 'DEF' | 'MID' | 'ATT' | 'ANY';
+export interface DraftSlot {
+  clubId: string;
+  round: number;
+  group: DraftGroup;
+}
+
 /** A Legends draft: the order of the first round, and whether it snakes back. */
 export interface LegendsDraft {
   kind: 'initial' | 'summer';
@@ -683,6 +691,8 @@ export interface LegendsDraft {
   /** Picks made so far (the next pick's index). */
   pick: number;
   picks: { clubId: string; playerId: string; round: number; pick: number }[];
+  /** Every pick in order: who, which round, and which group. */
+  slots: DraftSlot[];
 }
 
 export interface LegendsState {
@@ -693,6 +703,8 @@ export interface LegendsState {
   lastDraft?: LegendsDraft;
   /** Undrafted players. */
   pool: string[];
+  /** Each team's formation, locked for the whole game. */
+  formations?: Record<string, Formation>;
   /** One entry per finished season. */
   roll: { season: number; champions: string; cups: { id: string; winnerId: string }[]; positions: Record<string, number> }[];
   finished?: boolean;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clubOnTheClock, draftPool } from '../src/engine/legends';
+import { clubOnTheClock, draftOptions } from '../src/engine/legends';
 import type { GameState } from '../src/engine/types';
 import { GuestSession, HostSession, type Person } from '../src/online/session';
 import { localTransport, packState, unpackState } from '../src/online/transport';
@@ -65,7 +65,7 @@ describe('online legends', () => {
       } else {
         const g = guests[club === 'L1' ? 0 : 1];
         if (i % 2) g.autoPick();
-        else g.pick(draftPool(hostGame)[0].id);
+        else g.pick(draftOptions(hostGame)[0].id);
       }
       await until(() => !hostGame!.legends!.draft || hostGame!.legends!.draft.pick > before);
     }
@@ -73,11 +73,13 @@ describe('online legends', () => {
     expect(hostGame.clubs.L1.playerIds).toHaveLength(23);
     await until(() => guestGames.a!.legends!.draft === null && guestGames.a!.phase === 'season');
 
-    // A guest changes formation; the host plays with it.
+    // A guest changes mentality; the host plays with it, but the formation stays locked.
     const ga = guestGames.a!;
-    ga.clubs.L1.tactics = { ...ga.clubs.L1.tactics, formation: '3-5-2' };
+    const locked = hostGame.clubs.L1.tactics.formation;
+    ga.clubs.L1.tactics = { ...ga.clubs.L1.tactics, mentality: 'attacking', formation: locked === '5-3-2' ? '4-4-2' : '5-3-2' };
     guests[0].team(ga);
-    await until(() => hostGame!.clubs.L1.tactics.formation === '3-5-2');
+    await until(() => hostGame!.clubs.L1.tactics.mentality === 'attacking');
+    expect(hostGame.clubs.L1.tactics.formation).toBe(locked);
 
     guests[1].ready(true);
     await until(() => host.seats[2].ready === true);

@@ -435,6 +435,9 @@ export const useGame = create<Store>()((set, get) => {
       const { game } = get();
       if (!game) return;
       const club = game.clubs[game.userClubId];
+      // Legends: the formation is locked for the whole game.
+      const locked = game.legends?.formations?.[club.id];
+      if (locked) tactics = { ...tactics, formation: locked };
       if (club.lineup && tactics.formation !== club.tactics.formation) {
         club.lineup = remapLineup(squadOf(game, club.id), club.lineup, tactics.formation);
       }

@@ -24,6 +24,8 @@ export function Match() {
   const tick = useGame((s) => s.liveTick);
   const teamTalk = useGame((s) => s.liveTeamTalk);
   const setLiveTactics = useGame((s) => s.liveSetTactics);
+  // Legends: the formation is locked for the whole game.
+  const locked = game.legends?.formations?.[game.userClubId];
   const sub = useGame((s) => s.liveSub);
   const skip = useGame((s) => s.liveSkip);
   const finish = useGame((s) => s.liveFinish);
@@ -136,7 +138,7 @@ export function Match() {
         <div className="sheet-backdrop" onClick={() => setSheet(null)}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Tactics" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-head"><strong className="grow">Tactics</strong><button type="button" className="link-btn" onClick={() => setSheet(null)}>Done</button></div>
-            <TacticsPicker tactics={ours.tactics} onChange={setLiveTactics} />
+            <TacticsPicker tactics={ours.tactics} onChange={(t) => setLiveTactics(locked ? { ...t, formation: locked } : t)} locked={locked} />
             {ours.mods.notes.length > 0 && (
               <ul className="notes">
                 {ours.mods.notes.map((n, i) => (

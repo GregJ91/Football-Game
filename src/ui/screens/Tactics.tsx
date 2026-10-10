@@ -10,7 +10,7 @@ import { useGame } from '../../state/store';
 import { TacticsPicker } from '../components/TacticsPicker';
 
 /** Pitch rows (attack at the top) as indexes into each formation's slots, left to right. */
-const PITCH_ROWS: Record<Formation, number[][]> = {
+export const PITCH_ROWS: Record<Formation, number[][]> = {
   '4-4-2': [[9, 10], [8, 6, 7, 5], [4, 2, 3, 1], [0]],
   '4-3-3': [[9, 10, 8], [6, 7], [5], [4, 2, 3, 1], [0]],
   '4-2-3-1': [[10], [9, 8, 7], [5, 6], [4, 2, 3, 1], [0]],
@@ -188,7 +188,7 @@ export function Tactics() {
       </div>
 
       <section className="card">
-        <TacticsPicker tactics={club.tactics} onChange={setTactics} />
+        <TacticsPicker tactics={club.tactics} onChange={setTactics} locked={game.legends?.formations?.[club.id]} />
         <label className="toggle">
           <input
             id="assistant-tactics"

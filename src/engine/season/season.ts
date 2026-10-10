@@ -102,7 +102,7 @@ export function teamSheet(game: GameState, club: Club, opponent: Club, opts: { l
   }
   // Optionally delegate simmed matches to the assistant manager.
   const rotate = !opts.live && autoRotates(game);
-  if (!opts.live && game.settings?.assistantTactics) {
+  if (!opts.live && game.settings?.assistantTactics && game.mode !== 'legends') {
     const oppSheet = teamSheet(game, opponent, club);
     const select = (f: Formation) => userSelection(game, f, rotate).selection;
     const { tactics } = recommendTactics(squadOf(game, club.id), oppSheet, opts.home ? 'home' : 'away', false, select);

@@ -102,7 +102,7 @@ export function PreMatch() {
 
       <section className="card">
         <div className="card-label"><span>Your tactics</span><span>Squad fit {Math.round(preview.squadFit * 100)}%</span></div>
-        <TacticsPicker tactics={club.tactics} onChange={setTactics} />
+        <TacticsPicker tactics={club.tactics} onChange={setTactics} locked={game.legends?.formations?.[club.id]} />
         {covers.length > 0 && (
           <ul className="notes">
             {covers.map((c) => {

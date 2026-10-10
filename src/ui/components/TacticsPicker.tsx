@@ -11,13 +11,13 @@ const PRESSING: { value: Pressing; label: string }[] = [
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
-export function TacticsPicker({ tactics, onChange }: { tactics: Tactics; onChange: (t: Tactics) => void }) {
+export function TacticsPicker({ tactics, onChange, locked }: { tactics: Tactics; onChange: (t: Tactics) => void; locked?: Formation }) {
   return (
     <div className="tactics-picker">
       <fieldset {...hp('formation')}>
-        <legend>Formation</legend>
+        <legend>Formation{locked ? ' (locked for the whole game)' : ''}</legend>
         <div className="pills">
-          {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
+          {(locked ? [locked] : (Object.keys(FORMATIONS) as Formation[])).map((f) => (
             <button key={f} type="button" className="pill" aria-pressed={tactics.formation === f} onClick={() => onChange({ ...tactics, formation: f })}>
               {f}
             </button>

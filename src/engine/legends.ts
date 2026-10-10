@@ -1,5 +1,5 @@
 import { LEGENDS_PLAYERS } from '../data/legendsPlayers';
-import { FORMATIONS, isAvailable, pickTeam } from './match/selection';
+import { FORMATIONS } from './match/selection';
 import { generateAttributes } from './players/generate';
 import { computeOverall, ratingAt } from './players/ratings';
 import { assignRoles } from './players/squad';
@@ -9,7 +9,7 @@ import { seasonAwards } from './season/awards';
 import { scheduleSeason } from './season/season';
 import { divisionTable } from './season/table';
 import type {
-  ClubColours, CrestDesign, Formation, GameState, KitPattern, LegendsDifficulty, LegendsDraft, Player, Position, SeasonSummary,
+  ClubColours, CrestDesign, DraftGroup, DraftSlot, Formation, GameState, KitPattern, LegendsDifficulty, LegendsDraft, Player, Position, SeasonSummary,
 } from './types';
 import { squadOf, withRng } from './world';
 
@@ -51,13 +51,8 @@ const AI_TEAMS: [string, string, string, string, KitPattern][] = [
   ['Playmakers', 'PLY', '#5B2C83', '#F4F1E8', 'plain'],
 ];
 
-export interface LegendsConfig {
+export interface LegendsConfig extends LegendsTeam {
   seed: number;
-  teamName: string;
-  shortName: string;
-  colours: ClubColours;
-  awayKit?: ClubColours;
-  crest?: CrestDesign;
   difficulty: LegendsDifficulty;
   /** Online: the other people's teams (they take the next club ids; AI fills the rest). */
   others?: LegendsTeam[];
@@ -66,6 +61,9 @@ export interface LegendsConfig {
 export interface LegendsTeam {
   teamName: string;
   shortName: string;
+  /** Locked for all ten seasons; it decides how many of each position you draft. */
+  formation?: Formation;
+  stadiumName?: string;
   colours: ClubColours;
   awayKit?: ClubColours;
   crest?: CrestDesign;
@@ -163,14 +161,14 @@ export function createLegendsGame(config: LegendsConfig): GameState {
       name,
       shortName: short,
       colours: { primary, secondary, pattern },
-      stadiumName: i === 0 ? `${name} Arena` : `${name} Park`,
+      stadiumName: people[i]?.stadiumName || `${name} ${i === 0 ? 'Arena' : 'Park'}`,
       capacity: 60_000,
       region: 'N',
       reputation: 90,
       balance: 0,
       isUser: i === 0,
       playerIds: [],
-      tactics: { formation: '4-3-3', mentality: 'balanced', pressing: 'medium' },
+      tactics: { formation: people[i]?.formation ?? '4-3-3', mentality: 'balanced', pressing: 'medium' },
       history: [],
     };
   });
@@ -187,11 +185,22 @@ export function createLegendsGame(config: LegendsConfig): GameState {
     game.players[id] = makeLegend(rng, id, p.name, p.positions, p.rating);
     game.legends!.pool.push(id);
   });
-  game.rngState = rng.state;
-  // The opening draft: a random order that snakes back each round.
+  // The AI teams pick a formation too; everyone keeps theirs for all ten seasons.
+  for (const club of Object.values(game.clubs)) if (Number(club.id.slice(1)) >= people.length) club.tactics.formation = rng.pick(AI_FORMATIONS);
+  game.legends!.formations = Object.fromEntries(Object.values(game.clubs).map((c) => [c.id, c.tactics.formation]));
+  // The opening draft: a random order that snakes back each round,
+  // keepers first, then defenders, midfielders and attackers.
   const order = rng.shuffle(Object.keys(game.clubs));
   game.rngState = rng.state;
-  game.legends!.draft = { kind: 'initial', order, rounds: LEGENDS_SQUAD, snake: true, pick: 0, picks: [] };
+  game.legends!.draft = {
+    kind: 'initial',
+    order,
+    rounds: LEGENDS_SQUAD,
+    snake: true,
+    pick: 0,
+    picks: [],
+    slots: phasedSlots(order, (id) => squadNeeds(game.legends!.formations![id])),
+  };
   runAiPicks(game);
   return game;
 }
@@ -204,23 +213,61 @@ export function isLegends(game: GameState): boolean {
 
 /** Total picks in the draft. */
 export function draftLength(d: LegendsDraft): number {
-  return d.order.length * d.rounds;
+  return d.slots.length;
 }
 
 /** Who is on the clock for pick n (0-based). */
 export function clubOnTheClock(d: LegendsDraft, n = d.pick): string | null {
-  if (n >= draftLength(d)) return null;
-  const round = Math.floor(n / d.order.length);
-  const i = n % d.order.length;
-  return d.snake && round % 2 === 1 ? d.order[d.order.length - 1 - i] : d.order[i];
+  return d.slots[n]?.clubId ?? null;
 }
 
 export function draftRound(d: LegendsDraft, n = d.pick): number {
-  return Math.floor(n / d.order.length) + 1;
+  return d.slots[n]?.round ?? d.slots.at(-1)?.round ?? 1;
+}
+
+/** Which kind of player this pick must be. */
+export function draftGroup(d: LegendsDraft, n = d.pick): DraftGroup {
+  return d.slots[n]?.group ?? 'ANY';
+}
+
+/** The draft's position groups, in order. */
+export const DRAFT_GROUPS: Exclude<DraftGroup, 'ANY'>[] = ['GK', 'DEF', 'MID', 'ATT'];
+export const GROUP_NAME: Record<DraftGroup, string> = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', ATT: 'Attackers', ANY: 'Any position' };
+
+export function groupOf(pos: Position): Exclude<DraftGroup, 'ANY'> {
+  return pos === 'GK' ? 'GK' : pos === 'ST' ? 'ATT' : pos === 'DC' || pos === 'DR' || pos === 'DL' ? 'DEF' : 'MID';
+}
+
+/** How many of each group a formation drafts: three keepers and two for every outfield place (23). */
+export function squadNeeds(formation: Formation): Record<Exclude<DraftGroup, 'ANY'>, number> {
+  const out = { GK: 3, DEF: 0, MID: 0, ATT: 0 };
+  for (const pos of FORMATIONS[formation]) if (pos !== 'GK') out[groupOf(pos)] += 2;
+  return out;
+}
+
+/** The pick order: each group in turn, snaking, with teams that are full for a group skipped. */
+export function phasedSlots(order: string[], needs: (clubId: string) => Record<Exclude<DraftGroup, 'ANY'>, number>): DraftSlot[] {
+  const slots: DraftSlot[] = [];
+  let round = 0;
+  for (const group of DRAFT_GROUPS) {
+    const most = Math.max(...order.map((id) => needs(id)[group]));
+    for (let k = 0; k < most; k++, round++) {
+      const pass = round % 2 ? [...order].reverse() : order;
+      for (const clubId of pass) if (needs(clubId)[group] > k) slots.push({ clubId, round: round + 1, group });
+    }
+  }
+  return slots;
 }
 
 export function isHuman(game: GameState, clubId: string): boolean {
   return !!game.legends?.humans.includes(clubId);
+}
+
+/** Players who can be picked right now (the current round's group), best first. */
+export function draftOptions(game: GameState): Player[] {
+  const d = game.legends?.draft;
+  const group = d ? draftGroup(d) : 'ANY';
+  return draftPool(game).filter((p) => group === 'ANY' || groupOf(p.position) === group);
 }
 
 /** Players still to be drafted, best first. */
@@ -228,12 +275,14 @@ export function draftPool(game: GameState): Player[] {
   return game.legends!.pool.map((id) => game.players[id]).sort((a, b) => b.overall - a.overall);
 }
 
-/** The squad a team aims for: how many of each position. */
-const SHAPE: Record<Position, number> = { GK: 3, DC: 5, DR: 2, DL: 2, DMC: 2, MC: 3, MR: 1, ML: 1, AMC: 1, ST: 3 };
+const AI_FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '4-3-3', '4-2-3-1', '4-2-3-1', '3-5-2', '5-3-2'];
 
-function positionNeed(squad: Player[], pos: Position): number {
+/** How many more a team wants at a position: two per place in its formation (three keepers). */
+function positionNeed(game: GameState, clubId: string, squad: Player[], pos: Position): number {
+  const formation = game.legends?.formations?.[clubId] ?? game.clubs[clubId].tactics.formation;
+  const want = pos === 'GK' ? 3 : FORMATIONS[formation].filter((x) => x === pos).length * 2;
   const have = squad.filter((p) => p.position === pos).length + 0.5 * squad.filter((p) => p.position !== pos && p.positions.includes(pos)).length;
-  return SHAPE[pos] - have;
+  return want - have;
 }
 
 /** An AI team's pick: the best player for what it's missing, more or less carefully by difficulty. */
@@ -241,13 +290,18 @@ export function aiChoice(game: GameState, clubId: string, rng: Rng): Player {
   const diff = game.legends!.difficulty;
   const noise = diff === 'easy' ? 9 : diff === 'medium' ? 4 : 1.2;
   const squad = squadOf(game, clubId);
-  const pool = draftPool(game).slice(0, 80);
-  let best = pool[0];
+  const d = game.legends!.draft;
+  const group = d ? draftGroup(d) : 'ANY';
+  const all = draftPool(game);
+  const pool = (group === 'ANY' ? all : all.filter((p) => groupOf(p.position) === group)).slice(0, 80);
+  let best = pool[0] ?? all[0];
   let bestScore = -Infinity;
   for (const p of pool) {
-    const need = positionNeed(squad, p.position);
-    // Never a fourth keeper; a big bonus for filling a hole.
-    if (p.position === 'GK' && need <= 0) continue;
+    // The best position he can fill for this team.
+    // In a defenders' round only defensive places count, and so on.
+    const places = p.positions.filter((pos) => group === 'ANY' || groupOf(pos) === group);
+    const need = Math.max(...places.map((pos) => positionNeed(game, clubId, squad, pos) - (pos === p.position ? 0 : 0.5)));
+    if (group === 'ANY' && p.position === 'GK' && need <= 0) continue;
     const score = p.overall + (need > 0 ? 3 + need * 1.5 : need * 4) + rng.normal() * noise;
     if (score > bestScore) {
       bestScore = score;
@@ -284,6 +338,8 @@ export function makePick(game: GameState, clubId: string, playerId: string): str
   if (!d) return 'The draft is over.';
   if (clubOnTheClock(d) !== clubId) return "It isn't your pick.";
   if (!game.legends!.pool.includes(playerId)) return 'That player has already gone.';
+  const group = draftGroup(d);
+  if (group !== 'ANY' && groupOf(game.players[playerId].position) !== group) return `This round is for ${GROUP_NAME[group].toLowerCase()}.`;
   take(game, clubId, playerId);
   runAiPicks(game);
   return null;
@@ -297,21 +353,6 @@ export function autoPick(game: GameState, clubId: string): string | null {
   return makePick(game, clubId, choice.id);
 }
 
-/** The best formation for a squad: the one whose best XI rates highest. */
-export function bestFormation(squad: Player[]): Formation {
-  let best: Formation = '4-3-3';
-  let bestScore = -Infinity;
-  for (const f of Object.keys(FORMATIONS) as Formation[]) {
-    const sel = pickTeam(squad.filter(isAvailable), f, 0);
-    const score = sel.xi.reduce((n, p, i) => n + (p ? ratingAt(p.attributes, sel.slots[i]) : 0), 0);
-    if (score > bestScore) {
-      bestScore = score;
-      best = f;
-    }
-  }
-  return best;
-}
-
 function finishDraft(game: GameState) {
   const L = game.legends!;
   const kind = L.draft!.kind;
@@ -319,7 +360,8 @@ function finishDraft(game: GameState) {
   L.draft = null;
   for (const club of Object.values(game.clubs)) {
     const squad = squadOf(game, club.id);
-    if (!club.isUser) club.tactics = { ...club.tactics, formation: bestFormation(squad) };
+    // Formations are locked for the whole game.
+    club.tactics = { ...club.tactics, formation: L.formations?.[club.id] ?? club.tactics.formation };
     // Reputation follows the strength of the best XI (crowds, the first Super Cup).
     const top = squad.map((p) => p.overall).sort((a, b) => b - a).slice(0, 11);
     club.reputation = Math.round(top.reduce((n, x) => n + x, 0) / Math.max(1, top.length));
@@ -403,7 +445,9 @@ export function startSummerDraft(game: GameState, released: Record<string, strin
     if (club.bench) club.bench = club.bench.filter((id) => !out.includes(id));
   }
   const order = game.lastSummary.finalTables[LEGENDS_DIVISION].map((r) => r.clubId);
-  L.draft = { kind: 'summer', order, rounds: SUMMER_ROUNDS, snake: false, pick: 0, picks: [] };
+  const slots: DraftSlot[] = [];
+  for (let r = 1; r <= SUMMER_ROUNDS; r++) for (const clubId of order) slots.push({ clubId, round: r, group: 'ANY' });
+  L.draft = { kind: 'summer', order, rounds: SUMMER_ROUNDS, snake: false, pick: 0, picks: [], slots };
   runAiPicks(game);
 }
 
@@ -441,4 +485,28 @@ export function legendsStandings(game: GameState) {
       return { club: c, titles, cups, trophies: titles + cups, avgFinish: avg };
     })
     .sort((a, b) => b.trophies - a.trophies || b.titles - a.titles || a.avgFinish - b.avgFinish);
+}
+
+/**
+ * A drafted squad laid out in its formation: the best player who can play
+ * each place (natural position first), and everyone else in reserve.
+ */
+export function draftedTeam(game: GameState, clubId: string) {
+  const formation = game.legends?.formations?.[clubId] ?? game.clubs[clubId].tactics.formation;
+  const slots = FORMATIONS[formation];
+  const squad = [...squadOf(game, clubId)].sort((a, b) => b.overall - a.overall);
+  const xi: (Player | null)[] = slots.map(() => null);
+  const used = new Set<string>();
+  // Natural positions first, then players who can cover.
+  for (const natural of [true, false]) {
+    slots.forEach((slot, i) => {
+      if (xi[i]) return;
+      const p = squad.find((x) => !used.has(x.id) && (natural ? x.position === slot : x.positions.includes(slot)));
+      if (p) {
+        xi[i] = p;
+        used.add(p.id);
+      }
+    });
+  }
+  return { formation, slots, xi, reserves: squad.filter((p) => !used.has(p.id)) };
 }

@@ -188,7 +188,8 @@ export class HostSession {
     } else if (m.t === 'team') {
       const d = m.d as { tactics: Tactics; lineup?: (string | null)[]; bench?: string[] };
       const own = (id: string | null) => !id || club.playerIds.includes(id);
-      club.tactics = { ...club.tactics, ...d.tactics };
+      // The formation stays locked; mentality and pressing are theirs to change.
+      club.tactics = { ...club.tactics, ...d.tactics, formation: game.legends?.formations?.[club.id] ?? club.tactics.formation };
       if (d.lineup && d.lineup.every(own)) club.lineup = d.lineup;
       if (d.bench && d.bench.every(own)) club.bench = d.bench;
       this.hooks.commit();

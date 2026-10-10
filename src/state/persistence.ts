@@ -81,6 +81,15 @@ export async function loadGame(slot = 'slot1'): Promise<GameState | null> {
   // Saves from before the day-by-day calendar.
   record.game.day ??= -1;
   record.game.half ??= 'pm';
+  // Legends drafts from before the position-by-position draft.
+  const d = record.game.legends?.draft;
+  if (d && !d.slots) {
+    d.slots = [];
+    for (let r = 0; r < d.rounds; r++) {
+      const pass = d.snake && r % 2 ? [...d.order].reverse() : d.order;
+      for (const clubId of pass) d.slots.push({ clubId, round: r + 1, group: 'ANY' });
+    }
+  }
   return record.game;
 }
 

@@ -132,4 +132,17 @@ export const LEGENDS_PLAYERS: string[] = [
   'Roberto Firmino|ST,AMC|88', 'Richarlison|ST|83', 'Lukas Podolski|ST,ML|86', 'Pauleta|ST|85', 'Nuno Gomes|ST|84',
   'João Félix|ST,AMC|84', 'Jon Dahl Tomasson|ST|85', 'Ebbe Sand|ST|84', 'Viktor Gyökeres|ST|88', 'Randal Kolo Muani|ST|83',
   'Marcus Rashford|ST,ML|86', 'Ollie Watkins|ST|85',
+
+  // ---------------------------------------------------------------- more defenders
+  'Manuel Amoros|DR,DL|88', 'Paul Parker|DR,DC|84', 'Gary Stevens|DR|83', 'Steve Finnan|DR|82', 'Micah Richards|DR,DC|81',
+  'Seamus Coleman|DR|83', 'Héctor Bellerín|DR|82', 'Łukasz Piszczek|DR|86', 'Gregory van der Wiel|DR|82', 'Juanfran|DR|85',
+  'Lucas Vázquez|DR,MR|82', 'Nelson Semedo|DR|81', 'Ricardo Pereira|DR,DL|83', 'Moreno Torricelli|DR|82', 'Gianluca Pessotto|DR,DL|83',
+  'Graeme Le Saux|DL|84', 'Julian Dicks|DL|82', 'Fábio Coentrão|DL|85', 'Filipe Luís|DL|87', 'Alex Sandro|DL|85',
+  'David Alaba|DL,DC,MC|89', 'Marcel Schmelzer|DL|83', 'Kieran Tierney|DL|83', 'Aleksandar Kolarov|DL|84', 'Leonardo Spinazzola|DL|84',
+  'Federico Dimarco|DL|86', 'Ian Harte|DL|81', 'Sergio Reguilón|DL|80', 'Ben Davies|DL,DC|80', 'Destiny Udogie|DL|83',
+  'Gareth Southgate|DC,DMC|84', 'Steve Bould|DC|84', 'Colin Hendry|DC|84', 'Henning Berg|DC,DR|83', 'Ronny Johnsen|DC|83',
+  'Mauricio Pellegrino|DC|83', 'Rafael Márquez|DC,DMC|88', 'Iván Córdoba|DC|86', 'Marco Materazzi|DC|86', 'Paolo Montero|DC|86',
+  'Mark Iuliano|DC|84', 'Robert Huth|DC|81', 'Joleon Lescott|DC,DL|82', 'Phil Jagielka|DC|82', 'Bruno Alves|DC|83',
+  'Thomas Vermaelen|DC,DL|85', 'Victor Lindelöf|DC|81', 'Lisandro Martínez|DC|85', 'Cristian Romero|DC|87', 'Wesley Fofana|DC|83',
+  'Micky van de Ven|DC|85', 'Marc Guéhi|DC|84', 'Levi Colwill|DC|83', 'Nathan Aké|DC,DL|84', 'Mamadou Sakho|DC|81',
 ];

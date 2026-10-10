@@ -713,3 +713,20 @@ input[data-help], textarea[data-help] { -webkit-user-select: text; user-select: 
 .ready-list span.host { color: var(--accent); }
 .online-card .btn { width: 100%; }
 .center { text-align: center; }
+.formation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.formation-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mini-pitch { display: flex; flex-direction: column; justify-content: space-between; gap: 5px; width: 64px; height: 78px; padding: 5px 3px; border-radius: 6px; background: #1c5a35; border: 1px solid rgba(238, 243, 239, 0.4); }
+.mini-row { display: flex; justify-content: space-around; }
+.mini-row i { width: 8px; height: 8px; border-radius: 50%; background: #F5F1E6; display: block; }
+.phase-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 8px; }
+.phase-steps span { font-size: 11px; text-align: center; padding: 6px 2px; border-radius: 8px; background: var(--panel); color: var(--muted); border: 1px solid transparent; }
+.phase-steps span b { display: block; font-size: 14px; color: var(--text); }
+.phase-steps span.now { border-color: var(--accent); color: var(--text); }
+.phase-steps span.done b { color: var(--good); }
+.draft-pitch { min-height: 400px; margin-bottom: 10px; }
+.slot-chip.wanted { border-color: var(--accent); }
+.reserve-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.reserve-chips button { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+.reserve-chips small { color: var(--muted); }
+.draft-pool-label { margin-top: 6px; }
+.draft-row .fits { font-style: normal; font-size: 11px; color: var(--accent); white-space: nowrap; }
