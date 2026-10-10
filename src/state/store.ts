@@ -121,8 +121,8 @@ interface Store {
   renew: (playerId: string, wage: number, years: number) => string | null;
   answerBid: (itemId: string, action: BidAction) => string;
   adjustBudgets: (wageDelta: number) => void;
-  setUnlimitedMoney: (on: boolean) => void;
-  setAllInterested: (on: boolean) => void;
+  /** The in-game editor: set the club's reputation, budgets and bank balance. */
+  editClub: (values: { reputation: number; wage: number; transfer: number; balance: number }) => void;
 
   // Chairman decisions; each returns a problem, or null when done.
   buildStadium: (opt: WorkOption) => string | null;
@@ -310,6 +310,9 @@ export const useGame = create<Store>()((set, get) => {
     continueGame: async () => {
       const game = await loadGame();
       if (!game) return false;
+      // The old testing switches are gone: turn them off in older saves.
+      if (game.settings?.unlimitedMoney) setUnlimitedMoneyEngine(game, false);
+      if (game.settings?.allInterested) game.settings = { ...game.settings, allInterested: false };
       set((s) => ({ game, rev: s.rev + 1, screen: game.phase === 'seasonEnd' ? 'seasonEnd' : 'hub' }));
       return true;
     },
@@ -456,17 +459,14 @@ export const useGame = create<Store>()((set, get) => {
       return msg;
     },
 
-    setAllInterested: (on) => {
+    editClub: ({ reputation, wage, transfer, balance }) => {
       const { game } = get();
       if (!game) return;
-      game.settings = { ...game.settings, assistantTactics: !!game.settings?.assistantTactics, allInterested: on };
-      commit();
-    },
-
-    setUnlimitedMoney: (on) => {
-      const { game } = get();
-      if (!game) return;
-      setUnlimitedMoneyEngine(game, on);
+      const club = game.clubs[game.userClubId];
+      club.reputation = Math.max(1, Math.min(100, Math.round(reputation)));
+      club.balance = Math.round(balance);
+      club.budgets = { wage: Math.max(0, Math.round(wage)), transfer: Math.max(0, Math.round(transfer)) };
+      game.edited = true;
       commit();
     },
 

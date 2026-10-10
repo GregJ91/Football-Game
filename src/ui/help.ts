@@ -103,8 +103,7 @@ const HELP = {
   sponsor: ['Shirt sponsor', 'Choose a deal each summer: steady weekly money, a lump sum now, or less each week with a bonus if you go up.'],
   loanBank: ['Bank loan', 'Borrow money now and pay it back weekly over two seasons, with 8% interest. Useful for ground work.'],
   ledger: ['This season so far', 'Every pound in and out since the season started.'],
-  unlimited: ['Unlimited money', 'Testing only: the bank and budgets stay topped up at £1bn. Switch off to go back to your real balance.'],
-  allInterested: ['All players interested', 'Testing only: every player is keen to join you, whatever level you are at.'],
+  editor: ['Game editor', "Set the club's reputation, wage budget, transfer budget and bank balance yourself. Using it turns off achievements for this career."],
 } as const;
 
 export type HelpKey = keyof typeof HELP;

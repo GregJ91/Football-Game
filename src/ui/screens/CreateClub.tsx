@@ -30,7 +30,6 @@ export function CreateClub() {
   const { colours } = identity;
   const [country, setCountry] = useState<CountryId>('eng');
   const [region, setRegion] = useState<Region>('N');
-  const [topFlight, setTopFlight] = useState(false);
   const [realNames, setRealNames] = useState(true);
   const [step, setStep] = useState(1);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
@@ -50,7 +49,6 @@ export function CreateClub() {
       crest: identity.crest,
       country,
       region,
-      topFlight: challenge ? false : topFlight,
       realNames,
       difficulty,
       challenge: challenge ?? undefined,
@@ -133,7 +131,6 @@ export function CreateClub() {
             ))}
           </div>
         </fieldset>
-        {!topFlight && (
         <fieldset className="field">
           <legend>League</legend>
           <div className="grid-2">
@@ -145,7 +142,6 @@ export function CreateClub() {
             ))}
           </div>
         </fieldset>
-        )}
         {challenge !== 'sack' && (
         <fieldset className="field">
           <legend>Difficulty</legend>
@@ -169,20 +165,6 @@ export function CreateClub() {
             </span>
           </label>
         </fieldset>
-        {!challenge && (
-        <fieldset className="field">
-          <legend>Testing</legend>
-          <label className="toggle no-rule" htmlFor="top-flight">
-            <input id="top-flight" type="checkbox" checked={topFlight} onChange={(e) => setTopFlight(e.target.checked)} />
-            <span>
-              Start as a top-flight giant
-              <small>
-                Begin in the {COUNTRIES[country].divisions.find((d) => d.level === 1)!.name} with a title-winning squad, a big ground and a place in the Champions League.
-              </small>
-            </span>
-          </label>
-        </fieldset>
-        )}
         </>)}
       </div>
 

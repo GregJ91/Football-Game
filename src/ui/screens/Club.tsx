@@ -58,8 +58,9 @@ export function Club() {
   const borrow = useGame((s) => s.borrow);
   const repay = useGame((s) => s.repay);
   const showToast = useGame((s) => s.showToast);
-  const setUnlimited = useGame((s) => s.setUnlimitedMoney);
-  const setAllInterested = useGame((s) => s.setAllInterested);
+  const editClub = useGame((s) => s.editClub);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState({ reputation: 0, wage: 0, transfer: 0, balance: 0 });
   const [tab, setTab] = useState<Tab>('ground');
   const [standSheet, setStandSheet] = useState<number | null>(null);
   const [staffSheet, setStaffSheet] = useState<StaffRole | null>(null);
@@ -588,31 +589,46 @@ export function Club() {
             )}
           </section>
 
-          <section className="card">
-            <label className="toggle no-rule" htmlFor="unlimited-money" {...hp('unlimited')}>
-              <input
-                id="unlimited-money"
-                type="checkbox"
-                checked={!!game.settings?.unlimitedMoney}
-                onChange={(e) => setUnlimited(e.target.checked)}
-              />
-              <span>
-                Unlimited money (testing)
-                <small>Bank and budgets stay topped up at £1bn. Switch off to go back to your real balance.</small>
-              </span>
-            </label>
-            <label className="toggle no-rule" htmlFor="all-interested" {...hp('allInterested')}>
-              <input
-                id="all-interested"
-                type="checkbox"
-                checked={!!game.settings?.allInterested}
-                onChange={(e) => setAllInterested(e.target.checked)}
-              />
-              <span>
-                All players interested (testing)
-                <small>Every player is keen to join you, at a normal wage, and will sign or renew whatever level you're at.</small>
-              </span>
-            </label>
+          <section className="card editor-card" {...hp('editor')}>
+            <div className="card-label"><span>Game editor</span><span>{editOpen ? '' : 'Tap to open'}</span></div>
+            {!editOpen ? (
+              <button type="button" className="btn tile" onClick={() => {
+                setDraft({ reputation: club.reputation, wage: club.budgets?.wage ?? 0, transfer: club.budgets?.transfer ?? 0, balance: club.balance });
+                setEditOpen(true);
+              }}>Edit reputation, budgets and bank balance</button>
+            ) : (
+              <div className="stack">
+                {([
+                  ['reputation', 'Reputation (1–100)', 'How big the club is: crowds, sponsors, and which players and managers want to come.'],
+                  ['wage', 'Wage budget (£ a week)', `The most the wage bill can be. It's ${moneyPw(wageBill(game, club))} now.`],
+                  ['transfer', 'Transfer budget (£)', 'What the board lets you spend on fees.'],
+                  ['balance', 'Club balance (£)', 'Money in the bank. Below zero is an overdraft.'],
+                ] as const).map(([key, label, about]) => (
+                  <label key={key} className="field editor-field">
+                    <span>{label}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={draft[key]}
+                      min={key === 'reputation' ? 1 : key === 'balance' ? undefined : 0}
+                      max={key === 'reputation' ? 100 : undefined}
+                      step={key === 'reputation' ? 1 : 1000}
+                      onChange={(e) => setDraft({ ...draft, [key]: Number(e.target.value) })}
+                    />
+                    <small className="muted">{about}</small>
+                  </label>
+                ))}
+                <p className="muted small">The board sets new budgets every summer. Using the editor turns off achievements for this career.</p>
+                <div className="grid-2">
+                  <button type="button" className="btn primary" onClick={() => {
+                    editClub(draft);
+                    setEditOpen(false);
+                    showToast('Club updated.');
+                  }}>Save</button>
+                  <button type="button" className="btn secondary" onClick={() => setEditOpen(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="card">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACHIEVEMENTS, earnedAchievements } from '../src/engine/achievements';
+import { ACHIEVEMENTS, earnedAchievements, earnsAchievements } from '../src/engine/achievements';
 import { stadiumOf } from '../src/engine/club/stadium';
 import { computeOverall } from '../src/engine/players/ratings';
 import { playToSeasonEnd, playWeek, startNextSeason } from '../src/engine/season/season';
@@ -51,5 +51,14 @@ describe('achievements', () => {
     dominant(rich);
     for (let i = 0; i < 3; i++) playWeek(rich);
     expect(earnedAchievements(rich)).toEqual([]);
+  });
+});
+
+describe('game editor', () => {
+  it('a career where the editor has been used earns no achievements', () => {
+    const game = testGame('eng', 4321);
+    expect(earnsAchievements(game)).toBe(true);
+    game.edited = true;
+    expect(earnsAchievements(game)).toBe(false);
   });
 });

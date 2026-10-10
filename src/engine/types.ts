@@ -698,6 +698,8 @@ export interface GameState {
   manager?: ManagerRecord;
   /** Started as a top-flight giant (testing): no achievements. */
   testingStart?: boolean;
+  /** The in-game editor has been used on this career (no achievements). */
+  edited?: boolean;
   /** Points deductions this season, by club. */
   deductions?: Record<string, number>;
   /** Monthly awards this season, and the headline awards of past seasons. */
